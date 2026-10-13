@@ -1,8 +1,8 @@
 # Tweet Automation
 
-Aplicación web local para generar tweets (por IA, en lote a partir de una lista de temas, por plantilla, o manualmente), revisarlos, copiarlos y opcionalmente publicarlos en X (Twitter) con un click.
+Aplicación web local para generar tweets a partir de datos reales de la LES/LEC (o por plantilla, o manualmente), revisarlos, copiarlos y opcionalmente publicarlos en X (Twitter) con un click.
 
-En Compose hay siete modos visibles por defecto — **Calendario**, **Stats**, **H2H Hoy**, **Duelo 1v1**, **Efeméride**, **Cruce LEC** e **IA** — más **Lote (IA)**, **Plantilla** y **Manual** disponibles en el código pero ocultos del selector (reactivarlos es agregar su `<label>` en `static/index.html`). Todos los modos de datos reales (todos menos IA/Lote/Plantilla/Manual) tienen estilo **Plano** (sin IA, texto fijo con los datos reales) y varios también **IA** (misma info real, redacción con más onda) — la IA nunca decide los hechos, solo la forma de contarlos.
+En Compose hay seis modos visibles por defecto — **Calendario**, **Stats**, **H2H Hoy**, **Duelo 1v1**, **Efeméride** y **Cruce LEC** — más **Plantilla** y **Manual** disponibles en el código pero ocultos del selector (reactivarlos es agregar su `<label>` en `static/index.html`). Los modos de datos reales arman el texto con frases fijas a partir de los datos reales; la app no usa IA.
 
 - **Calendario**: próximos partidos de **LES** y/o **LEC**, datos reales de la API pública de LoL Esports.
 - **Stats**: "stats curiosas" (KDA, winrate, first blood, rivalidad/head-to-head entre equipos, y rango en ranked SoloQ vía lolpros.gg) con datos reales de **gol.gg** y **lolpros.gg**. **Split actual** o **Todo el año** (todos los torneos del año combinados), foco en un equipo/jugador, o rivalidad de un par puntual.
@@ -10,15 +10,13 @@ En Compose hay siete modos visibles por defecto — **Calendario**, **Stats**, *
 - **Duelo 1v1**: para el partido de hoy/mañana (autodetectado), compara el KDA de temporada del jugador con más partidos en cada carril compartido por ambos equipos (roster y rol vía lolesports.com, stats vía gol.gg) — una tarjeta por carril con datos, ninguna si no hay suficiente info (no inventa alineaciones ni cruces históricos entre esos jugadores, esos datos no están disponibles).
 - **Efeméride**: "un día como hoy" de la historia de la LES/Superliga, con una base curada de hitos verificados (no es scraping en vivo — ver limitaciones). 2 versiones: completa y "dato rápido".
 - **Cruce LEC**: conecta la LES con la LEC — comparativa de rendimiento en vivo (gol.gg de ambas ligas) o jugadores que pasaron por las dos ligas (base curada). 2 tonos: dato sorprendente y pregunta a debate.
-- **Lote (IA)**: pegás una lista de temas (uno por línea, hasta 25) y genera un tweet por cada uno.
 
-Cada resultado (y cada borrador/tweet del historial) tiene un botón **Copiar** para pegarlo directamente donde publiques manualmente, sin depender de la API de X. Calendario/Stats/IA/Plantilla/Manual usan el editor compartido de abajo, con **Guardar borrador**/**Publicar ahora**; los modos que muestran varias variantes en tarjetas (H2H Hoy, Efeméride, Cruce LEC, Lote) tienen un botón **Guardar** por tarjeta — nada se guarda solo, elegís qué variante(s) quedan como borrador.
+Cada resultado (y cada borrador/tweet del historial) tiene un botón **Copiar** para pegarlo directamente donde publiques manualmente, sin depender de la API de X. Calendario/Stats/Plantilla/Manual usan el editor compartido de abajo, con **Guardar borrador**/**Publicar ahora**; los modos que muestran varias variantes en tarjetas (H2H Hoy, Duelo 1v1, Efeméride, Cruce LEC) tienen un botón **Guardar** por tarjeta — nada se guarda solo, elegís qué variante(s) quedan como borrador.
 
 ## Requisitos previos
 
 - Python 3.11 o superior.
 - Una cuenta de X (Twitter) y acceso a [developer.x.com](https://developer.x.com).
-- Una cuenta en [console.anthropic.com](https://console.anthropic.com) con billing habilitado.
 
 ## Instalación
 
@@ -32,15 +30,6 @@ copy .env.example .env
 ```
 
 Después completá `.env` con tus credenciales (ver abajo).
-
-## Conseguir la API key de Anthropic
-
-1. Entrá a [console.anthropic.com](https://console.anthropic.com/settings/keys).
-2. Settings → API Keys → **Create Key**.
-3. Copiá el valor y pegalo en `ANTHROPIC_API_KEY` dentro de `.env`.
-4. Verificá que tu cuenta tenga saldo/billing habilitado, si no las llamadas van a fallar.
-
-`ANTHROPIC_MODEL` viene configurado en `claude-sonnet-5` por defecto (buen balance costo/calidad para tweets). Podés cambiarlo a `claude-opus-5` o `claude-haiku-4-5` si querés.
 
 ## Conseguir las credenciales de X (Twitter)
 
@@ -100,7 +89,7 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 
 Abrí [http://localhost:8000](http://localhost:8000) en el navegador.
 
-Si te faltan credenciales, la app va a arrancar igual y te va a avisar con un cartel en la parte superior — podés seguir usando lo que sí esté configurado (por ejemplo, borradores manuales sin IA).
+Si te faltan credenciales, la app va a arrancar igual y te va a avisar con un cartel en la parte superior — podés seguir usando lo que sí esté configurado (por ejemplo, generar y copiar tweets sin credenciales de X).
 
 ## Estructura del proyecto
 
@@ -109,13 +98,13 @@ app/
   main.py, config.py, db.py, models.py
   data/         # les_anniversaries.json, les_lec_players.json (bases curadas)
   routers/      # tweets, generate, templates
-  services/     # ai_service, x_service, char_count,
+  services/     # x_service, char_count,
                 # lolesports_service (Calendario), golgg_service (Stats/H2H/Cruce LEC),
                 # history_service (Efemeride), crossover_service (Cruce LEC: jugadores),
                 # ranked_service (Stats: ranked SoloQ via lolpros.gg),
                 # duel_service (Duelo 1v1: roster/rol de lolesports.com + stats de gol.gg)
 static/         # frontend (HTML/CSS/JS, sin build step)
-tests/          # pytest, con mocks para IA, X, LoL Esports y gol.gg
+tests/          # pytest, con mocks para X, LoL Esports y gol.gg
 ```
 
 ## Correr los tests
@@ -124,7 +113,7 @@ tests/          # pytest, con mocks para IA, X, LoL Esports y gol.gg
 pytest
 ```
 
-Los tests corren sin necesidad de credenciales reales (mockean las llamadas a Anthropic y a X).
+Los tests corren sin necesidad de credenciales reales (mockean las llamadas a X y a las fuentes de datos).
 
 ## Limitaciones conocidas
 
@@ -147,4 +136,3 @@ Los tests corren sin necesidad de credenciales reales (mockean las llamadas a An
 | "permisos insuficientes" (403) | La app no tiene permisos "Read and Write", o el Access Token se generó antes de cambiarlos (hay que regenerarlo). |
 | "muy similar a uno reciente" (403 duplicado) | X no permite publicar el mismo texto dos veces seguidas. Modificá el tweet. |
 | "Limite de publicaciones alcanzado" (429) | Se llegó al límite del plan Free (~500 posts/mes). |
-| "API key de Anthropic es invalida" | Revisá `ANTHROPIC_API_KEY` en `.env`. |

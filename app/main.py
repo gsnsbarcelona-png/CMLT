@@ -30,7 +30,6 @@ def health() -> dict:
 @app.get("/api/config/check")
 def config_check() -> dict:
     return {
-        "anthropic_configured": settings.anthropic_configured,
         "x_configured": settings.x_configured,
     }
 

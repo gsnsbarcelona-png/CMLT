@@ -95,35 +95,6 @@ def find_for_today(today: date | None = None) -> tuple[Anniversary, bool, int]:
     return anniversary, False, days_away
 
 
-def format_anniversary_context(anniversary: Anniversary, is_exact: bool, today: date | None = None) -> str:
-    """Bloque de hechos en texto plano para pasarle a la IA. Deja explicito si
-    la efemeride es de HOY o es la mas cercana disponible (nunca en silencio),
-    para que la IA nunca tenga que inventar ni disimular la diferencia."""
-    if today is None:
-        today = date.today()
-    years_ago = today.year - anniversary.year
-
-    lines = [f"Fecha de hoy: {today.day:02d}/{today.month:02d}."]
-    if is_exact:
-        lines.append(
-            f"Hay una efemeride verificada para EXACTAMENTE hoy, del {anniversary.day:02d}/"
-            f"{anniversary.month:02d}/{anniversary.year} (hace {years_ago} años)."
-        )
-    else:
-        lines.append(
-            "No hay ninguna efemeride verificada para el dia de hoy exacto. La mas cercana en el "
-            f"calendario es del {anniversary.day:02d}/{anniversary.month:02d}/{anniversary.year} "
-            f"(hace {years_ago} años) -- el tweet debe dejar claro que no es de hoy exactamente."
-        )
-
-    lines.append(f"Competicion de esa epoca: {anniversary.era_name}.")
-    lines.append(f"Hecho: {anniversary.headline}.")
-    lines.append(f"Detalle/cifra: {anniversary.detail}")
-    if anniversary.teams:
-        lines.append(f"Equipos implicados: {', '.join(anniversary.teams)}.")
-    if anniversary.today_connection:
-        lines.append(f"Conexion con la actualidad: {anniversary.today_connection}")
-    return "\n".join(lines)
 
 
 def _truncate(text: str, budget: int) -> str:

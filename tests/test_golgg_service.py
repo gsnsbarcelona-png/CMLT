@@ -18,12 +18,10 @@ from app.services.golgg_service import (
     fetch_player_stats,
     fetch_team_stats,
     find_head_to_head,
-    format_h2h_context,
     format_h2h_variant_plain,
     format_stat_tweet_plain,
     compute_league_comparison_candidates,
     discover_tournaments,
-    format_league_comparison_context,
     format_league_comparison_plain,
     get_lec_tournament,
     get_team_handles,
@@ -650,51 +648,8 @@ def test_build_head_to_head_preview_no_prior_meetings(mocker):
     assert preview.recent_form_b is None  # Barca no aparece en ningun resultado
 
 
-def test_format_h2h_context_states_missing_data_explicitly():
-    import app.services.golgg_service as golgg_service
-
-    preview = golgg_service.HeadToHeadPreviewData(
-        team_a="UCAM Esports",
-        team_b="Barca eSports",
-        total_wins_a=0,
-        total_wins_b=0,
-        total_maps_a=0,
-        total_maps_b=0,
-        last_meeting=None,
-        last_win_by_a=None,
-        last_win_by_b=None,
-        recent_form_a=None,
-        recent_form_b=None,
-    )
-
-    context = format_h2h_context(preview)
-
-    assert "sin enfrentamientos previos registrados" in context
-    assert "Ultimo enfrentamiento: no hay registro." in context
-    assert "Forma reciente de UCAM Esports: sin datos disponibles." in context
-    assert "Forma reciente de Barca eSports: sin datos disponibles." in context
 
 
-def test_format_h2h_context_includes_today_context_when_given():
-    import app.services.golgg_service as golgg_service
-
-    preview = golgg_service.HeadToHeadPreviewData(
-        team_a="UCAM Esports",
-        team_b="Barca eSports",
-        total_wins_a=1,
-        total_wins_b=0,
-        total_maps_a=2,
-        total_maps_b=0,
-        last_meeting=_result("UCAM Esports", "Barca eSports", "2026-01-01"),
-        last_win_by_a=_result("UCAM Esports", "Barca eSports", "2026-01-01"),
-        last_win_by_b=None,
-        recent_form_a=None,
-        recent_form_b=None,
-    )
-
-    context = format_h2h_context(preview, today_context="Partido de hoy: fase 'Final', horario 17:00 (Madrid).")
-
-    assert "Partido de hoy: fase 'Final', horario 17:00 (Madrid)." in context
 
 
 def test_fetch_all_match_results_combines_tournaments(mocker):
@@ -877,14 +832,3 @@ def test_format_league_comparison_plain_sorprendente_and_debate_tones():
     assert candidate.fact_sentence in debate
     assert candidate.nuance in debate
     assert sorprendente != debate
-
-
-def test_format_league_comparison_context_includes_tone_and_nuance():
-    candidates = compute_league_comparison_candidates(_les_teams(), _les_players(), _lec_teams(), _lec_players())
-    candidate = next(c for c in candidates if c.kind == "team_kda")
-
-    context = format_league_comparison_context(candidate, "debate")
-
-    assert "Tono pedido: debate" in context
-    assert candidate.fact_sentence in context
-    assert candidate.nuance in context
