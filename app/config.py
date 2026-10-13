@@ -1,0 +1,79 @@
+import logging
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+logger = logging.getLogger(__name__)
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+
+    anthropic_api_key: str = ""
+    anthropic_model: str = "claude-sonnet-5"
+
+    x_api_key: str = ""
+    x_api_secret: str = ""
+    x_access_token: str = ""
+    x_access_token_secret: str = ""
+
+    lolesports_api_key: str = "0TvQnueqKa5mxJntVWt0w4LpLfEkrV1Ta8rQBb9Z"
+
+    # Hay que actualizar estos 3 en cada split nuevo (buscar el nombre exacto
+    # del torneo en gol.gg, ej. https://gol.gg/tournament/tournament-stats/LES%202026%20Summer/)
+    golgg_season: str = "S16"
+    golgg_tournament: str = "LES 2026 Summer"
+    # Torneos que forman "todo el año" para el scope=year de Stats (separados por
+    # coma) -- incluye playoffs para capturar rivalidades que se cruzaron mas de
+    # una vez en la temporada regular (ej. en la fase de grupos de cada split) y
+    # otra vez en playoffs.
+    golgg_year_tournaments: str = (
+        "LES 2026 Kick-off Tournament,LES 2026 Spring,LES 2026 Spring Playoffs,"
+        "LES 2026 Summer,LES 2026 Summer Playoffs"
+    )
+    # Para comparativas LES-LEC (Stats -> "Cruce LEC"). Ojo: en gol.gg el
+    # nombre completo de la LEC lleva "Season" al final, a diferencia de LES.
+    lec_tournament: str = "LEC 2026 Summer Season"
+
+    # Arrobas/hashtags que se agregan al final de los tweets generados.
+    league_handle_les: str = "@LESESPORTS"
+    league_handle_lec: str = "@LEC"
+    custom_hashtags: str = "#LT"
+    # "Nombre de equipo:@handle" separados por coma -- solo se usan en Stats
+    # (en Calendario arrobar a todos los equipos de todos los partidos saturaria
+    # el texto). Cargados a mano, no adivinados. UB Alma Mater queda afuera a
+    # proposito: se probaron @UniBarcelona (cuenta general de la universidad)
+    # y @EsportsUB (que resulto ser el Servei d'Esports general, no el equipo
+    # de LoL) y ninguno de los dos es correcto -- mejor no arrobar a nadie.
+    team_handles: str = (
+        "Barca eSports:@FCBeSports,"
+        "Falke Esports:@FALKE_EC,"
+        "GIANTX iTero:@GIANTXLeague,"
+        "LUA Gaming:@LUAGaming_,"
+        "Movistar KOI Fenix:@MovistarKOILoL,"
+        "Team Heretics Academy:@HereticsLES,"
+        "UCAM Esports:@UCAM_esports"
+    )
+
+    app_host: str = "127.0.0.1"
+    app_port: int = 8000
+    database_url: str = "sqlite:///./data/tweets.db"
+
+    @property
+    def custom_hashtag_list(self) -> list[str]:
+        return [h.strip() for h in self.custom_hashtags.split() if h.strip()]
+
+    @property
+    def anthropic_configured(self) -> bool:
+        return bool(self.anthropic_api_key)
+
+    @property
+    def x_configured(self) -> bool:
+        return bool(self.x_api_key and self.x_api_secret and self.x_access_token and self.x_access_token_secret)
+
+
+settings = Settings()
+
+if not settings.anthropic_configured:
+    logger.warning("ANTHROPIC_API_KEY no configurada: la generacion por IA no va a funcionar hasta que la cargues en .env")
+if not settings.x_configured:
+    logger.warning("Credenciales de X incompletas: la publicacion no va a funcionar hasta que las cargues en .env")

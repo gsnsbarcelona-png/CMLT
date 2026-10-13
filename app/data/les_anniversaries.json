@@ -1,0 +1,68 @@
+[
+  {
+    "month": 8,
+    "day": 12,
+    "year": 2021,
+    "headline": "Vodafone Giants campeon de verano",
+    "detail": "3-1 a UCAM Esports en la final (Barcelona), su septimo titulo nacional.",
+    "era_name": "Superliga",
+    "teams": ["Vodafone Giants", "UCAM Esports Club"],
+    "today_connection": "GIANTX sigue compitiendo hoy en la LES.",
+    "source": "COPE, RTP Arena, Murcia.com (agosto 2021)"
+  },
+  {
+    "month": 8,
+    "day": 20,
+    "year": 2022,
+    "headline": "Heretics gano su primer titulo",
+    "detail": "3-1 a Giants en la final de verano (IFEMA Madrid), con record de audiencia.",
+    "era_name": "Superliga",
+    "teams": ["Team Heretics", "Giants"],
+    "today_connection": "Heretics Academy sigue compitiendo hoy en la LES.",
+    "source": "Dexerto, ElDesmarque, Millenium, FullEsports (agosto 2022)"
+  },
+  {
+    "month": 9,
+    "day": 2,
+    "year": 2018,
+    "headline": "MAD Lions completo el doblete del año",
+    "detail": "3-1 a Vodafone Giants en la final de verano, tras ganar 3-0 la primavera en Murcia.",
+    "era_name": "Superliga Orange",
+    "teams": ["MAD Lions", "Vodafone Giants"],
+    "today_connection": null,
+    "source": "elEconomista, VivirEdiciones (septiembre 2018)"
+  },
+  {
+    "month": 5,
+    "day": 30,
+    "year": 2025,
+    "headline": "Barca eSports gano su primer titulo",
+    "detail": "3-1 a GiantX Pride en la final de primavera (Torrevieja), tras perder dos finales previas.",
+    "era_name": "Superliga Domino's",
+    "teams": ["Barca eSports", "GiantX Pride"],
+    "today_connection": "Barca eSports sigue compitiendo hoy en la LES.",
+    "source": "fcbarcelona.com (mayo 2025, fuente oficial del club)"
+  },
+  {
+    "month": 11,
+    "day": 27,
+    "year": 2025,
+    "headline": "Riot anuncio nuevos organizadores de la liga",
+    "detail": "Lastlap y CABAL Esports pasarian a organizarla, cerrando mas de una decada de LVP al frente.",
+    "era_name": "Superliga",
+    "teams": [],
+    "today_connection": "Fue el primer paso hacia lo que hoy es la LES.",
+    "source": "Movistar eSports, cuenta oficial en X (27 de noviembre de 2025)"
+  },
+  {
+    "month": 1,
+    "day": 16,
+    "year": 2026,
+    "headline": "Se anuncio oficialmente el rebranding a LES",
+    "detail": "Se revelaron nombre, sede y equipos del paso de Superliga a LES.",
+    "era_name": "transicion Superliga -> LES",
+    "teams": [],
+    "today_connection": "Esa fecha marco el nacimiento oficial de la LES.",
+    "source": "Sheep Esports, Movistar eSports (enero 2026)"
+  }
+]
