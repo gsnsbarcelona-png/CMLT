@@ -51,6 +51,12 @@ class Settings(BaseSettings):
         "UCAM Esports:@UCAM_esports"
     )
 
+    # Login: con APP_PASSWORD vacia la app no pide contraseña (uso local). Para
+    # exponerla en internet (ej. usarla desde el movil) hay que cargarla, y
+    # conviene fijar SESSION_SECRET para que las sesiones sobrevivan reinicios.
+    app_password: str = ""
+    session_secret: str = ""
+
     app_host: str = "127.0.0.1"
     app_port: int = 8000
     database_url: str = "sqlite:///./data/tweets.db"

@@ -15,6 +15,11 @@ async function api(path, options = {}) {
   });
   const isJson = res.status !== 204 && res.headers.get("content-type")?.includes("application/json");
   const body = isJson ? await res.json() : null;
+  if (res.status === 401) {
+    // Sesion expirada (solo pasa con APP_PASSWORD configurada).
+    window.location.replace("/login");
+    throw new Error("Sesion expirada.");
+  }
   if (!res.ok) {
     const message = body?.detail || `Error ${res.status}`;
     throw new Error(message);
@@ -836,10 +841,31 @@ function bindTemplateCard(template) {
   });
 }
 
+// ---------- Sesion ----------
+async function initLogout() {
+  try {
+    const status = await api("/api/auth/status");
+    if (!status.enabled) return;
+    const btn = document.getElementById("logout-btn");
+    btn.hidden = false;
+    btn.addEventListener("click", async () => {
+      await api("/api/auth/logout", { method: "POST" });
+      window.location.replace("/login");
+    });
+  } catch (e) {
+    // silencioso: sin boton de salir, el resto de la app sigue andando
+  }
+}
+
 // ---------- Init ----------
 document.addEventListener("DOMContentLoaded", () => {
   initTabs();
   initCompose();
   initTemplateForm();
   checkConfig();
+  initLogout();
 });
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/sw.js").catch(() => {});
+}

@@ -91,11 +91,31 @@ Abrí [http://localhost:8000](http://localhost:8000) en el navegador.
 
 Si te faltan credenciales, la app va a arrancar igual y te va a avisar con un cartel en la parte superior — podés seguir usando lo que sí esté configurado (por ejemplo, generar y copiar tweets sin credenciales de X).
 
+## Usarla desde el móvil (PWA / APK)
+
+La app es instalable como PWA: desde Chrome en Android, abrís la URL y elegís **"Instalar app"** (o "Agregar a pantalla principal"). Queda con ícono propio y abre a pantalla completa. La interfaz se adapta a pantallas chicas. Toda la lógica (gol.gg, lolesports, lolpros.gg, publicación en X) sigue corriendo en el servidor, así que el móvil necesita llegar a un servidor donde corra la app.
+
+**Opción rápida, en casa:** corré la app en tu PC con `--host 0.0.0.0` y abrí `http://IP-de-tu-PC:8000` desde el móvil en la misma Wi-Fi. Ojo: sin HTTPS Chrome no ofrece instalarla como app, pero se puede usar desde el navegador.
+
+**Opción completa, desde cualquier lado:** subí la app a un servidor con HTTPS (Render, Fly.io, un VPS...). En ese caso:
+
+1. **Activá el login, es obligatorio.** Cargá `APP_PASSWORD` (la contraseña para entrar) y `SESSION_SECRET` (generalo con `python -c "import secrets; print(secrets.token_hex(32))"`). Sin `APP_PASSWORD` cualquiera que encuentre la URL podría publicar en tu cuenta de X.
+2. Arrancá uvicorn detrás del proxy HTTPS con `--proxy-headers --forwarded-allow-ips="*"`, para que la cookie de sesión se marque como `Secure`:
+   ```
+   uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips="*"
+   ```
+3. La base SQLite tiene que estar en un disco persistente (`DATABASE_URL`), si no se pierden borradores e historial en cada deploy.
+4. Cargá también en el servidor las credenciales de X y la config de gol.gg que tenías en `.env`.
+
+**APK:** con la PWA ya publicada en HTTPS, [Bubblewrap](https://github.com/GoogleChromeLabs/bubblewrap) (`npx @bubblewrap/cli init --manifest https://TU-DOMINIO/static/manifest.webmanifest` y después `build`) genera un `.apk` que abre la app a pantalla completa. Para que no muestre la barra de URL hay que guardar el `assetlinks.json` que te genera Bubblewrap en `static/well-known/assetlinks.json`; la app lo sirve en `/.well-known/assetlinks.json`, y esa ruta queda abierta aunque el login esté activo.
+
+Con `APP_PASSWORD` vacía (el valor por defecto) no se pide login, y la app funciona en local igual que siempre.
+
 ## Estructura del proyecto
 
 ```
 app/
-  main.py, config.py, db.py, models.py
+  main.py, config.py, db.py, models.py, auth.py (login opcional)
   data/         # les_anniversaries.json, les_lec_players.json (bases curadas)
   routers/      # tweets, generate, templates
   services/     # x_service, char_count,
@@ -103,7 +123,7 @@ app/
                 # history_service (Efemeride), crossover_service (Cruce LEC: jugadores),
                 # ranked_service (Stats: ranked SoloQ via lolpros.gg),
                 # duel_service (Duelo 1v1: roster/rol de lolesports.com + stats de gol.gg)
-static/         # frontend (HTML/CSS/JS, sin build step)
+static/         # frontend (HTML/CSS/JS, sin build step) + PWA (manifest, sw.js, icons/)
 tests/          # pytest, con mocks para X, LoL Esports y gol.gg
 ```
 
@@ -119,7 +139,7 @@ Los tests corren sin necesidad de credenciales reales (mockean las llamadas a X 
 
 - El conteo de caracteres es una aproximación: las URLs se cuentan siempre como 23 caracteres (igual que el acortador t.co de X) y el resto se cuenta por code point Unicode. Puede diferir levemente del conteo real de X en casos extremos (emojis raros, texto CJK).
 - No hay scheduler/calendario: la publicación es siempre manual e inmediata.
-- Pensada para un solo usuario, corriendo en local.
+- Pensada para un solo usuario: el login es una única contraseña (`APP_PASSWORD`), no hay cuentas.
 - Stats "Todo el año" combina splits con **promedio ponderado por partidos jugados** — una aproximación razonable para stats curiosas, no matemáticamente exacta para ratios como K:D (no es lo mismo que recalcular desde los totales crudos de kills/deaths).
 - gol.gg necesita mantenimiento manual cada split nuevo (ver sección Stats arriba, incluye cómo encontrar el nombre del torneo nuevo sin buscar a mano) — si Stats empieza a devolver "no hay datos" o 502, seguramente hay que actualizar `GOLGG_TOURNAMENT`/`GOLGG_YEAR_TOURNAMENTS`.
 - Las respuestas de gol.gg y de lolpros.gg se cachean en memoria 5 minutos (por proceso, se pierde al reiniciar el server) para no repetir pedidos innecesarios — si el dato en vivo cambia, puede tardar hasta 5 minutos en reflejarse.
