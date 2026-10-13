@@ -6,17 +6,6 @@ from app.db import get_session
 from app.models import Template
 from app.routers.templates import render_template
 from app.services import char_count
-from app.services.ai_service import (
-    AIGenerationError,
-    generate_anniversary_quick_fact,
-    generate_anniversary_tweet,
-    generate_head_to_head_variant,
-    generate_hype_calendar,
-    generate_individual_duel_variant,
-    generate_league_comparison_variant,
-    generate_stat_tweet,
-    generate_tweet,
-)
 from app.services.crossover_service import CrossoverDataError, compute_player_crossover_candidates
 from app.services.duel_service import compute_duel_candidates, reconcile_player_casing
 from app.services.golgg_service import (
@@ -33,9 +22,7 @@ from app.services.golgg_service import (
     fetch_player_stats,
     fetch_team_stats,
     find_head_to_head,
-    format_h2h_context,
     format_h2h_variant_plain,
-    format_league_comparison_context,
     format_league_comparison_plain,
     format_stat_tweet_plain,
     get_lec_tournament,
@@ -47,7 +34,6 @@ from app.services.golgg_service import (
 from app.services.history_service import (
     HistoryDataError,
     find_for_today,
-    format_anniversary_context,
     format_anniversary_plain,
     format_anniversary_quick_fact_plain,
 )
@@ -56,7 +42,6 @@ from app.services.lolesports_service import (
     LEAGUE_IDS,
     LoLEsportsError,
     TeamRosterNotFoundError,
-    build_matches_context,
     closing_tags,
     fetch_les_team_roster,
     fetch_les_team_roster_with_roles,
@@ -64,7 +49,6 @@ from app.services.lolesports_service import (
     fetch_todays_matches,
     fetch_upcoming_matches,
     format_schedule_tweet,
-    league_label,
     normalize_team_name,
 )
 from app.services.ranked_service import (
@@ -76,14 +60,10 @@ from app.services.ranked_service import (
     fetch_player_rank,
 )
 
-CALENDAR_STYLES = {"plain", "hype"}
 STAT_CATEGORIES = {"teams", "players", "ranked"}
-STAT_STYLES = {"plain", "ai"}
 STAT_SCOPES = {"split", "year"}
 
 router = APIRouter(prefix="/api/generate", tags=["generate"])
-
-MAX_BATCH_TOPICS = 25
 
 
 class GenerateResult(BaseModel):
@@ -97,66 +77,8 @@ def _result(content: str) -> GenerateResult:
     return GenerateResult(content=content, char_count=count, within_limit=count <= char_count.TWEET_CHAR_LIMIT)
 
 
-class AIGenerateRequest(BaseModel):
-    topic: str
-    tone: str | None = None
-    instructions: str | None = None
-
-
-@router.post("/ai")
-def generate_ai(payload: AIGenerateRequest) -> GenerateResult:
-    try:
-        content = generate_tweet(payload.topic, payload.tone, payload.instructions)
-    except AIGenerationError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
-    return _result(content)
-
-
-class BatchGenerateRequest(BaseModel):
-    topics: list[str]
-    tone: str | None = None
-    instructions: str | None = None
-
-
-class BatchTopicResult(BaseModel):
-    topic: str
-    content: str | None = None
-    char_count: int | None = None
-    within_limit: bool | None = None
-    error: str | None = None
-
-
-@router.post("/ai/batch")
-def generate_ai_batch(payload: BatchGenerateRequest) -> list[BatchTopicResult]:
-    topics = [t.strip() for t in payload.topics if t.strip()]
-    if not topics:
-        raise HTTPException(status_code=400, detail="Ingresa al menos un tema.")
-    if len(topics) > MAX_BATCH_TOPICS:
-        raise HTTPException(status_code=400, detail=f"Maximo {MAX_BATCH_TOPICS} temas por lote.")
-
-    results: list[BatchTopicResult] = []
-    for topic in topics:
-        try:
-            content = generate_tweet(topic, payload.tone, payload.instructions)
-        except AIGenerationError as exc:
-            results.append(BatchTopicResult(topic=topic, error=str(exc)))
-            continue
-
-        count = char_count.count_chars(content)
-        results.append(
-            BatchTopicResult(
-                topic=topic,
-                content=content,
-                char_count=count,
-                within_limit=count <= char_count.TWEET_CHAR_LIMIT,
-            )
-        )
-    return results
-
-
 class CalendarGenerateRequest(BaseModel):
     leagues: list[str]
-    style: str = "plain"
 
 
 @router.post("/calendar")
@@ -168,31 +90,18 @@ def generate_calendar(payload: CalendarGenerateRequest) -> GenerateResult:
     if unknown:
         raise HTTPException(status_code=400, detail=f"Liga no reconocida: {', '.join(unknown)}.")
 
-    style = payload.style.strip().lower()
-    if style not in CALENDAR_STYLES:
-        raise HTTPException(status_code=400, detail="Estilo no reconocido (usa 'plain' o 'hype').")
-
     try:
         matches = fetch_upcoming_matches(leagues)
     except LoLEsportsError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
-    if style == "hype":
-        try:
-            content = generate_hype_calendar(build_matches_context(matches), league_label(leagues))
-        except AIGenerationError as exc:
-            raise HTTPException(status_code=502, detail=str(exc)) from exc
-    else:
-        content = format_schedule_tweet(matches, leagues)
-
-    content = f"{content}\n\n{closing_tags(leagues)}"
+    content = f"{format_schedule_tweet(matches, leagues)}\n\n{closing_tags(leagues)}"
     return _result(content)
 
 
 class StatGenerateRequest(BaseModel):
     categories: list[str] = []
     focus: str | None = None
-    style: str = "plain"
     scope: str = "split"
     rivalry_team_a: str | None = None
     rivalry_team_b: str | None = None
@@ -224,10 +133,6 @@ def list_available_tournaments(season: str | None = None, region: str | None = "
 
 @router.post("/stats")
 def generate_stats(payload: StatGenerateRequest) -> GenerateResult:
-    style = payload.style.strip().lower()
-    if style not in STAT_STYLES:
-        raise HTTPException(status_code=400, detail="Estilo no reconocido (usa 'plain' o 'ai').")
-
     rivalry_a = (payload.rivalry_team_a or "").strip()
     rivalry_b = (payload.rivalry_team_b or "").strip()
     ranked_player_a = (payload.ranked_player_a or "").strip()
@@ -335,15 +240,7 @@ def generate_stats(payload: StatGenerateRequest) -> GenerateResult:
         except GolGGError as exc:
             raise HTTPException(status_code=502, detail=str(exc)) from exc
 
-    if style == "ai":
-        try:
-            content = generate_stat_tweet(candidate.fact_sentence, candidate.subject)
-        except AIGenerationError as exc:
-            raise HTTPException(status_code=502, detail=str(exc)) from exc
-    else:
-        content = format_stat_tweet_plain(candidate)
-
-    content = f"{content}\n\n{stat_closing_tags(candidate)}"
+    content = f"{format_stat_tweet_plain(candidate)}\n\n{stat_closing_tags(candidate)}"
     return _result(content)
 
 
@@ -371,13 +268,9 @@ def get_todays_matches() -> list[TodayMatchInfo]:
     ]
 
 
-HEAD_TO_HEAD_STYLES = {"plain", "ai"}
-
-
 class HeadToHeadPreviewRequest(BaseModel):
     team_a: str
     team_b: str
-    style: str = "plain"
 
 
 class HeadToHeadVariantResult(BaseModel):
@@ -385,7 +278,6 @@ class HeadToHeadVariantResult(BaseModel):
     content: str | None = None
     char_count: int | None = None
     within_limit: bool | None = None
-    error: str | None = None
 
 
 @router.post("/stats/head-to-head-preview")
@@ -396,10 +288,6 @@ def generate_head_to_head_preview(payload: HeadToHeadPreviewRequest) -> list[Hea
         raise HTTPException(status_code=400, detail="Elegi los dos equipos.")
     if team_a.lower() == team_b.lower():
         raise HTTPException(status_code=400, detail="Elegi dos equipos distintos.")
-
-    style = payload.style.strip().lower()
-    if style not in HEAD_TO_HEAD_STYLES:
-        raise HTTPException(status_code=400, detail="Estilo no reconocido (usa 'plain' o 'ai').")
 
     try:
         preview = build_head_to_head_preview(team_a, team_b, get_year_tournaments())
@@ -421,7 +309,6 @@ def generate_head_to_head_preview(payload: HeadToHeadPreviewRequest) -> list[Hea
     except LoLEsportsError:
         pass  # best-effort: si falla, seguimos sin ese contexto extra
 
-    context = format_h2h_context(preview, today_context)
     closing = stat_closing_tags(
         StatCandidate(
             kind="team_head_to_head",
@@ -434,17 +321,8 @@ def generate_head_to_head_preview(payload: HeadToHeadPreviewRequest) -> list[Hea
     )
 
     results: list[HeadToHeadVariantResult] = []
-    for angle_key, angle_label in (("historial", "historial"), ("forma_reciente", "forma reciente")):
-        if style == "ai":
-            try:
-                content = generate_head_to_head_variant(context, angle_label)
-            except AIGenerationError as exc:
-                results.append(HeadToHeadVariantResult(angle=angle_key, error=str(exc)))
-                continue
-        else:
-            content = format_h2h_variant_plain(preview, angle_key, today_context)
-
-        content = f"{content}\n\n{closing}"
+    for angle_key in ("historial", "forma_reciente"):
+        content = f"{format_h2h_variant_plain(preview, angle_key, today_context)}\n\n{closing}"
         count = char_count.count_chars(content)
         results.append(
             HeadToHeadVariantResult(
@@ -474,13 +352,9 @@ def get_duel_today_or_tomorrow_matches() -> list[TodayMatchInfo]:
     ]
 
 
-DUEL_STYLES = {"plain", "ai"}
-
-
 class DuelGenerateRequest(BaseModel):
     team_a: str
     team_b: str
-    style: str = "plain"
 
 
 class DuelVariantResult(BaseModel):
@@ -489,7 +363,6 @@ class DuelVariantResult(BaseModel):
     content: str | None = None
     char_count: int | None = None
     within_limit: bool | None = None
-    error: str | None = None
 
 
 @router.post("/duel")
@@ -500,10 +373,6 @@ def generate_duel(payload: DuelGenerateRequest) -> list[DuelVariantResult]:
         raise HTTPException(status_code=400, detail="Elegi los dos equipos.")
     if team_a.lower() == team_b.lower():
         raise HTTPException(status_code=400, detail="Elegi dos equipos distintos.")
-
-    style = payload.style.strip().lower()
-    if style not in DUEL_STYLES:
-        raise HTTPException(status_code=400, detail="Estilo no reconocido (usa 'plain' o 'ai').")
 
     try:
         roster_a = fetch_les_team_roster_with_roles(team_a)
@@ -540,18 +409,7 @@ def generate_duel(payload: DuelGenerateRequest) -> list[DuelVariantResult]:
 
     results: list[DuelVariantResult] = []
     for candidate in candidates:
-        if style == "ai":
-            try:
-                content = generate_individual_duel_variant(candidate.fact_sentence, candidate.subject)
-            except AIGenerationError as exc:
-                results.append(
-                    DuelVariantResult(role=candidate.plano_title, subject=candidate.subject, error=str(exc))
-                )
-                continue
-        else:
-            content = format_stat_tweet_plain(candidate)
-
-        content = f"{content}\n\n{closing}"
+        content = f"{format_stat_tweet_plain(candidate)}\n\n{closing}"
         count = char_count.count_chars(content)
         results.append(
             DuelVariantResult(
@@ -565,53 +423,31 @@ def generate_duel(payload: DuelGenerateRequest) -> list[DuelVariantResult]:
     return results
 
 
-ANNIVERSARY_STYLES = {"plain", "ai"}
-
-
-class AnniversaryGenerateRequest(BaseModel):
-    style: str = "plain"
-
-
 class AnniversaryVariantResult(BaseModel):
     format: str
     content: str | None = None
     char_count: int | None = None
     within_limit: bool | None = None
-    error: str | None = None
     is_exact: bool = False
 
 
 @router.post("/anniversary")
-def generate_anniversary(payload: AnniversaryGenerateRequest) -> list[AnniversaryVariantResult]:
-    style = payload.style.strip().lower()
-    if style not in ANNIVERSARY_STYLES:
-        raise HTTPException(status_code=400, detail="Estilo no reconocido (usa 'plain' o 'ai').")
-
+def generate_anniversary() -> list[AnniversaryVariantResult]:
     try:
         anniversary, is_exact, _days_away = find_for_today()
     except HistoryDataError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
-    context = format_anniversary_context(anniversary, is_exact)
     closing = anniversary_closing_tags()
 
     formats = (
-        ("completo", generate_anniversary_tweet, format_anniversary_plain),
-        ("dato_rapido", generate_anniversary_quick_fact, format_anniversary_quick_fact_plain),
+        ("completo", format_anniversary_plain),
+        ("dato_rapido", format_anniversary_quick_fact_plain),
     )
 
     results: list[AnniversaryVariantResult] = []
-    for format_key, ai_fn, plain_fn in formats:
-        if style == "ai":
-            try:
-                content = ai_fn(context)
-            except AIGenerationError as exc:
-                results.append(AnniversaryVariantResult(format=format_key, error=str(exc), is_exact=is_exact))
-                continue
-        else:
-            content = plain_fn(anniversary, is_exact)
-
-        content = f"{content}\n\n{closing}"
+    for format_key, plain_fn in formats:
+        content = f"{plain_fn(anniversary, is_exact)}\n\n{closing}"
         count = char_count.count_chars(content)
         results.append(
             AnniversaryVariantResult(
@@ -625,11 +461,7 @@ def generate_anniversary(payload: AnniversaryGenerateRequest) -> list[Anniversar
     return results
 
 
-LEAGUE_COMPARISON_STYLES = {"plain", "ai"}
-
-
 class LeagueComparisonRequest(BaseModel):
-    style: str = "plain"
     focus: str | None = None
 
 
@@ -638,15 +470,10 @@ class LeagueComparisonVariantResult(BaseModel):
     content: str | None = None
     char_count: int | None = None
     within_limit: bool | None = None
-    error: str | None = None
 
 
 @router.post("/league-comparison")
 def generate_league_comparison(payload: LeagueComparisonRequest) -> list[LeagueComparisonVariantResult]:
-    style = payload.style.strip().lower()
-    if style not in LEAGUE_COMPARISON_STYLES:
-        raise HTTPException(status_code=400, detail="Estilo no reconocido (usa 'plain' o 'ai').")
-
     try:
         les_teams = fetch_team_stats()
         les_players = fetch_player_stats()
@@ -688,16 +515,7 @@ def generate_league_comparison(payload: LeagueComparisonRequest) -> list[LeagueC
 
     results: list[LeagueComparisonVariantResult] = []
     for tone in ("sorprendente", "debate"):
-        if style == "ai":
-            try:
-                content = generate_league_comparison_variant(format_league_comparison_context(candidate, tone))
-            except AIGenerationError as exc:
-                results.append(LeagueComparisonVariantResult(tone=tone, error=str(exc)))
-                continue
-        else:
-            content = format_league_comparison_plain(candidate, tone)
-
-        content = f"{content}\n\n{closing}"
+        content = f"{format_league_comparison_plain(candidate, tone)}\n\n{closing}"
         count = char_count.count_chars(content)
         results.append(
             LeagueComparisonVariantResult(

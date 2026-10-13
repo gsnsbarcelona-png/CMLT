@@ -11,7 +11,6 @@ from app.services.history_service import (
     find_for_date,
     find_for_today,
     find_nearest,
-    format_anniversary_context,
     format_anniversary_plain,
     format_anniversary_quick_fact_plain,
     load_anniversaries,
@@ -107,18 +106,8 @@ def _anniversary(**overrides):
     return Anniversary(**base)
 
 
-def test_format_anniversary_context_exact_states_it_clearly():
-    context = format_anniversary_context(_anniversary(), is_exact=True, today=date(2026, 8, 12))
-    assert "EXACTAMENTE hoy" in context
-    assert "hace 5 años" in context
-    assert "Hecho: Hecho A." in context
-    assert "Sigue activo." in context
 
 
-def test_format_anniversary_context_not_exact_states_it_clearly():
-    context = format_anniversary_context(_anniversary(), is_exact=False, today=date(2026, 8, 20))
-    assert "No hay ninguna efemeride verificada para el dia de hoy exacto" in context
-    assert "12/08/2021" in context
 
 
 def test_format_anniversary_plain_exact():

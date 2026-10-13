@@ -109,7 +109,6 @@ async function checkConfig() {
     const cfg = await api("/api/config/check");
     const banner = document.getElementById("config-banner");
     const missing = [];
-    if (!cfg.anthropic_configured) missing.push("Anthropic (IA)");
     if (!cfg.x_configured) missing.push("X (publicacion)");
     if (missing.length) {
       banner.textContent = `Falta configurar en .env: ${missing.join(", ")}.`;
@@ -132,11 +131,9 @@ function initCompose() {
   contentEl.addEventListener("input", updateCharCounter);
   updateCharCounter();
 
-  document.getElementById("ai-generate-btn").addEventListener("click", handleAiGenerate);
   document.getElementById("template-render-btn").addEventListener("click", handleTemplateRender);
   document.getElementById("save-draft-btn").addEventListener("click", () => handleSave(false));
   document.getElementById("publish-now-btn").addEventListener("click", () => handleSave(true));
-  document.getElementById("batch-generate-btn").addEventListener("click", handleBatchGenerate);
   document.getElementById("calendar-generate-btn").addEventListener("click", handleCalendarGenerate);
   document.getElementById("stats-generate-btn").addEventListener("click", handleStatsGenerate);
   document.getElementById("h2h-autofill-btn").addEventListener("click", handleH2hAutofill);
@@ -178,16 +175,13 @@ function updateComposeMode() {
   document.getElementById("mode-duel").hidden = mode !== "duel";
   document.getElementById("mode-anniversary").hidden = mode !== "anniversary";
   document.getElementById("mode-lec-compare").hidden = mode !== "lec-compare";
-  document.getElementById("mode-ai").hidden = mode !== "ai";
-  document.getElementById("mode-batch").hidden = mode !== "batch";
   document.getElementById("mode-template").hidden = mode !== "template";
   document.getElementById("mode-manual").hidden = mode !== "manual";
   document.getElementById("single-compose-area").hidden =
-    mode === "batch" || mode === "h2h" || mode === "duel" || mode === "anniversary" || mode === "lec-compare";
+    mode === "h2h" || mode === "duel" || mode === "anniversary" || mode === "lec-compare";
 }
 
 async function handleLecCompareGenerate() {
-  const style = document.querySelector('input[name="lec-compare-style"]:checked').value;
   const focus = document.getElementById("lec-compare-focus").value.trim();
   const resultsEl = document.getElementById("lec-compare-results");
 
@@ -197,15 +191,13 @@ async function handleLecCompareGenerate() {
   try {
     const results = await api("/api/generate/league-comparison", {
       method: "POST",
-      body: JSON.stringify({ style, focus: focus || null }),
+      body: JSON.stringify({ focus: focus || null }),
     });
     resultsEl.innerHTML = results.map(lecCompareResultCardHtml).join("");
     results.forEach((r, idx) => {
-      if (r.content) {
-        const card = resultsEl.children[idx];
-        bindCopyButton(card.querySelector(".copy-lec-compare-btn"), () => r.content);
-        bindSaveButton(card.querySelector(".save-lec-compare-btn"), () => r.content, "lec-compare");
-      }
+      const card = resultsEl.children[idx];
+      bindCopyButton(card.querySelector(".copy-lec-compare-btn"), () => r.content);
+      bindSaveButton(card.querySelector(".save-lec-compare-btn"), () => r.content, "lec-compare");
     });
   } catch (e) {
     resultsEl.innerHTML = `<div class="empty-state">Error: ${escapeHtml(e.message)}</div>`;
@@ -216,14 +208,6 @@ async function handleLecCompareGenerate() {
 
 function lecCompareResultCardHtml(result) {
   const toneLabel = result.tone === "debate" ? "Tono: pregunta a debate" : "Tono: dato sorprendente";
-  if (result.error) {
-    return `
-      <div class="card">
-        <div class="card-meta">${toneLabel}</div>
-        <div class="card-error">${escapeHtml(result.error)}</div>
-      </div>
-    `;
-  }
   return `
     <div class="card">
       <div class="card-meta">${toneLabel} · ${result.char_count} / ${TWEET_CHAR_LIMIT}</div>
@@ -237,7 +221,6 @@ function lecCompareResultCardHtml(result) {
 }
 
 async function handleAnniversaryGenerate() {
-  const style = document.querySelector('input[name="anniversary-style"]:checked').value;
   const resultsEl = document.getElementById("anniversary-results");
 
   const btn = document.getElementById("anniversary-generate-btn");
@@ -246,15 +229,12 @@ async function handleAnniversaryGenerate() {
   try {
     const results = await api("/api/generate/anniversary", {
       method: "POST",
-      body: JSON.stringify({ style }),
     });
     resultsEl.innerHTML = results.map(anniversaryResultCardHtml).join("");
     results.forEach((r, idx) => {
-      if (r.content) {
-        const card = resultsEl.children[idx];
-        bindCopyButton(card.querySelector(".copy-anniversary-btn"), () => r.content);
-        bindSaveButton(card.querySelector(".save-anniversary-btn"), () => r.content, "anniversary");
-      }
+      const card = resultsEl.children[idx];
+      bindCopyButton(card.querySelector(".copy-anniversary-btn"), () => r.content);
+      bindSaveButton(card.querySelector(".save-anniversary-btn"), () => r.content, "anniversary");
     });
   } catch (e) {
     resultsEl.innerHTML = `<div class="empty-state">Error: ${escapeHtml(e.message)}</div>`;
@@ -266,14 +246,6 @@ async function handleAnniversaryGenerate() {
 function anniversaryResultCardHtml(result) {
   const formatLabel = result.format === "completo" ? "Version completa" : "Dato rapido";
   const exactNote = result.is_exact ? "" : " (no es de hoy exacto, ver texto)";
-  if (result.error) {
-    return `
-      <div class="card">
-        <div class="card-meta">${formatLabel}${exactNote}</div>
-        <div class="card-error">${escapeHtml(result.error)}</div>
-      </div>
-    `;
-  }
   return `
     <div class="card">
       <div class="card-meta">${formatLabel}${exactNote} · ${result.char_count} / ${TWEET_CHAR_LIMIT}</div>
@@ -315,23 +287,19 @@ async function handleH2hGenerate() {
     return;
   }
 
-  const style = document.querySelector('input[name="h2h-style"]:checked').value;
-
   const btn = document.getElementById("h2h-generate-btn");
   btn.disabled = true;
   resultsEl.innerHTML = "Generando...";
   try {
     const results = await api("/api/generate/stats/head-to-head-preview", {
       method: "POST",
-      body: JSON.stringify({ team_a: teamA, team_b: teamB, style }),
+      body: JSON.stringify({ team_a: teamA, team_b: teamB }),
     });
     resultsEl.innerHTML = results.map(h2hResultCardHtml).join("");
     results.forEach((r, idx) => {
-      if (r.content) {
-        const card = resultsEl.children[idx];
-        bindCopyButton(card.querySelector(".copy-h2h-btn"), () => r.content);
-        bindSaveButton(card.querySelector(".save-h2h-btn"), () => r.content, "h2h");
-      }
+      const card = resultsEl.children[idx];
+      bindCopyButton(card.querySelector(".copy-h2h-btn"), () => r.content);
+      bindSaveButton(card.querySelector(".save-h2h-btn"), () => r.content, "h2h");
     });
   } catch (e) {
     resultsEl.innerHTML = `<div class="empty-state">Error: ${escapeHtml(e.message)}</div>`;
@@ -342,14 +310,6 @@ async function handleH2hGenerate() {
 
 function h2hResultCardHtml(result) {
   const angleLabel = result.angle === "historial" ? "Enfoque: historial" : "Enfoque: forma reciente";
-  if (result.error) {
-    return `
-      <div class="card">
-        <div class="card-meta">${angleLabel}</div>
-        <div class="card-error">${escapeHtml(result.error)}</div>
-      </div>
-    `;
-  }
   return `
     <div class="card">
       <div class="card-meta">${angleLabel} · ${result.char_count} / ${TWEET_CHAR_LIMIT}</div>
@@ -391,15 +351,13 @@ async function handleDuelGenerate() {
     return;
   }
 
-  const style = document.querySelector('input[name="duel-style"]:checked').value;
-
   const btn = document.getElementById("duel-generate-btn");
   btn.disabled = true;
   resultsEl.innerHTML = "Generando...";
   try {
     const results = await api("/api/generate/duel", {
       method: "POST",
-      body: JSON.stringify({ team_a: teamA, team_b: teamB, style }),
+      body: JSON.stringify({ team_a: teamA, team_b: teamB }),
     });
     if (!results.length) {
       resultsEl.innerHTML =
@@ -408,11 +366,9 @@ async function handleDuelGenerate() {
     }
     resultsEl.innerHTML = results.map(duelResultCardHtml).join("");
     results.forEach((r, idx) => {
-      if (r.content) {
-        const card = resultsEl.children[idx];
-        bindCopyButton(card.querySelector(".copy-duel-btn"), () => r.content);
-        bindSaveButton(card.querySelector(".save-duel-btn"), () => r.content, "duel");
-      }
+      const card = resultsEl.children[idx];
+      bindCopyButton(card.querySelector(".copy-duel-btn"), () => r.content);
+      bindSaveButton(card.querySelector(".save-duel-btn"), () => r.content, "duel");
     });
   } catch (e) {
     resultsEl.innerHTML = `<div class="empty-state">Error: ${escapeHtml(e.message)}</div>`;
@@ -423,14 +379,6 @@ async function handleDuelGenerate() {
 
 function duelResultCardHtml(result) {
   const meta = `${result.role} · ${result.subject}`;
-  if (result.error) {
-    return `
-      <div class="card">
-        <div class="card-meta">${escapeHtml(meta)}</div>
-        <div class="card-error">${escapeHtml(result.error)}</div>
-      </div>
-    `;
-  }
   return `
     <div class="card">
       <div class="card-meta">${escapeHtml(meta)} · ${result.char_count} / ${TWEET_CHAR_LIMIT}</div>
@@ -469,7 +417,6 @@ async function handleStatsGenerate() {
     return;
   }
   const focus = document.getElementById("stats-focus").value.trim();
-  const style = document.querySelector('input[name="stats-style"]:checked').value;
   const scope = document.querySelector('input[name="stats-scope"]:checked').value;
 
   const usesLolpros = categories.includes("ranked") || usingRankedPlayers || usingRankedTeams;
@@ -482,7 +429,6 @@ async function handleStatsGenerate() {
     {
       categories,
       focus: focus || null,
-      style,
       scope,
       rivalry_team_a: rivalryTeamA || null,
       rivalry_team_b: rivalryTeamB || null,
@@ -504,72 +450,12 @@ async function handleCalendarGenerate() {
     setComposeFeedback("Marca al menos una liga (LES o LEC).", true);
     return;
   }
-  const style = document.querySelector('input[name="calendar-style"]:checked').value;
-
   setComposeFeedback("Consultando calendario...", false);
   await fillComposeFromGenerate(
     "/api/generate/calendar",
-    { leagues, style },
+    { leagues },
     "Calendario generado. Podes editarlo antes de guardar o publicar."
   );
-}
-
-async function handleBatchGenerate() {
-  const topics = document
-    .getElementById("batch-topics")
-    .value.split("\n")
-    .map((t) => t.trim())
-    .filter(Boolean);
-  const resultsEl = document.getElementById("batch-results");
-  if (!topics.length) {
-    resultsEl.innerHTML = '<div class="empty-state">Ingresa al menos un tema, uno por linea.</div>';
-    return;
-  }
-  const tone = document.getElementById("batch-tone").value.trim();
-  const instructions = document.getElementById("batch-instructions").value.trim();
-
-  const btn = document.getElementById("batch-generate-btn");
-  btn.disabled = true;
-  resultsEl.innerHTML = "Generando...";
-  try {
-    const results = await api("/api/generate/ai/batch", {
-      method: "POST",
-      body: JSON.stringify({ topics, tone: tone || null, instructions: instructions || null }),
-    });
-    resultsEl.innerHTML = results.map(batchResultCardHtml).join("");
-    results.forEach((r, idx) => {
-      if (r.content) {
-        const card = resultsEl.children[idx];
-        bindCopyButton(card.querySelector(".copy-batch-btn"), () => r.content);
-        bindSaveButton(card.querySelector(".save-batch-btn"), () => r.content, "batch");
-      }
-    });
-  } catch (e) {
-    resultsEl.innerHTML = `<div class="empty-state">Error: ${escapeHtml(e.message)}</div>`;
-  } finally {
-    btn.disabled = false;
-  }
-}
-
-function batchResultCardHtml(result) {
-  if (result.error) {
-    return `
-      <div class="card">
-        <div class="card-meta">Tema: ${escapeHtml(result.topic)}</div>
-        <div class="card-error">${escapeHtml(result.error)}</div>
-      </div>
-    `;
-  }
-  return `
-    <div class="card">
-      <div class="card-meta">Tema: ${escapeHtml(result.topic)} · ${result.char_count} / ${TWEET_CHAR_LIMIT}</div>
-      <div class="card-content">${escapeHtml(result.content)}</div>
-      <div class="card-actions">
-        <button class="save-batch-btn">Guardar</button>
-        <button class="copy-batch-btn">Copiar</button>
-      </div>
-    </div>
-  `;
 }
 
 function updateCharCounter() {
@@ -591,7 +477,7 @@ function setComposeFeedback(message, isError) {
 }
 
 // Patron compartido por los modos de Compose que generan texto y lo vuelcan
-// en el editor (IA, Calendario, Stats, Plantilla): pegarle al endpoint,
+// en el editor (Calendario, Stats, Plantilla): pegarle al endpoint,
 // llenar compose-content, y mostrar feedback de exito/error.
 async function fillComposeFromGenerate(endpoint, payload, successMessage) {
   try {
@@ -602,22 +488,6 @@ async function fillComposeFromGenerate(endpoint, payload, successMessage) {
   } catch (e) {
     setComposeFeedback(e.message, true);
   }
-}
-
-async function handleAiGenerate() {
-  const topic = document.getElementById("ai-topic").value.trim();
-  if (!topic) {
-    setComposeFeedback("Ingresa un tema para generar el tweet.", true);
-    return;
-  }
-  const tone = document.getElementById("ai-tone").value.trim();
-  const instructions = document.getElementById("ai-instructions").value.trim();
-  setComposeFeedback("Generando...", false);
-  await fillComposeFromGenerate(
-    "/api/generate/ai",
-    { topic, tone: tone || null, instructions: instructions || null },
-    "Tweet generado. Podes editarlo antes de guardar o publicar."
-  );
 }
 
 async function loadTemplateSelect() {
@@ -711,9 +581,6 @@ async function handleSave(publishNow) {
 
 function resetCompose() {
   document.getElementById("compose-content").value = "";
-  document.getElementById("ai-topic").value = "";
-  document.getElementById("ai-tone").value = "";
-  document.getElementById("ai-instructions").value = "";
   updateCharCounter();
 }
 

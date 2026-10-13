@@ -1,6 +1,5 @@
 from datetime import datetime, timezone
 
-from app.services.ai_service import AIGenerationError
 from app.services.golgg_service import GolGGError, PlayerStat
 from app.services.lolesports_service import LoLEsportsError, MatchInfo, RosterPlayer, TeamRosterNotFoundError
 
@@ -42,7 +41,6 @@ def test_generate_duel_success(client, mocker):
     assert body[0]["subject"] == "Escik vs Fulano"
     assert "Escik" in body[0]["content"]
     assert "Fulano" in body[0]["content"]
-    assert body[0]["error"] is None
 
 
 def test_generate_duel_no_common_role_returns_empty_list(client, mocker):
@@ -66,15 +64,6 @@ def test_generate_duel_rejects_same_team(client):
     assert res.status_code == 400
 
 
-def test_generate_duel_rejects_unknown_style(client, mocker):
-    _mock_success(mocker)
-
-    res = client.post(
-        "/api/generate/duel",
-        json={"team_a": "UCAM Esports", "team_b": "Barca eSports", "style": "flashy"},
-    )
-
-    assert res.status_code == 400
 
 
 def test_generate_duel_unknown_team_returns_400(client, mocker):
@@ -113,45 +102,8 @@ def test_generate_duel_golgg_failure_returns_502(client, mocker):
     assert res.status_code == 502
 
 
-def test_generate_duel_ai_style_uses_ai(client, mocker):
-    _mock_success(mocker)
-    ai_mock = mocker.patch(
-        "app.routers.generate.generate_individual_duel_variant", return_value="Duelo de mid con onda!"
-    )
-
-    res = client.post(
-        "/api/generate/duel",
-        json={"team_a": "UCAM Esports", "team_b": "Barca eSports", "style": "ai"},
-    )
-
-    assert res.status_code == 200
-    assert res.json()[0]["content"].startswith("Duelo de mid con onda!")
-    ai_mock.assert_called_once()
 
 
-def test_generate_duel_partial_ai_failure_still_returns_other_roles(client, mocker):
-    roster_a = [RosterPlayer(name="Escik", role="mid"), RosterPlayer(name="Andariel", role="bottom")]
-    roster_b = [RosterPlayer(name="Fulano", role="mid"), RosterPlayer(name="Mengano", role="bottom")]
-    player_stats = [_player("Escik"), _player("Fulano", kda=4.0), _player("Andariel"), _player("Mengano", kda=2.0)]
-    _mock_success(mocker, roster_a=roster_a, roster_b=roster_b, player_stats=player_stats)
-    mocker.patch(
-        "app.routers.generate.generate_individual_duel_variant",
-        side_effect=[AIGenerationError("Falta configurar ANTHROPIC_API_KEY"), "Duelo de adc!"],
-    )
-
-    res = client.post(
-        "/api/generate/duel",
-        json={"team_a": "UCAM Esports", "team_b": "Barca eSports", "style": "ai"},
-    )
-
-    assert res.status_code == 200
-    body = res.json()
-    assert len(body) == 2
-    errored = [r for r in body if r["error"]]
-    succeeded = [r for r in body if not r["error"]]
-    assert len(errored) == 1
-    assert len(succeeded) == 1
-    assert succeeded[0]["content"].startswith("Duelo de adc!")
 
 
 def test_generate_duel_appends_closing_tags_with_team_handles(client, mocker):

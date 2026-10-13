@@ -287,11 +287,6 @@ def _match_line(match: MatchInfo) -> str:
     )
 
 
-def build_matches_context(matches: list[MatchInfo]) -> str:
-    """Lista de partidos en texto plano, para pasarle como hechos a la IA."""
-    if not matches:
-        return "No hay partidos programados en los proximos 7 dias."
-    return "\n".join(_match_line(m) for m in matches)
 
 
 def format_schedule_tweet(matches: list[MatchInfo], league_slugs: list[str]) -> str:

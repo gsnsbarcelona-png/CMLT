@@ -1,6 +1,5 @@
 from datetime import datetime, timezone
 
-from app.services.ai_service import AIGenerationError
 from app.services.lolesports_service import LoLEsportsError, MatchInfo
 
 
@@ -50,39 +49,10 @@ def test_generate_calendar_service_error_returns_502(client, mocker):
     assert "calendario" in res.json()["detail"]
 
 
-def test_generate_calendar_hype_style_uses_ai(client, mocker):
-    mocker.patch("app.routers.generate.fetch_upcoming_matches", return_value=[_match()])
-    hype_mock = mocker.patch(
-        "app.routers.generate.generate_hype_calendar", return_value="Semana decisiva en la LES!"
-    )
-
-    res = client.post("/api/generate/calendar", json={"leagues": ["les"], "style": "hype"})
-
-    assert res.status_code == 200
-    assert res.json()["content"].startswith("Semana decisiva en la LES!")
-    hype_mock.assert_called_once()
-    context_arg, label_arg = hype_mock.call_args.args
-    assert "MKF 🆚 UCAM" in context_arg
-    assert label_arg == "LES"
 
 
-def test_generate_calendar_hype_style_ai_failure_returns_502(client, mocker):
-    mocker.patch("app.routers.generate.fetch_upcoming_matches", return_value=[_match()])
-    mocker.patch(
-        "app.routers.generate.generate_hype_calendar",
-        side_effect=AIGenerationError("Falta configurar ANTHROPIC_API_KEY"),
-    )
-
-    res = client.post("/api/generate/calendar", json={"leagues": ["les"], "style": "hype"})
-
-    assert res.status_code == 502
-    assert "ANTHROPIC_API_KEY" in res.json()["detail"]
 
 
-def test_generate_calendar_rejects_unknown_style(client):
-    res = client.post("/api/generate/calendar", json={"leagues": ["les"], "style": "flashy"})
-
-    assert res.status_code == 400
 
 
 def test_generate_calendar_appends_closing_tags(client, mocker):

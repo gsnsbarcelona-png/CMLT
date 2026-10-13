@@ -1,4 +1,3 @@
-from app.services.ai_service import AIGenerationError
 from app.services.golgg_service import GolGGError, PlayerStat, StatFocusNotFoundError, TeamStat
 from app.services.lolesports_service import TeamRosterNotFoundError
 from app.services.ranked_service import PlayerRank, RankedError
@@ -51,11 +50,6 @@ def test_generate_stats_rejects_unknown_category(client):
     assert res.status_code == 400
 
 
-def test_generate_stats_rejects_unknown_style(client, mocker):
-    mocker.patch("app.routers.generate.fetch_team_stats", return_value=[_team()])
-
-    res = client.post("/api/generate/stats", json={"categories": ["teams"], "style": "flashy"})
-    assert res.status_code == 400
 
 
 def test_generate_stats_rejects_unknown_scope(client, mocker):
@@ -98,30 +92,8 @@ def test_generate_stats_golgg_failure_returns_502(client, mocker):
     assert res.status_code == 502
 
 
-def test_generate_stats_ai_style_uses_ai(client, mocker):
-    mocker.patch("app.routers.generate.fetch_team_stats", return_value=[_team()])
-    _mock_no_h2h(mocker)
-    stat_mock = mocker.patch("app.routers.generate.generate_stat_tweet", return_value="Tweet con onda!")
-
-    res = client.post("/api/generate/stats", json={"categories": ["teams"], "style": "ai"})
-
-    assert res.status_code == 200
-    assert res.json()["content"].startswith("Tweet con onda!")
-    stat_mock.assert_called_once()
 
 
-def test_generate_stats_ai_failure_returns_502(client, mocker):
-    mocker.patch("app.routers.generate.fetch_team_stats", return_value=[_team()])
-    _mock_no_h2h(mocker)
-    mocker.patch(
-        "app.routers.generate.generate_stat_tweet",
-        side_effect=AIGenerationError("Falta configurar ANTHROPIC_API_KEY"),
-    )
-
-    res = client.post("/api/generate/stats", json={"categories": ["teams"], "style": "ai"})
-
-    assert res.status_code == 502
-    assert "ANTHROPIC_API_KEY" in res.json()["detail"]
 
 
 def test_generate_stats_scope_year_uses_aggregate_functions(client, mocker):

@@ -12,7 +12,7 @@ class Tweet(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     content: str
     status: str = Field(default="draft")  # draft | published | failed
-    source: str = Field(default="manual")  # ai | template | manual
+    source: str = Field(default="manual")  # modo de Compose que lo genero (calendar, stats, template, manual...)
     char_count: int = 0
     created_at: datetime = Field(default_factory=_utcnow)
     published_at: Optional[datetime] = None
