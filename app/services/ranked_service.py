@@ -19,7 +19,7 @@ class RankedError(Exception):
 # Solo consulta en vivo al generar (sin historial persistido, decision del
 # usuario) -- pero una cache corta evita repetir ~30 pedidos a lolpros.gg si
 # se genera "ranked" varias veces seguidas en pocos minutos.
-_CACHE_TTL_SECONDS = 300
+_CACHE_TTL_SECONDS = 900
 _http_cache: dict[str, tuple[float, str]] = {}
 
 

@@ -11,6 +11,7 @@ from app.services.golgg_service import (
     fetch_team_stats,
     format_league_comparison_plain,
     get_lec_tournament,
+    warm_stats_pages,
     pick_league_comparison_candidate,
 )
 
@@ -31,6 +32,9 @@ class LeagueComparisonVariantResult(BaseModel):
 
 @router.post("/league-comparison")
 def generate_league_comparison(payload: LeagueComparisonRequest) -> list[LeagueComparisonVariantResult]:
+    warm_stats_pages(
+        team_tournaments=[None, get_lec_tournament()], player_tournaments=[None, get_lec_tournament()]
+    )
     try:
         les_teams = fetch_team_stats()
         les_players = fetch_player_stats()

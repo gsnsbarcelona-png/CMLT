@@ -113,3 +113,35 @@ def test_fetch_team_stats_reports_format_change_when_all_rows_dropped(mocker):
 
     with pytest.raises(GolGGError, match="cambiado el formato"):
         fetch_team_stats("LES 2026 Summer")
+
+
+def test_warm_urls_fetches_in_parallel_and_ignores_errors(mocker):
+    calls = []
+
+    def fake_get(url):
+        calls.append(url)
+        if url.endswith("/b"):
+            raise GolGGError("caido")
+        return "<html></html>"
+
+    mocker.patch("app.services.golgg_service._cached_get", side_effect=fake_get)
+    golgg_service._real_warm_urls(["https://gol.gg/a", "https://gol.gg/b", "https://gol.gg/c", "https://gol.gg/a"])
+
+    assert sorted(calls) == ["https://gol.gg/a", "https://gol.gg/b", "https://gol.gg/c"]  # sin duplicados
+
+
+def test_parse_table_is_cached_for_same_html():
+    golgg_service._parse_table.cache_clear()
+    html = '<table class="playerslist"><tr><th>Name</th></tr></table>'
+    first = golgg_service._parse_table(html, "playerslist")
+    second = golgg_service._parse_table(html, "playerslist")
+    assert first is second
+
+
+def test_league_events_are_cached_between_calls(mocker):
+    from app.services import lolesports_service
+
+    fetch = mocker.patch.object(lolesports_service, "_fetch_league_events_uncached", return_value=[])
+    lolesports_service._fetch_league_events("les")
+    lolesports_service._fetch_league_events("les")
+    assert fetch.call_count == 1

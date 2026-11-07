@@ -7,6 +7,19 @@ from app.main import app
 
 
 @pytest.fixture(autouse=True)
+def _no_prewarm_and_clear_events_cache(monkeypatch):
+    """Sin precalentamiento al arrancar (pegaria a la red) y con la cache del
+    calendario limpia entre tests."""
+    from app.config import settings
+    from app.services import lolesports_service
+
+    monkeypatch.setattr(settings, "prewarm_cache", False)
+    lolesports_service._events_cache.clear()
+    yield
+    lolesports_service._events_cache.clear()
+
+
+@pytest.fixture(autouse=True)
 def _disable_golgg_autodiscover(monkeypatch):
     """Los tests usan los torneos del settings; el autodescubrimiento (que
     pega a gol.gg) se prueba aparte, activandolo explicitamente."""
@@ -14,6 +27,8 @@ def _disable_golgg_autodiscover(monkeypatch):
     from app.services import golgg_service
 
     monkeypatch.setattr(settings, "golgg_autodiscover", False)
+    # warm_urls descarga paginas reales en paralelo: en tests, sin red.
+    monkeypatch.setattr(golgg_service, "warm_urls", lambda urls: None)
     golgg_service.reset_active_config_cache()
     yield
     golgg_service.reset_active_config_cache()

@@ -1,4 +1,5 @@
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 
 import httpx
 from fastapi import APIRouter, HTTPException
@@ -22,6 +23,7 @@ from app.services.golgg_service import (
     format_h2h_variant_plain,
     format_stat_tweet_plain,
     get_emea_masters_tournaments,
+    warm_stats_pages,
     get_year_tournaments,
     pick_candidate,
     stat_closing_tags,
@@ -74,12 +76,14 @@ def list_h2h_teams() -> list[str]:
     Masters en la temporada -- a diferencia de /stats/teams (solo LES, usado
     por el resto de los modos), aca hace falta poder elegir un rival de
     EMEA Masters que nunca jugo en LES."""
+    emea_tournaments = get_emea_masters_tournaments()
+    warm_stats_pages(team_tournaments=[None, *emea_tournaments])
     try:
         names = {t.name for t in fetch_team_stats()}
     except GolGGError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
-    for tournament in get_emea_masters_tournaments():
+    for tournament in emea_tournaments:
         try:
             names.update(t.name for t in fetch_team_stats(tournament))
         except GolGGError:
@@ -233,8 +237,12 @@ def generate_stats(payload: StatGenerateRequest) -> GenerateResult:
         roster_a = reconcile_player_casing(roster_a, known_players)
         roster_b = reconcile_player_casing(roster_b, known_players)
 
-        ranks_a, _unresolved_a = fetch_all_player_ranks(roster_a)
-        ranks_b, _unresolved_b = fetch_all_player_ranks(roster_b)
+        # Los dos equipos en paralelo (cada uno ya paraleliza sus jugadores).
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            future_a = pool.submit(fetch_all_player_ranks, roster_a)
+            future_b = pool.submit(fetch_all_player_ranks, roster_b)
+            ranks_a, _unresolved_a = future_a.result()
+            ranks_b, _unresolved_b = future_b.result()
         try:
             candidate = compute_team_vs_team_candidate(ranked_team_a, ranked_team_b, ranks_a, ranks_b)
         except RankedError as exc:

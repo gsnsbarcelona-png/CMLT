@@ -1,7 +1,9 @@
+import functools
 import logging
 import random
 import re
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import Callable
 
@@ -30,7 +32,7 @@ class StatFocusNotFoundError(GolGGError):
 # recorre los mismos torneos que aggregate_team_stats, y el usuario suele
 # generar varias veces seguidas mientras prueba/edita). Una cache corta en
 # memoria evita repetir esos pedidos sin arriesgar datos muy desactualizados.
-_CACHE_TTL_SECONDS = 300
+_CACHE_TTL_SECONDS = 900
 _MAX_ATTEMPTS = 2
 _RETRY_BACKOFF_SECONDS = 1.0
 _http_cache: dict[str, tuple[float, str]] = {}
@@ -268,13 +270,68 @@ def _tournament_path(prefix: str, tournament: str | None = None) -> str:
     )
 
 
+@functools.lru_cache(maxsize=64)
+def _parse_table(html: str, table_class: str):
+    """Parsear una pagina de gol.gg con BeautifulSoup es CPU pura y se
+    repetia en cada llamada aunque el HTML ya estuviera cacheado. El mismo
+    string de HTML (misma identidad, viene de _http_cache) reutiliza el
+    resultado. Solo se lee la tabla, nunca se modifica."""
+    return BeautifulSoup(html, "html.parser").find("table", class_=table_class)
+
+
 def _fetch_table(url: str, table_class: str) -> BeautifulSoup:
-    html = _cached_get(url)
-    soup = BeautifulSoup(html, "html.parser")
-    table = soup.find("table", class_=table_class)
+    table = _parse_table(_cached_get(url), table_class)
     if table is None:
         raise GolGGError("gol.gg devolvio una pagina sin la tabla de estadisticas esperada.")
     return table
+
+
+_PREFETCH_WORKERS = 6
+
+
+def warm_urls(urls: list[str]) -> None:
+    """Descarga varias paginas de gol.gg EN PARALELO para llenar la cache; el
+    codigo secuencial de despues las encuentra ya cacheadas. Los errores se
+    ignoran aqui a proposito: reaparecen (con reintentos y copia cacheada) en
+    la llamada normal, que es la que sabe como degradar."""
+    unique = list(dict.fromkeys(urls))
+    if len(unique) < 2:
+        return
+
+    def _safe(url: str) -> None:
+        try:
+            _cached_get(url)
+        except GolGGError:
+            pass
+
+    with ThreadPoolExecutor(max_workers=min(_PREFETCH_WORKERS, len(unique))) as pool:
+        list(pool.map(_safe, unique))
+
+
+_real_warm_urls = warm_urls  # los tests parchean warm_urls (sin red) y usan esta para probarla
+
+
+def warm_stats_pages(team_tournaments: list[str | None] = (), player_tournaments: list[str | None] = ()) -> None:
+    """Calienta en paralelo las tablas de equipos/jugadores de esos torneos
+    (None = el torneo actual)."""
+    warm_urls(
+        [_tournament_path("teams", t) for t in team_tournaments]
+        + [_tournament_path("players", t) for t in player_tournaments]
+    )
+
+
+def prewarm() -> None:
+    """Se lanza en segundo plano al arrancar (Render tarda en despertar y el
+    primer clic pagaba todas las descargas): descubre la config y calienta las
+    paginas mas usadas. Nunca levanta."""
+    try:
+        config = get_active_config()
+        warm_stats_pages(
+            team_tournaments=[None, config.lec_tournament],
+            player_tournaments=[None, config.lec_tournament],
+        )
+    except Exception:
+        logger.warning("Precalentamiento de gol.gg fallo (no es grave)", exc_info=True)
 
 
 def _header_index(table: BeautifulSoup) -> tuple[dict[str, int], list]:
@@ -402,6 +459,7 @@ def aggregate_team_stats(tournaments: list[str]) -> list[TeamStat]:
     como K:D (combinar dos ratios promediando no es lo mismo que recalcular
     desde los totales de kills/deaths crudos), pero alcanza para este uso.
     """
+    warm_stats_pages(team_tournaments=tournaments)
     by_name: dict[str, list[TeamStat]] = {}
     for tournament in tournaments:
         for team in fetch_team_stats(tournament):
@@ -430,6 +488,7 @@ def aggregate_team_stats(tournaments: list[str]) -> list[TeamStat]:
 
 def aggregate_player_stats(tournaments: list[str]) -> list[PlayerStat]:
     by_name: dict[str, list[PlayerStat]] = {}
+    warm_stats_pages(player_tournaments=tournaments)
     for tournament in tournaments:
         for player in fetch_player_stats(tournament):
             by_name.setdefault(player.name, []).append(player)
@@ -525,6 +584,7 @@ def fetch_match_results(tournament: str) -> list[MatchResult]:
 
 
 def fetch_all_match_results(tournaments: list[str]) -> list[MatchResult]:
+    warm_urls([f"{GOLGG_BASE}/tournament/tournament-matchlist/{t}/" for t in tournaments])
     all_results: list[MatchResult] = []
     for tournament in tournaments:
         all_results.extend(fetch_match_results(tournament))

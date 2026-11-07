@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     # de abajo quedan como respaldo si gol.gg no responde. Ponelo en false
     # para forzar a mano los valores configurados.
     golgg_autodiscover: bool = True
+    # Calienta la cache de gol.gg/lolesports en segundo plano al arrancar.
+    prewarm_cache: bool = True
     golgg_season: str = "S16"
     golgg_tournament: str = "LES 2026 Summer"
     # Torneos que forman "todo el año" para el scope=year de Stats (separados por

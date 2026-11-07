@@ -1,5 +1,6 @@
 import logging
 import os
+import threading
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -18,6 +19,18 @@ from app.routers.images import IMAGES_DIR
 from app.version import router as version_router
 
 
+def _prewarm() -> None:
+    """Calienta las caches en segundo plano sin bloquear el arranque ni
+    romperlo si una fuente esta caida."""
+    from app.services import golgg_service, lolesports_service
+
+    golgg_service.prewarm()
+    try:
+        lolesports_service._fetch_all_teams()
+    except Exception:
+        logger.warning("Precalentamiento de lolesports fallo (no es grave)", exc_info=True)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # En Render (que define RENDER=true) la app es publica: sin contrasena
@@ -26,6 +39,8 @@ async def lifespan(app: FastAPI):
         raise RuntimeError("APP_PASSWORD no esta configurada: la app es publica en Render y quedaria abierta.")
     init_db()
     IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+    if settings.prewarm_cache:
+        threading.Thread(target=_prewarm, daemon=True, name="prewarm").start()
     yield
 
 

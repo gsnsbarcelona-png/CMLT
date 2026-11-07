@@ -158,7 +158,23 @@ def _parse_team(team: dict | None) -> tuple[str, str]:
     return team.get("name") or "TBD", team.get("code") or "TBD"
 
 
+# El calendario cambia poco (un partido que termina, uno que empieza), y los
+# modos H2H/Duelo/Calendario lo piden varias veces seguidas: cache corta.
+_EVENTS_CACHE_TTL_SECONDS = 90
+_events_cache: dict[str, tuple[float, list[dict]]] = {}
+
+
 def _fetch_league_events(league_slug: str) -> list[dict]:
+    cached = _events_cache.get(league_slug)
+    now = time_module.monotonic()
+    if cached is not None and now - cached[0] < _EVENTS_CACHE_TTL_SECONDS:
+        return cached[1]
+    events = _fetch_league_events_uncached(league_slug)
+    _events_cache[league_slug] = (now, events)
+    return events
+
+
+def _fetch_league_events_uncached(league_slug: str) -> list[dict]:
     league_id = LEAGUE_IDS[league_slug]
     try:
         response = httpx.get(
