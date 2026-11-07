@@ -475,3 +475,17 @@ input[type="password"] {
 @keyframes image-pulse { 50% { opacity: .25; } }
 @media (prefers-reduced-motion: reduce) { .image-loading { animation: none; } }
 .auto-image-setting { font-size: 12px; opacity: .8; margin-top: 8px; }
+/* Sugerencia del día */
+.suggestions { margin-bottom: 14px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); }
+.suggestions-title { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px; }
+.suggestions-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.suggestion-btn { display: inline-flex; align-items: center; gap: 8px; text-align: left; padding: 8px 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--panel); color: var(--text); cursor: pointer; font: inherit; }
+.suggestion-btn:hover:not(:disabled) { background: var(--hover); border-color: var(--primary); }
+.suggestion-btn:disabled { cursor: default; opacity: .8; }
+.suggestion-btn:focus-visible { outline: 2px solid var(--primary-dark); outline-offset: 2px; }
+.suggestion-txt { display: flex; flex-direction: column; font-size: 13px; line-height: 1.25; }
+.suggestion-txt span { color: var(--muted); font-size: 12px; }
+.suggestion-skeleton { height: 38px; width: 220px; max-width: 100%; border-radius: 999px; }
+@media (max-width: 640px) {
+  .suggestion-btn { flex: 1 1 100%; border-radius: 10px; }
+}

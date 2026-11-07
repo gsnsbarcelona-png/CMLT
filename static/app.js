@@ -655,6 +655,90 @@ function switchTab(name) {
   document.querySelectorAll(".tab-panel").forEach((p) => p.classList.toggle("active", p.id === `tab-${name}`));
   if (name === "drafts") loadDrafts();
   if (name === "history") loadHistory();
+  if (name === "compose") refreshSuggestions();
+}
+
+// ---------- Sugerencia del día ----------
+// Banner sobre el selector de modos con lo que toca hoy (GET
+// /api/suggestions/today). Carga al abrir y al volver a Compose tras >5 min.
+const SUGGESTIONS_TTL_MS = 5 * 60 * 1000;
+let suggestionsLoadedAt = 0;
+let suggestionsLoading = false;
+const SUGGESTION_ICONS = { h2h: "🆚", "match-day": "⚔️", results: "🏁", calendar: "📅", anniversary: "🎂", empty: "😴" };
+const SUGGESTION_GENERATE_BTN = {
+  h2h: "h2h-generate-btn",
+  "match-day": "match-day-generate-btn",
+  results: "results-generate-btn",
+  calendar: "calendar-generate-btn",
+  anniversary: "anniversary-generate-btn",
+};
+
+async function refreshSuggestions(force = false) {
+  const box = document.getElementById("suggestions");
+  if (!box || suggestionsLoading) return;
+  if (!force && suggestionsLoadedAt && Date.now() - suggestionsLoadedAt < SUGGESTIONS_TTL_MS) return;
+  suggestionsLoading = true;
+  // Skeleton solo la primera vez; en recargas se mantiene lo anterior.
+  if (!suggestionsLoadedAt) {
+    box.hidden = false;
+    box.innerHTML =
+      '<div class="suggestions-title">Sugerencia del día</div><div class="suggestions-list">' +
+      '<div class="skeleton-line suggestion-skeleton"></div><div class="skeleton-line suggestion-skeleton"></div></div>';
+  }
+  try {
+    const data = await api("/api/suggestions/today");
+    suggestionsLoadedAt = Date.now();
+    renderSuggestions(box, data.suggestions || []);
+  } catch (e) {
+    box.hidden = true;
+    box.innerHTML = "";
+  } finally {
+    suggestionsLoading = false;
+  }
+}
+
+function renderSuggestions(box, items) {
+  if (!items.length) {
+    box.hidden = true;
+    box.innerHTML = "";
+    return;
+  }
+  box.hidden = false;
+  box.innerHTML =
+    '<div class="suggestions-title">Sugerencia del día</div><div class="suggestions-list">' +
+    items
+      .map(
+        (s, i) =>
+          `<button type="button" class="suggestion-btn" data-idx="${i}"${s.mode ? "" : " disabled"}>` +
+          `<span class="chip-ico" aria-hidden="true">${SUGGESTION_ICONS[s.kind] || "💡"}</span>` +
+          `<span class="suggestion-txt"><strong>${escapeHtml(s.title)}</strong><span>${escapeHtml(s.detail || "")}</span></span></button>`
+      )
+      .join("") +
+    "</div>";
+  box.querySelectorAll(".suggestion-btn").forEach((btn) =>
+    btn.addEventListener("click", () => applySuggestion(items[Number(btn.dataset.idx)]))
+  );
+}
+
+async function applySuggestion(s) {
+  if (!s || !s.mode) return;
+  const radio = document.querySelector(`input[name="mode"][value="${s.mode}"]`);
+  if (!radio) return;
+  radio.checked = true;
+  radio.dispatchEvent(new Event("change", { bubbles: true }));
+  if (s.mode === "h2h" && s.params) {
+    const a = document.getElementById("h2h-team-a");
+    const b = document.getElementById("h2h-team-b");
+    // Las listas de equipos se cargan en segundo plano: esperar un poco.
+    for (let i = 0; i < 20 && (a.options.length < 2 || b.options.length < 2); i++) {
+      await new Promise((r) => setTimeout(r, 150));
+    }
+    const okA = selectTeamOption(a, s.params.team_a || "");
+    const okB = selectTeamOption(b, s.params.team_b || "");
+    if (!okA || !okB) return; // sin los dos equipos no se lanza nada
+  }
+  const btn = document.getElementById(SUGGESTION_GENERATE_BTN[s.mode]);
+  if (btn && !btn.disabled) btn.click();
 }
 
 // ---------- Config banner ----------
@@ -774,6 +858,7 @@ function initCompose() {
   // incluye los rivales de EMEA Masters (para poder armar H2H cuando un
   // equipo de LES juega ahi contra alguien que nunca jugo en LES).
   loadTeamOptions(["h2h-team-a", "h2h-team-b"], "/api/generate/stats/h2h-teams");
+  refreshSuggestions();
 }
 
 async function loadTeamOptions(selectIds, endpoint = "/api/generate/stats/teams") {
