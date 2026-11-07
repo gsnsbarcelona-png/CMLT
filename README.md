@@ -2,7 +2,7 @@
 
 Aplicación web local para generar tweets a partir de datos reales de la LES/LEC (o manualmente), revisarlos, copiarlos y opcionalmente publicarlos en X (Twitter) con un click.
 
-En Compose hay nueve modos visibles por defecto — **Calendario**, **Dia de partido** (pack en un clic: calendario + H2H de cada partido de hoy), **Resultados** (marcadores de la ultima jornada), **Stats**, **H2H Hoy**, **Duelo 1v1**, **Top/Ranking**, **Efeméride** y **Cruce LEC** — más **Plantilla** y **Manual** disponibles en el código pero ocultos del selector (reactivarlos es agregar su `<label>` en `static/index.html`). Los modos de datos reales arman el texto con frases fijas a partir de los datos reales; la app no usa IA. Las preguntas de cierre tienen varias redacciones alternativas (`app/services/phrasing.py`) y se evita repetir las usadas hace poco, asi regenerar da un texto distinto.
+En Compose hay nueve modos visibles por defecto — **Calendario**, **Día de partido** (pack en un clic: calendario + H2H de cada partido de hoy), **Resultados** (marcadores de la última jornada), **Stats**, **H2H Hoy**, **Duelo 1v1**, **Top/Ranking**, **Efeméride** y **Cruce LEC** — más **Plantilla** y **Manual** disponibles en el código pero ocultos del selector (reactivarlos es agregar su `<label>` en `static/index.html`). Los modos de datos reales arman el texto con frases fijas a partir de los datos reales; la app no usa IA. Las preguntas de cierre tienen varias redacciones alternativas (`app/services/phrasing.py`) y se evita repetir las usadas hace poco, así regenerar da un texto distinto.
 
 - **Calendario**: próximos partidos de **LES** y/o **LEC**, datos reales de la API pública de LoL Esports.
 - **Stats**: "stats curiosas" (KDA, winrate, first blood, rivalidad/head-to-head entre equipos, y rango en ranked SoloQ vía lolpros.gg) con datos reales de **gol.gg** y **lolpros.gg**. **Split actual** o **Todo el año** (todos los torneos del año combinados), foco en un equipo/jugador, o rivalidad de un par puntual.
@@ -53,7 +53,7 @@ Este es el paso más delicado, seguilo en orden:
 4. En la sección **"Keys and tokens"** de la App, copia:
    - **API Key** y **API Key Secret** → van en `X_API_KEY` / `X_API_SECRET`.
 5. En la misma pantalla, genera (botón **"Generate"**) el **Access Token and Secret**.
-   > Importante: si ya los habías generado *antes* de configurar los permisos "Read and Write", **regeneralos** — si no, la publicación va a fallar con error 403.
+   > Importante: si ya los habías generado *antes* de configurar los permisos "Read and Write", **regenéralos** — si no, la publicación va a fallar con error 403.
 6. Copia esos valores en `X_ACCESS_TOKEN` / `X_ACCESS_TOKEN_SECRET`.
 
 ## Calendario LES/LEC/EMEA Masters
@@ -138,12 +138,12 @@ Con `APP_PASSWORD` vacía (el valor por defecto) no se pide login, y la app func
 app/
   main.py, config.py, db.py, models.py, auth.py (login opcional)
   data/         # les_anniversaries.json, les_lec_players.json (bases curadas)
-  routers/      # tweets, images (subida de imagenes)
+  routers/      # tweets, images (subida de imágenes)
                 # generate/ (paquete, un sub-router por dominio: calendar, stats, duel,
                 #            anniversary, league_comparison, top_ranking, results)
   services/     # x_service, char_count,
                 # lolesports_service (Calendario), golgg_service (Stats/H2H/Cruce LEC),
-                # history_service (Efemeride), crossover_service (Cruce LEC: jugadores),
+                # history_service (Efeméride), crossover_service (Cruce LEC: jugadores),
                 # ranked_service (Stats: ranked SoloQ via lolpros.gg),
                 # duel_service (Duelo 1v1: roster/rol de lolesports.com + stats de gol.gg),
                 # image_service (composite "VS" de dos escudos y fondo de marca, con Pillow)
@@ -152,7 +152,7 @@ tests/          # pytest, con mocks para X, LoL Esports y gol.gg
 
 data/             # gitignored -- generado en runtime
   tweets.db       # SQLite (borradores, historial)
-  images/         # imagenes subidas a mano o descargadas para adjuntar a un tweet
+  images/         # imágenes subidas a mano o descargadas para adjuntar a un tweet
 ```
 
 ## Correr los tests
@@ -183,7 +183,7 @@ Los tests corren sin necesidad de credenciales reales (mockean las llamadas a X 
 
 | Error al publicar | Causa probable |
 |---|---|
-| "credenciales... invalidas o expiraron" (401) | Keys de X mal copiadas o revocadas. |
+| "credenciales... inválidas o expiraron" (401) | Keys de X mal copiadas o revocadas. |
 | "permisos insuficientes" (403) | La app no tiene permisos "Read and Write", o el Access Token se generó antes de cambiarlos (hay que regenerarlo). |
 | "muy similar a uno reciente" (403 duplicado) | X no permite publicar el mismo texto dos veces seguidas. Modifica el tweet. |
-| "Limite de publicaciones alcanzado" (429) | Se llegó al límite del plan Free (~500 posts/mes). |
+| "Límite de publicaciones alcanzado" (429) | Se llegó al límite del plan Free (~500 posts/mes). |

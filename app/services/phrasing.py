@@ -52,7 +52,7 @@ QUESTION_ALTERNATIVES: dict[str, list[str]] = {
     "¿Se mantiene arriba?": ["¿Seguirá liderando?", "¿Alguien le quita el puesto?"],
     "¿Se mantiene el top 1?": ["¿Cambia el liderato?", "¿Alguien destrona al primero?"],
     # Efemeride
-    "¿Lo viviste en directo?": ["¿Dónde estabas tu cuando pasó?", "¿Te acuerdas de aquello?"],
+    "¿Lo viviste en directo?": ["¿Dónde estabas tú cuando pasó?", "¿Te acuerdas de aquello?"],
 }
 
 
