@@ -18,6 +18,9 @@ class GenerateResult(BaseModel):
     char_count: int
     within_limit: bool
     suggested_teams: list[str] = []
+    # Datos estructurados para "Crear imagen" (/api/images/card/...); solo
+    # Resultados lo rellena.
+    card: dict | None = None
 
 
 class TodayMatchInfo(BaseModel):

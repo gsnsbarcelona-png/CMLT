@@ -346,6 +346,38 @@ function bindImagePicker(root, { suggestedTeams = [], initialUrl = null } = {}) 
   setImage(initialUrl);
 }
 
+// Boton "Crear imagen" (tarjeta PNG de Resultados / Top 3): se crea
+// dinamicamente dentro de un `.image-picker` ya enlazado con bindImagePicker.
+// `card` es el objeto `card` que devuelve el endpoint de generacion (con
+// `kind` "results" o "top"); sin card quita el boton. Deja la imagen en el
+// mismo estado que usa el image-picker (root.dataset.imageUrl + vista previa).
+function attachCardButton(root, card) {
+  const picker = root.querySelector(".image-picker") || root;
+  picker.querySelectorAll(".create-card-btn").forEach((b) => b.remove());
+  if (!card || (card.kind !== "results" && card.kind !== "top")) return;
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "create-card-btn";
+  btn.textContent = "Crear imagen";
+  btn.addEventListener("click", async () => {
+    btn.disabled = true;
+    try {
+      const { kind, ...body } = card;
+      const res = await api(`/api/images/card/${kind}`, { method: "POST", body: JSON.stringify(body) });
+      root.dataset.imageUrl = res.image_url;
+      const preview = picker.querySelector(".image-preview");
+      preview.src = res.image_url;
+      preview.hidden = false;
+      picker.querySelector(".remove-image-btn").hidden = false;
+    } catch (e) {
+      toast(e.message, "error");
+    } finally {
+      btn.disabled = false;
+    }
+  });
+  picker.appendChild(btn);
+}
+
 // Patron compartido por los modos de Compose que generan varias tarjetas de
 // resultado a partir de UN pedido (H2H, Duelo 1v1, Top/Ranking, Efemeride,
 // Cruce LEC, Lote): mismo esqueleto de tarjeta (meta + contenido + Guardar/
@@ -408,6 +440,7 @@ async function generateResultCards({
       if (r.content) {
         const card = resultsEl.children[idx];
         bindImagePicker(card, { suggestedTeams: r.suggested_teams || [] });
+        attachCardButton(card, r.card);
         // El texto es editable: todos los botones leen lo que haya en el textarea.
         const textarea = card.querySelector(".card-edit-result");
         const counter = card.querySelector(".result-char-counter");
@@ -1043,6 +1076,7 @@ async function fillComposeFromGenerate(endpoint, payload, successMessage) {
       imagePicker.innerHTML = imagePickerHtml();
       bindImagePicker(imagePicker, { suggestedTeams: result.suggested_teams });
     }
+    attachCardButton(imagePicker, result.card);
     setComposeFeedback(successMessage, false);
   } catch (e) {
     setComposeFeedback(e.message, true);

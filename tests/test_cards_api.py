@@ -63,6 +63,28 @@ def test_endpoints_store_valid_png(client, tmp_path, monkeypatch):
     assert len(list(images_dir.iterdir())) == 2
 
 
+def test_generate_payloads_feed_card_endpoints(client, mocker, tmp_path, monkeypatch):
+    from datetime import datetime, timezone
+
+    from app.services import lolesports_service
+    from tests.test_generate_top_ranking_api import _players
+
+    monkeypatch.setattr(images_module, "IMAGES_DIR", tmp_path / "images")
+    info = lolesports_service.ResultInfo(
+        start_time=datetime(2026, 11, 7, 12, tzinfo=timezone.utc), league_slug="les", block_name="Final",
+        team1_name="A", team1_code="AAA", team2_name="B", team2_code="BBB", score1=3, score2=1,
+    )
+    mocker.patch("app.routers.generate.results.fetch_latest_results", return_value=[info])
+    card = client.post("/api/generate/results", json={"leagues": ["les"]}).json()["card"]
+    assert card.pop("kind") == "results"
+    assert client.post("/api/images/card/results", json=card).status_code == 200
+
+    mocker.patch("app.routers.generate.top_ranking.fetch_player_stats", return_value=_players())
+    card = client.post("/api/generate/top-ranking", json={"category": "player_kda"}).json()[0]["card"]
+    assert card.pop("kind") == "top"
+    assert client.post("/api/images/card/top", json=card).status_code == 200
+
+
 def test_twelve_long_rows_still_render(client, tmp_path, monkeypatch):
     monkeypatch.setattr(images_module, "IMAGES_DIR", tmp_path / "images")
     match = {"team1": "A" * 40, "team2": "B" * 40, "score1": 2, "score2": 1, "block": "C" * 40}

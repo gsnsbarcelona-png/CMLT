@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from app.routers.generate._shared import _closing_tags_for, _generate_variants
+from app.services.golgg.config import get_current_tournament
 from app.services.golgg_service import (
     TOP_RANKING_CATEGORIES,
     TOP_RANKING_CATEGORY_LABELS,
@@ -25,6 +26,7 @@ class TopRankingVariantResult(BaseModel):
     char_count: int | None = None
     within_limit: bool | None = None
     suggested_teams: list[str] = []
+    card: dict | None = None  # datos para "Crear imagen" (/api/images/card/top)
 
 
 @router.get("/top-ranking/categories")
@@ -52,6 +54,14 @@ def generate_top_ranking(payload: TopRankingGenerateRequest) -> list[TopRankingV
     # el equipo de cada jugador, no se inventa para las categorias de jugador.
     suggested_teams = [leader.name] if candidate.level == "team" else []
 
+    card = {
+        "kind": "top",
+        "title": f"TOP {candidate.category_label.upper()}"[:60],
+        "subtitle": get_current_tournament()[:80],
+        "unit": candidate.unit_label[:30],
+        "entries": [{"name": e.name[:50], "value": e.value_display[:20]} for e in candidate.entries[:3]],
+    }
+
     return _generate_variants(
         ("top1", "top3"),
         plain_fn=lambda variant: format_top_ranking_plain(candidate, variant),
@@ -62,5 +72,6 @@ def generate_top_ranking(payload: TopRankingGenerateRequest) -> list[TopRankingV
             char_count=count,
             within_limit=within,
             suggested_teams=suggested_teams,
+            card=card,
         ),
     )
