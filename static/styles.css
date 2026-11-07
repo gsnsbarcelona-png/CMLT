@@ -258,7 +258,6 @@ input[type="text"], textarea, select {
 
 .char-counter-row .char-counter { margin-bottom: 0; }
 
-.card-copy-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
 
 .rivalry-row { display: flex; gap: 10px; margin-top: 6px; }
 .rivalry-row select { flex: 1; }
@@ -335,7 +334,6 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .empty-state { color: var(--muted); font-size: 14px; padding: 20px 0; text-align: center; }
 
-.var-input { margin-bottom: 10px; }
 
 .logout-btn { padding: 6px 12px; font-size: 13px; }
 .theme-btn { margin-left: auto; padding: 6px 10px; font-size: 16px; line-height: 1; }
