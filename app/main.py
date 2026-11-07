@@ -12,6 +12,7 @@ from app.config import settings
 from app.db import init_db
 from app.routers import generate, images, templates, tweets
 from app.routers.images import IMAGES_DIR
+from app.version import router as version_router
 
 
 @asynccontextmanager
@@ -44,6 +45,7 @@ async def security_headers(request, call_next):
     return response
 
 app.include_router(auth_router)
+app.include_router(version_router)
 app.include_router(tweets.router)
 app.include_router(generate.router)
 app.include_router(templates.router)

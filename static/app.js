@@ -1041,12 +1041,29 @@ async function initLogout() {
   }
 }
 
+async function showVersion() {
+  const el = document.getElementById("app-version");
+  try {
+    const v = await api("/api/version");
+    const when = new Date(v.started_at).toLocaleString();
+    let status = "";
+    if (v.up_to_date === true) status = ' · <span class="version-ok">✓ ultima version</span>';
+    else if (v.up_to_date === false) {
+      status = ` · <span class="version-old">hay una nueva (${escapeHtml(v.latest)}), recarga en unos minutos</span>`;
+    }
+    el.innerHTML = `Version ${escapeHtml(v.commit)} · iniciada ${escapeHtml(when)}${status}`;
+  } catch (e) {
+    // silencioso: la version es informativa, no bloquea la app
+  }
+}
+
 // ---------- Init ----------
 document.addEventListener("DOMContentLoaded", () => {
   initTabs();
   initCompose();
   initTemplateForm();
   checkConfig();
+  showVersion();
   initLogout();
 });
 

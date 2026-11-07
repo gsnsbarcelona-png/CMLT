@@ -80,3 +80,33 @@ def test_app_refuses_to_start_on_render_without_password(monkeypatch):
     with pytest.raises(RuntimeError):
         with TestClient(app):
             pass
+
+
+def test_version_endpoint_reports_commit_and_up_to_date(client, mocker, monkeypatch):
+    from app import version
+
+    monkeypatch.setenv("RENDER_GIT_COMMIT", "abcdef1234567890")
+    version._latest_cache.update(at=0.0, value=None)
+    mocker.patch(
+        "httpx.get",
+        return_value=mocker.Mock(status_code=200, json=lambda: {"sha": "abcdef1234567890"}),
+    )
+    body = client.get("/api/version").json()
+    assert body["commit"] == "abcdef1"
+    assert body["up_to_date"] is True
+
+    version._latest_cache.update(at=0.0, value=None)
+    mocker.patch("httpx.get", return_value=mocker.Mock(status_code=200, json=lambda: {"sha": "9999999aaaa"}))
+    assert client.get("/api/version").json()["up_to_date"] is False
+
+
+def test_version_endpoint_survives_github_failure(client, mocker, monkeypatch):
+    import httpx
+
+    from app import version
+
+    monkeypatch.setenv("RENDER_GIT_COMMIT", "abcdef1234567890")
+    version._latest_cache.update(at=0.0, value=None)
+    mocker.patch("httpx.get", side_effect=httpx.ConnectError("boom"))
+    body = client.get("/api/version").json()
+    assert body["latest"] is None and body["up_to_date"] is None
