@@ -277,3 +277,44 @@ input[type="password"] {
   /* 16px evita que iOS haga zoom al enfocar un campo */
   input[type="text"], input[type="password"], textarea, select { font-size: 16px; }
 }
+
+/* Toasts y dialogo de confirmacion */
+.toast-container {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(92vw, 420px);
+  z-index: 1000;
+  pointer-events: none;
+}
+.toast {
+  pointer-events: auto;
+  padding: 10px 14px;
+  border-radius: 8px;
+  color: #fff;
+  background: #1f2937;
+  font-size: 14px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+}
+.toast-error { background: #b91c1c; }
+
+.confirm-dialog {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+  max-width: min(92vw, 420px);
+  background: var(--panel);
+  color: var(--text);
+}
+.confirm-dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
+.confirm-dialog p { margin: 0 0 16px; }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.confirm-actions button { padding: 8px 14px; border-radius: 6px; cursor: pointer; font: inherit; }
+.confirm-actions .secondary { background: var(--panel); color: var(--text); border: 1px solid var(--border); }
+.confirm-actions .confirm-ok { background: #0f6cb6; color: #fff; border: 1px solid #0f6cb6; }
+.confirm-actions button:focus-visible { outline: 3px solid #0f6cb6; outline-offset: 2px; }

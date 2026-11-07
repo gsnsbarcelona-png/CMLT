@@ -62,6 +62,72 @@ async function apiRequest(path, options) {
   return body;
 }
 
+// Avisos no bloqueantes (sustituyen a alert). Region aria-live, se cierran solos.
+function toast(message, variant = "info") {
+  let host = document.getElementById("toast-container");
+  if (!host) {
+    host = document.createElement("div");
+    host.id = "toast-container";
+    host.className = "toast-container";
+    host.setAttribute("role", "status");
+    host.setAttribute("aria-live", "polite");
+    document.body.appendChild(host);
+  }
+  const el = document.createElement("div");
+  el.className = `toast toast-${variant === "error" ? "error" : "info"}`;
+  el.textContent = message;
+  host.appendChild(el);
+  const remove = () => el.remove();
+  setTimeout(remove, 4000);
+  el.addEventListener("click", remove);
+}
+
+// Dialogo de confirmacion (sustituye a confirm). Devuelve Promise<boolean>.
+function confirmDialog(message) {
+  return new Promise((resolve) => {
+    const previous = document.activeElement;
+    const dialog = document.createElement("dialog");
+    dialog.className = "confirm-dialog";
+    dialog.setAttribute("aria-labelledby", "confirm-dialog-msg");
+    const p = document.createElement("p");
+    p.id = "confirm-dialog-msg";
+    p.textContent = message;
+    const actions = document.createElement("div");
+    actions.className = "confirm-actions";
+    const cancelBtn = document.createElement("button");
+    cancelBtn.type = "button";
+    cancelBtn.className = "secondary";
+    cancelBtn.textContent = "Cancelar";
+    const okBtn = document.createElement("button");
+    okBtn.type = "button";
+    okBtn.className = "confirm-ok";
+    okBtn.textContent = "Aceptar";
+    actions.append(cancelBtn, okBtn);
+    dialog.append(p, actions);
+    document.body.appendChild(dialog);
+
+    let done = false;
+    const finish = (value) => {
+      if (done) return;
+      done = true;
+      if (dialog.open && typeof dialog.close === "function") dialog.close();
+      dialog.remove();
+      if (previous && typeof previous.focus === "function") previous.focus();
+      resolve(value);
+    };
+    okBtn.addEventListener("click", () => finish(true));
+    cancelBtn.addEventListener("click", () => finish(false));
+    // Escape lanza "cancel" en <dialog> nativo; keydown cubre el resto de casos.
+    dialog.addEventListener("cancel", (ev) => { ev.preventDefault(); finish(false); });
+    dialog.addEventListener("keydown", (ev) => { if (ev.key === "Escape") finish(false); });
+    dialog.addEventListener("click", (ev) => { if (ev.target === dialog) finish(false); });
+
+    if (typeof dialog.showModal === "function") dialog.showModal();
+    else dialog.setAttribute("open", "");
+    cancelBtn.focus();
+  });
+}
+
 function escapeHtml(str) {
   return String(str ?? "")
     .replace(/&/g, "&amp;")
@@ -163,7 +229,7 @@ function bindSaveButton(button, getText, source, getImageUrl) {
       await api("/api/tweets", { method: "POST", body: JSON.stringify(payload) });
       flashButtonLabel(button, "Guardado!");
     } catch (e) {
-      alert(e.message);
+      toast(e.message, "error");
     }
   });
 }
@@ -215,10 +281,10 @@ function bindImagePicker(root, { suggestedTeams = [], initialUrl = null } = {}) 
           if (res.image_url) {
             setImage(res.image_url);
           } else {
-            alert(`No encontramos el escudo de ${team}.`);
+            toast(`No encontramos el escudo de ${team}.`, "error");
           }
         } catch (e) {
-          alert(e.message);
+          toast(e.message, "error");
         } finally {
           btn.disabled = false;
         }
@@ -233,7 +299,7 @@ function bindImagePicker(root, { suggestedTeams = [], initialUrl = null } = {}) 
           const res = await api(`/api/generate/team-vs-logo?${params}`);
           setImage(res.image_url);
         } catch (e) {
-          alert(e.message);
+          toast(e.message, "error");
         } finally {
           vsBtn.disabled = false;
         }
@@ -252,7 +318,7 @@ function bindImagePicker(root, { suggestedTeams = [], initialUrl = null } = {}) 
       const res = await api(`/api/generate/branded-image${query ? `?${query}` : ""}`);
       setImage(res.image_url);
     } catch (e) {
-      alert(e.message);
+      toast(e.message, "error");
     } finally {
       brandedBtn.disabled = false;
     }
@@ -269,7 +335,7 @@ function bindImagePicker(root, { suggestedTeams = [], initialUrl = null } = {}) 
       if (!res.ok) throw new Error(body?.detail || `Error ${res.status}`);
       setImage(body.image_url);
     } catch (e) {
-      alert(e.message);
+      toast(e.message, "error");
     } finally {
       fileInput.value = "";
     }
@@ -906,7 +972,7 @@ async function handleSave(publishNow) {
   const mode = document.querySelector('input[name="mode"]:checked').value;
 
   if (publishNow) {
-    const confirmed = confirm("¿Publicar este tweet ahora en X? Esta accion es publica e irreversible.");
+    const confirmed = await confirmDialog("¿Publicar este tweet ahora en X? Esta accion es publica e irreversible.");
     if (!confirmed) return;
   }
 
@@ -1020,7 +1086,7 @@ function bindDraftCard(tweet) {
   });
 
   card.querySelector(".publish-btn").addEventListener("click", async () => {
-    if (!confirm("¿Publicar este tweet ahora en X? Esta accion es publica e irreversible.")) return;
+    if (!(await confirmDialog("¿Publicar este tweet ahora en X? Esta accion es publica e irreversible."))) return;
     try {
       await api(`/api/tweets/${tweet.id}`, {
         method: "PUT",
@@ -1040,7 +1106,7 @@ function bindDraftCard(tweet) {
   });
 
   card.querySelector(".delete-btn").addEventListener("click", async () => {
-    if (!confirm("¿Eliminar este borrador?")) return;
+    if (!(await confirmDialog("¿Eliminar este borrador?"))) return;
     try {
       await api(`/api/tweets/${tweet.id}`, { method: "DELETE" });
       loadDrafts();
@@ -1105,7 +1171,7 @@ function bindRetryButton(tweet) {
       await api(`/api/tweets/${tweet.id}/retry`, { method: "POST" });
       switchTab("drafts");
     } catch (e) {
-      alert(e.message);
+      toast(e.message, "error");
     }
   });
 }
