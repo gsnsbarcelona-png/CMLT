@@ -4,6 +4,8 @@ document.getElementById("login-form").addEventListener("submit", async (event) =
   const button = event.target.querySelector("button");
   feedback.textContent = "";
   button.disabled = true;
+  const originalLabel = button.textContent;
+  button.textContent = "Entrando... (si el servidor estaba dormido puede tardar)";
   try {
     const res = await fetch("/api/auth/login", {
       method: "POST",
@@ -20,5 +22,6 @@ document.getElementById("login-form").addEventListener("submit", async (event) =
     feedback.textContent = "No se pudo conectar con el servidor.";
   } finally {
     button.disabled = false;
+    button.textContent = originalLabel;
   }
 });

@@ -17,17 +17,21 @@
     <button id="logout-btn" class="logout-btn" type="button" hidden>Salir</button>
   </header>
 
-  <nav class="tabs">
-    <button class="tab-btn active" data-tab="compose">Compose</button>
-    <button class="tab-btn" data-tab="drafts">Borradores</button>
-    <button class="tab-btn" data-tab="history">Historial</button>
-    <button class="tab-btn" data-tab="templates">Plantillas</button>
+  <div id="slow-notice" class="slow-notice" role="status" hidden>
+    Esto esta tardando... si el servidor estaba dormido puede tardar hasta un minuto en despertar.
+  </div>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab-btn active" data-tab="compose" role="tab" aria-selected="true">Compose</button>
+    <button class="tab-btn" data-tab="drafts" role="tab" aria-selected="false">Borradores</button>
+    <button class="tab-btn" data-tab="history" role="tab" aria-selected="false">Historial</button>
+    <button class="tab-btn" data-tab="templates" role="tab" aria-selected="false">Plantillas</button>
   </nav>
 
   <main>
     <!-- Compose -->
     <section id="tab-compose" class="tab-panel active">
-      <div class="mode-selector">
+      <div class="mode-selector" role="radiogroup" aria-label="Modo">
         <label><input type="radio" name="mode" value="calendar" checked /> Calendario</label>
         <label><input type="radio" name="mode" value="stats" /> Stats</label>
         <label><input type="radio" name="mode" value="h2h" /> H2H Hoy</label>
@@ -152,6 +156,7 @@
           <div class="char-counter" id="compose-char-counter">0 / 280</div>
           <button id="copy-content-btn" type="button">Copiar</button>
           <button id="open-x-btn" type="button" title="Abre X con el texto listo (sin imagen)">Abrir en X</button>
+          <button id="share-btn" type="button" hidden>Compartir</button>
         </div>
         <div id="image-picker"></div>
 
@@ -159,7 +164,7 @@
           <button id="save-draft-btn">Guardar borrador</button>
           <button id="publish-now-btn" class="primary">Publicar ahora</button>
         </div>
-        <div id="compose-feedback" class="feedback"></div>
+        <div id="compose-feedback" class="feedback" role="status" aria-live="polite"></div>
       </div>
     </section>
 

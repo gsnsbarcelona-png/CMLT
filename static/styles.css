@@ -4,8 +4,8 @@
   --border: #e0e0e0;
   --text: #1a1a1a;
   --muted: #6b7280;
-  --primary: #1d9bf0;
-  --primary-dark: #1a8cd8;
+  --primary: #0f6cb6; /* 5.4:1 con texto blanco (AA) */
+  --primary-dark: #0b5a99;
   --green: #16a34a;
   --yellow: #ca8a04;
   --red: #dc2626;
@@ -94,14 +94,47 @@ input[type="text"], textarea, select {
   background: var(--panel);
 }
 
+[hidden] { display: none !important; }
+
+/* Selector de modo como "chips": una sola fila con scroll horizontal en el
+   movil y areas tactiles de 44px (antes eran 7 radios pequenos en 3-4 filas). */
 .mode-selector {
   display: flex;
-  gap: 16px;
+  gap: 8px;
   margin-bottom: 16px;
   font-size: 14px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
 }
 
-.mode-selector label { display: flex; align-items: center; gap: 6px; margin: 0; }
+.mode-selector label {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 10px 14px;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.mode-selector label:has(input:checked) { background: var(--primary); border-color: var(--primary); color: #fff; }
+.mode-selector label:has(input:focus-visible) { outline: 2px solid var(--primary-dark); outline-offset: 2px; }
+.mode-selector input { position: absolute; opacity: 0; pointer-events: none; }
+
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+.slow-notice {
+  background: #fef3c7;
+  color: #78350f;
+  font-size: 13px;
+  padding: 8px 16px;
+  text-align: center;
+}
 
 .checkbox-inline {
   display: inline-flex;
@@ -238,7 +271,6 @@ input[type="password"] {
   .tabs { padding: 8px 8px 0; overflow-x: auto; }
   .tab-btn { padding: 10px 12px; white-space: nowrap; }
   main { padding: 16px; }
-  .mode-selector { flex-wrap: wrap; gap: 10px 14px; }
   .rivalry-row { flex-direction: column; }
   .actions { flex-direction: column; }
   .actions button { width: 100%; }

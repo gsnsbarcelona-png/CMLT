@@ -8,7 +8,42 @@ function countChars(text) {
   return Array.from(withoutUrls).length + urls.length * URL_PLACEHOLDER_LEN;
 }
 
+// Aviso de "servidor despertando": en el plan gratuito de Render el servicio
+// se duerme y la primera peticion puede tardar hasta un minuto. Si algo lleva
+// mas de 4 s se muestra un aviso (en vez de parecer que la app esta colgada).
+let pendingRequests = 0;
+let slowNoticeTimer = null;
+
+function noteRequestStart() {
+  pendingRequests += 1;
+  if (!slowNoticeTimer) {
+    slowNoticeTimer = setTimeout(() => {
+      const el = document.getElementById("slow-notice");
+      if (el && pendingRequests > 0) el.hidden = false;
+    }, 4000);
+  }
+}
+
+function noteRequestEnd() {
+  pendingRequests = Math.max(0, pendingRequests - 1);
+  if (pendingRequests === 0) {
+    clearTimeout(slowNoticeTimer);
+    slowNoticeTimer = null;
+    const el = document.getElementById("slow-notice");
+    if (el) el.hidden = true;
+  }
+}
+
 async function api(path, options = {}) {
+  noteRequestStart();
+  try {
+    return await apiRequest(path, options);
+  } finally {
+    noteRequestEnd();
+  }
+}
+
+async function apiRequest(path, options) {
   const res = await fetch(path, {
     headers: { "Content-Type": "application/json" },
     ...options,
@@ -89,6 +124,31 @@ function bindOpenXButton(button, getText) {
     const text = getText();
     if (!text || !text.trim()) return;
     window.open(`https://x.com/intent/post?text=${encodeURIComponent(text)}`, "_blank", "noopener");
+  });
+}
+
+// Boton "Compartir": hoja nativa del movil (X, WhatsApp, etc.) via Web Share
+// API. Solo aparece si el navegador la soporta. Si hay una imagen propia
+// (/data/images/...) la adjunta como archivo, cosa que el enlace de "Abrir en
+// X" no puede; las imagenes externas (escudos) no se adjuntan.
+function bindShareButton(button, getText, getImageUrl) {
+  if (!button || !navigator.share) return;
+  button.hidden = false;
+  button.addEventListener("click", async () => {
+    const text = getText();
+    if (!text || !text.trim()) return;
+    const data = { text };
+    try {
+      const imageUrl = getImageUrl ? getImageUrl() : "";
+      if (imageUrl && imageUrl.startsWith("/data/images/")) {
+        const blob = await (await fetch(imageUrl)).blob();
+        const file = new File([blob], imageUrl.split("/").pop(), { type: blob.type });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) data.files = [file];
+      }
+      await navigator.share(data);
+    } catch (e) {
+      if (e.name !== "AbortError") flashButtonLabel(button, "No se pudo compartir");
+    }
   });
 }
 
@@ -240,13 +300,15 @@ function variantResultCardHtml(result, source, metaFn) {
   }
   return `
     <div class="card">
-      <div class="card-meta">${escapeHtml(meta)} · ${result.char_count} / ${TWEET_CHAR_LIMIT}</div>
-      <div class="card-content">${escapeHtml(result.content)}</div>
+      <div class="card-meta">${escapeHtml(meta)}</div>
+      <textarea class="card-edit card-edit-result" rows="5" aria-label="Texto del tweet (editable)">${escapeHtml(result.content)}</textarea>
+      <div class="char-counter result-char-counter">${result.char_count} / ${TWEET_CHAR_LIMIT}</div>
       ${imagePickerHtml()}
       <div class="card-actions">
         <button class="save-${source}-btn">Guardar</button>
         <button class="copy-${source}-btn">Copiar</button>
         <button class="open-x-${source}-btn" title="Abre X con el texto listo (sin imagen)">Abrir en X</button>
+        <button class="share-${source}-btn" hidden>Compartir</button>
       </div>
     </div>
   `;
@@ -268,9 +330,15 @@ async function generateResultCards({ endpoint, payload, resultsElId, btnId, sour
       if (r.content) {
         const card = resultsEl.children[idx];
         bindImagePicker(card, { suggestedTeams: r.suggested_teams || [] });
-        bindCopyButton(card.querySelector(`.copy-${source}-btn`), () => r.content);
-        bindOpenXButton(card.querySelector(`.open-x-${source}-btn`), () => r.content);
-        bindSaveButton(card.querySelector(`.save-${source}-btn`), () => r.content, source, () => card.dataset.imageUrl);
+        // El texto es editable: todos los botones leen lo que haya en el textarea.
+        const textarea = card.querySelector(".card-edit-result");
+        const counter = card.querySelector(".result-char-counter");
+        const getText = () => textarea.value;
+        textarea.addEventListener("input", () => updateCounterEl(counter, getText()));
+        bindCopyButton(card.querySelector(`.copy-${source}-btn`), getText);
+        bindOpenXButton(card.querySelector(`.open-x-${source}-btn`), getText);
+        bindShareButton(card.querySelector(`.share-${source}-btn`), getText, () => card.dataset.imageUrl);
+        bindSaveButton(card.querySelector(`.save-${source}-btn`), getText, source, () => card.dataset.imageUrl);
       }
     });
   } catch (e) {
@@ -281,6 +349,14 @@ async function generateResultCards({ endpoint, payload, resultsElId, btnId, sour
 }
 
 // ---------- Tabs ----------
+function updateCounterEl(counterEl, text) {
+  const count = countChars(text);
+  counterEl.textContent = `${count} / ${TWEET_CHAR_LIMIT}`;
+  counterEl.classList.remove("warn", "over");
+  if (count > TWEET_CHAR_LIMIT) counterEl.classList.add("over");
+  else if (count > 260) counterEl.classList.add("warn");
+}
+
 function initTabs() {
   document.querySelectorAll(".tab-btn").forEach((btn) => {
     btn.addEventListener("click", () => switchTab(btn.dataset.tab));
@@ -288,7 +364,10 @@ function initTabs() {
 }
 
 function switchTab(name) {
-  document.querySelectorAll(".tab-btn").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
+  document.querySelectorAll(".tab-btn").forEach((b) => {
+    b.classList.toggle("active", b.dataset.tab === name);
+    b.setAttribute("aria-selected", b.dataset.tab === name ? "true" : "false");
+  });
   document.querySelectorAll(".tab-panel").forEach((p) => p.classList.toggle("active", p.id === `tab-${name}`));
   if (name === "drafts") loadDrafts();
   if (name === "history") loadHistory();
@@ -303,7 +382,7 @@ async function checkConfig() {
     const missing = [];
     if (!cfg.x_configured) missing.push("X (publicacion)");
     if (missing.length) {
-      banner.textContent = `Falta configurar en .env: ${missing.join(", ")}.`;
+      banner.textContent = `Sin configurar: ${missing.join(", ")}. Puedes usar "Abrir en X" o "Copiar".`;
       banner.hidden = false;
     } else {
       banner.hidden = true;
@@ -314,7 +393,60 @@ async function checkConfig() {
 }
 
 // ---------- Compose ----------
+// Recordar el ultimo modo, ligas, alcance, etc. (solo en este navegador):
+// ahorra 1-3 toques por sesion en el movil. localStorage puede no estar
+// disponible (ventana privada), asi que todo va envuelto en try/catch y la app
+// funciona igual sin el.
+const PREFS_KEY = "ta-prefs";
+const PREF_SELECTOR = "#tab-compose input:not([type=file]):not([type=text]), #tab-compose select";
+
+function loadPrefs() {
+  try {
+    return JSON.parse(localStorage.getItem(PREFS_KEY) || "{}");
+  } catch (e) {
+    return {};
+  }
+}
+
+function prefKey(el) {
+  if (el.type === "radio") return el.name ? `r:${el.name}` : null;
+  return el.id ? `i:${el.id}` : null;
+}
+
+function applyPref(el, prefs) {
+  const key = prefKey(el);
+  if (!key || !(key in prefs)) return;
+  if (el.type === "radio") el.checked = el.value === prefs[key];
+  else if (el.type === "checkbox") el.checked = !!prefs[key];
+  else if (el.tagName === "SELECT") {
+    if ([...el.options].some((o) => o.value === prefs[key])) el.value = prefs[key];
+  }
+}
+
+function applyPrefs() {
+  const prefs = loadPrefs();
+  document.querySelectorAll(PREF_SELECTOR).forEach((el) => applyPref(el, prefs));
+}
+
+function trackPrefs() {
+  document.getElementById("tab-compose").addEventListener("change", (event) => {
+    const el = event.target;
+    if (!el.matches(PREF_SELECTOR)) return;
+    const key = prefKey(el);
+    if (!key) return;
+    try {
+      const prefs = loadPrefs();
+      prefs[key] = el.type === "checkbox" ? el.checked : el.value;
+      localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+    } catch (e) {
+      // sin localStorage: no se recuerda nada, la app sigue igual
+    }
+  });
+}
+
 function initCompose() {
+  applyPrefs();
+  trackPrefs();
   const modeRadios = document.querySelectorAll('input[name="mode"]');
   modeRadios.forEach((r) => r.addEventListener("change", updateComposeMode));
   updateComposeMode();
@@ -339,6 +471,11 @@ function initCompose() {
   document.getElementById("lec-compare-generate-btn").addEventListener("click", handleLecCompareGenerate);
   bindCopyButton(document.getElementById("copy-content-btn"), () => document.getElementById("compose-content").value);
   bindOpenXButton(document.getElementById("open-x-btn"), () => document.getElementById("compose-content").value);
+  bindShareButton(
+    document.getElementById("share-btn"),
+    () => document.getElementById("compose-content").value,
+    () => document.getElementById("image-picker").dataset.imageUrl || ""
+  );
 
   loadTemplateSelect();
   loadTopRankingCategories();
@@ -353,7 +490,12 @@ async function loadTeamOptions(selectIds, endpoint = "/api/generate/stats/teams"
   try {
     const teams = await api(endpoint);
     const options = teams.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join("");
-    selectIds.forEach((id) => document.getElementById(id).insertAdjacentHTML("beforeend", options));
+    const prefs = loadPrefs();
+    selectIds.forEach((id) => {
+      const select = document.getElementById(id);
+      select.insertAdjacentHTML("beforeend", options);
+      applyPref(select, prefs); // recuperar el equipo elegido la ultima vez
+    });
   } catch (e) {
     // silencioso: si gol.gg no responde, el usuario todavia puede usar el resto de la app
   }
@@ -650,6 +792,8 @@ function setComposeFeedback(message, isError) {
 // en el editor (Calendario, Stats, Plantilla): pegarle al endpoint,
 // llenar compose-content, y mostrar feedback de exito/error.
 async function fillComposeFromGenerate(endpoint, payload, successMessage) {
+  const generateButtons = document.querySelectorAll("#tab-compose button[id$='-generate-btn']");
+  generateButtons.forEach((b) => (b.disabled = true));
   try {
     const result = await api(endpoint, { method: "POST", body: JSON.stringify(payload) });
     document.getElementById("compose-content").value = result.content;
@@ -665,6 +809,8 @@ async function fillComposeFromGenerate(endpoint, payload, successMessage) {
     setComposeFeedback(successMessage, false);
   } catch (e) {
     setComposeFeedback(e.message, true);
+  } finally {
+    generateButtons.forEach((b) => (b.disabled = false));
   }
 }
 
@@ -798,6 +944,7 @@ function draftCardHtml(tweet) {
         <button class="save-edit-btn">Guardar cambios</button>
         <button class="copy-draft-btn">Copiar</button>
         <button class="open-x-draft-btn" title="Abre X con el texto listo (sin imagen)">Abrir en X</button>
+        <button class="share-draft-btn" hidden>Compartir</button>
         <button class="publish-btn primary">Publicar ahora</button>
         <button class="delete-btn">Eliminar</button>
       </div>
@@ -825,6 +972,7 @@ function bindDraftCard(tweet) {
   bindImagePicker(card, { initialUrl: tweet.image_url || null });
   bindCopyButton(card.querySelector(".copy-draft-btn"), () => textarea.value);
   bindOpenXButton(card.querySelector(".open-x-draft-btn"), () => textarea.value);
+  bindShareButton(card.querySelector(".share-draft-btn"), () => textarea.value, () => card.dataset.imageUrl || "");
 
   card.querySelector(".save-edit-btn").addEventListener("click", async () => {
     try {
