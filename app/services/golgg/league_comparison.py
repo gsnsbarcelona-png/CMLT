@@ -36,6 +36,7 @@ def compute_league_comparison_candidates(
                     f"{lec_avg_kda} de promedio entre los equipos de la LEC."
                 ),
                 nuance=LEVEL_NUANCE,
+                hook=f"{best_kda.name}: {best_kda.kda} de K:D en la LES, frente a {lec_avg_kda} de media en la LEC",
             )
         )
 
@@ -50,6 +51,7 @@ def compute_league_comparison_candidates(
                     f"frente al {lec_avg_winrate}% de promedio en la LEC."
                 ),
                 nuance=LEVEL_NUANCE,
+                hook=f"{best_winrate.name}: {best_winrate.win_rate}% de victorias en la LES, la media LEC es {lec_avg_winrate}%",
             )
         )
 
@@ -64,6 +66,7 @@ def compute_league_comparison_candidates(
                     f"partidos en la LES, frente al {lec_avg_fb}% de promedio en la LEC."
                 ),
                 nuance=LEVEL_NUANCE,
+                hook=f"{best_fb.name}: primera sangre en el {best_fb.fb_pct}% de sus partidos LES, media LEC {lec_avg_fb}%",
             )
         )
 
@@ -78,6 +81,7 @@ def compute_league_comparison_candidates(
                     f"{best_kda.name} cerró con {best_kda.kda} de KDA en la LES, frente al "
                     f"{lec_avg_kda} de promedio entre los jugadores de la LEC."
                 ),
+                hook=f"{best_kda.name}: {best_kda.kda} de KDA en la LES, frente a {lec_avg_kda} de media en la LEC",
                 nuance="El KDA en la LES suele estar inflado vs la LEC por la diferencia de nivel.",
             )
         )

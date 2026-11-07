@@ -43,6 +43,7 @@ class StatCandidate:
     emoji: str
     title: str
     question: str
+    hook: str = ""  # primera linea con dato + sujeto; vacio = se usa el titulo generico
 
 
 @dataclass
@@ -92,6 +93,7 @@ class LeagueComparisonCandidate:
     subject: str  # equipo/jugador de LES protagonista
     fact_sentence: str  # las dos cifras (LES y LEC) lado a lado
     nuance: str  # matiz obligatorio sobre nivel/muestra distintos
+    hook: str = ""  # primera linea con dato + sujeto; vacio = cabecera generica
 
 
 @dataclass

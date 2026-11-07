@@ -320,7 +320,8 @@ def test_format_stat_tweet_plain_structure():
 
     lines = text.split("\n")
     assert len(lines) == 3
-    assert lines[0] == f"{candidate.emoji} {candidate.title}"
+    assert lines[0] == f"{candidate.emoji} {candidate.hook}"
+    assert candidate.subject in candidate.hook and "9.4" in candidate.hook  # gancho con sujeto + dato
     assert lines[1] == candidate.fact_sentence
     assert candidate.question in lines[2]
 
@@ -861,12 +862,13 @@ def test_format_league_comparison_plain_sorprendente_and_debate_tones():
     sorprendente = format_league_comparison_plain(candidate, "sorprendente")
     debate = format_league_comparison_plain(candidate, "debate")
 
-    assert "DATO LES-LEC" in sorprendente
-    assert candidate.fact_sentence in sorprendente
+    assert sorprendente.startswith(f"🔎 {candidate.hook}")
+    assert candidate.subject in candidate.hook and "media" in candidate.hook
+    assert "2.13" in sorprendente and "1.6" in sorprendente  # las dos cifras, ahora en el gancho
     assert candidate.nuance in sorprendente
 
-    assert "DEBATE LES-LEC" in debate
-    assert candidate.fact_sentence in debate
+    assert debate.startswith(f"🤔 {candidate.hook}")
+    assert "2.13" in debate and "1.6" in debate
     assert candidate.nuance in debate
     assert sorprendente != debate
 
@@ -956,9 +958,10 @@ def test_format_top_ranking_plain_top1_focuses_on_leader():
 
     content = format_top_ranking_plain(candidate, "top1")
 
-    assert "Escik" in content
-    assert "Andariel" not in content
-    assert "9.4" in content
+    assert content.splitlines()[0].startswith("🔥 Escik lleva 9.4 de KDA")
+    assert "Hydra" not in content and "2. " not in content  # solo el lider (el segundo aparece solo en la comparacion)
+    assert "1.7 más que Andariel" in content  # 9.4 - 7.7: diferencia real con el segundo
+    assert "Media de la liga" in content
 
 
 def test_format_top_ranking_plain_top3_lists_all_entries():
