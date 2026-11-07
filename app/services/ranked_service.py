@@ -233,7 +233,7 @@ def compute_rank_candidates(ranks: list[PlayerRank]) -> list[StatCandidate]:
                 ),
                 plano_emoji="🏆",
                 plano_title="RANGO EN SOLOQ",
-                plano_question="¿A que elo estas vos?",
+                plano_question="¿En que elo estas tu?",
             )
         )
 
@@ -316,5 +316,5 @@ def compute_team_vs_team_candidate(
         ),
         plano_emoji="🛡️",
         plano_title="MEJOR ELO DE CADA PLANTILLA",
-        plano_question="¿A cual preferis tener en tu equipo?",
+        plano_question="¿A cual prefieres tener en tu equipo?",
     )

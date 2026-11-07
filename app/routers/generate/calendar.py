@@ -21,7 +21,7 @@ class CalendarGenerateRequest(BaseModel):
 def generate_calendar(payload: CalendarGenerateRequest) -> GenerateResult:
     leagues = [league.strip().lower() for league in payload.leagues if league.strip()]
     if not leagues:
-        raise HTTPException(status_code=400, detail="Elegi al menos una liga (LES, LEC o EMEA Masters).")
+        raise HTTPException(status_code=400, detail="Elige al menos una liga (LES, LEC o EMEA Masters).")
     unknown = [league for league in leagues if league not in LEAGUE_IDS]
     if unknown:
         raise HTTPException(status_code=400, detail=f"Liga no reconocida: {', '.join(unknown)}.")

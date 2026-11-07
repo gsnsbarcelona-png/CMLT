@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     # del torneo en gol.gg, ej. https://gol.gg/tournament/tournament-stats/LES%202026%20Summer/)
     # Con autodiscover activo (por defecto) la temporada y los torneos de
     # abajo se descubren solos desde gol.gg (cache de unas horas); los valores
-    # de abajo quedan como respaldo si gol.gg no responde. Ponelo en false
+    # de abajo quedan como respaldo si gol.gg no responde. Ponlo en false
     # para forzar a mano los valores configurados.
     golgg_autodiscover: bool = True
     # Calienta la cache de gol.gg/lolesports en segundo plano al arrancar.

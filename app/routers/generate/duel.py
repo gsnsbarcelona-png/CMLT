@@ -50,9 +50,9 @@ def generate_duel(payload: DuelGenerateRequest) -> list[DuelVariantResult]:
     team_a = payload.team_a.strip()
     team_b = payload.team_b.strip()
     if not team_a or not team_b:
-        raise HTTPException(status_code=400, detail="Elegi los dos equipos.")
+        raise HTTPException(status_code=400, detail="Elige los dos equipos.")
     if team_a.lower() == team_b.lower():
-        raise HTTPException(status_code=400, detail="Elegi dos equipos distintos.")
+        raise HTTPException(status_code=400, detail="Elige dos equipos distintos.")
 
     try:
         roster_a = fetch_les_team_roster_with_roles(team_a)

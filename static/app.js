@@ -690,10 +690,10 @@ async function runTeamAutofill({ feedbackId, teamAId, teamBId, endpoint, loading
       feedback.textContent =
         okA && okB
           ? `Completado: ${matches[0].team_a} vs ${matches[0].team_b} (${matches[0].block_name}).`
-          : `No encontramos "${matches[0].team_a} vs ${matches[0].team_b}" en la lista de gol.gg -- elegi los equipos a mano.`;
+          : `No encontramos "${matches[0].team_a} vs ${matches[0].team_b}" en la lista de gol.gg -- elige los equipos a mano.`;
     } else {
       const list = matches.map((m) => `${m.team_a} vs ${m.team_b}`).join(", ");
-      feedback.textContent = `${multiMessagePrefix}, elegi los equipos a mano: ${list}.`;
+      feedback.textContent = `${multiMessagePrefix}, elige los equipos a mano: ${list}.`;
     }
   } catch (e) {
     feedback.textContent = e.message;
@@ -716,7 +716,7 @@ async function handleH2hGenerate() {
   const teamA = document.getElementById("h2h-team-a").value;
   const teamB = document.getElementById("h2h-team-b").value;
   if (!teamA || !teamB) {
-    document.getElementById("h2h-results").innerHTML = '<div class="empty-state">Elegi los dos equipos.</div>';
+    document.getElementById("h2h-results").innerHTML = '<div class="empty-state">Elige los dos equipos.</div>';
     return;
   }
 
@@ -747,7 +747,7 @@ async function handleDuelGenerate() {
   const teamA = document.getElementById("duel-team-a").value;
   const teamB = document.getElementById("duel-team-b").value;
   if (!teamA || !teamB) {
-    document.getElementById("duel-results").innerHTML = '<div class="empty-state">Elegi los dos equipos.</div>';
+    document.getElementById("duel-results").innerHTML = '<div class="empty-state">Elige los dos equipos.</div>';
     return;
   }
 
@@ -766,7 +766,7 @@ async function handleDuelGenerate() {
 async function handleTopRankingGenerate() {
   const category = document.getElementById("top-ranking-category").value;
   if (!category) {
-    document.getElementById("top-ranking-results").innerHTML = '<div class="empty-state">Elegi una categoria.</div>';
+    document.getElementById("top-ranking-results").innerHTML = '<div class="empty-state">Elige una categoria.</div>';
     return;
   }
 
@@ -801,7 +801,7 @@ async function handleStatsGenerate() {
 
   if (!usingRivalry && !usingRankedPlayers && !usingRankedTeams && !categories.length) {
     setComposeFeedback(
-      "Marca al menos una categoria (equipos, jugadores o ranked), elegi los dos equipos de rivalidad, o elegi un par a comparar en elo.",
+      "Marca al menos una categoria (equipos, jugadores o ranked), elige los dos equipos de rivalidad, o elige un par a comparar en elo.",
       true
     );
     return;
@@ -827,7 +827,7 @@ async function handleStatsGenerate() {
       ranked_team_a: rankedTeamA || null,
       ranked_team_b: rankedTeamB || null,
     },
-    "Stat generado. Podes editarlo antes de guardar o publicar."
+    "Stat generado. Puedes editarlo antes de guardar o publicar."
   );
 }
 
@@ -845,7 +845,7 @@ async function handleCalendarGenerate() {
   await fillComposeFromGenerate(
     "/api/generate/calendar",
     { leagues },
-    "Calendario generado. Podes editarlo antes de guardar o publicar."
+    "Calendario generado. Puedes editarlo antes de guardar o publicar."
   );
 }
 
@@ -951,7 +951,7 @@ async function loadDrafts() {
   try {
     const drafts = await api("/api/tweets?status=draft");
     if (!drafts.length) {
-      container.innerHTML = '<div class="empty-state">No hay borradores. Creá uno en Compose.</div>';
+      container.innerHTML = '<div class="empty-state">No hay borradores. Crea uno en Compose.</div>';
       return;
     }
     container.innerHTML = drafts.map(draftCardHtml).join("");

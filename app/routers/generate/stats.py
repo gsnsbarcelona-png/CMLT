@@ -189,7 +189,7 @@ def generate_stats(payload: StatGenerateRequest) -> GenerateResult:
 
     if rivalry_a or rivalry_b:
         if not (rivalry_a and rivalry_b):
-            raise HTTPException(status_code=400, detail="Elegi los dos equipos para ver su rivalidad.")
+            raise HTTPException(status_code=400, detail="Elige los dos equipos para ver su rivalidad.")
         try:
             candidate = find_head_to_head(rivalry_a, rivalry_b, get_year_tournaments())
         except GolGGError as exc:
@@ -201,9 +201,9 @@ def generate_stats(payload: StatGenerateRequest) -> GenerateResult:
             )
     elif ranked_player_a or ranked_player_b:
         if not (ranked_player_a and ranked_player_b):
-            raise HTTPException(status_code=400, detail="Elegi los dos jugadores para comparar su elo.")
+            raise HTTPException(status_code=400, detail="Elige los dos jugadores para comparar su elo.")
         if ranked_player_a.lower() == ranked_player_b.lower():
-            raise HTTPException(status_code=400, detail="Elegi dos jugadores distintos.")
+            raise HTTPException(status_code=400, detail="Elige dos jugadores distintos.")
         # fetch_all_player_ranks resuelve ambos en paralelo (mismo helper que ya
         # usa la comparacion equipo-vs-equipo, dos ramas mas abajo) en vez de dos
         # pedidos secuenciales a lolpros.gg.
@@ -219,9 +219,9 @@ def generate_stats(payload: StatGenerateRequest) -> GenerateResult:
         )
     elif ranked_team_a or ranked_team_b:
         if not (ranked_team_a and ranked_team_b):
-            raise HTTPException(status_code=400, detail="Elegi los dos equipos para comparar su elo.")
+            raise HTTPException(status_code=400, detail="Elige los dos equipos para comparar su elo.")
         if ranked_team_a.lower() == ranked_team_b.lower():
-            raise HTTPException(status_code=400, detail="Elegi dos equipos distintos.")
+            raise HTTPException(status_code=400, detail="Elige dos equipos distintos.")
         try:
             roster_a = fetch_les_team_roster(ranked_team_a)
             roster_b = fetch_les_team_roster(ranked_team_b)
@@ -251,7 +251,7 @@ def generate_stats(payload: StatGenerateRequest) -> GenerateResult:
         categories = {c.strip().lower() for c in payload.categories if c.strip()}
         if not categories:
             raise HTTPException(
-                status_code=400, detail="Elegi al menos una categoria (equipos, jugadores o ranked)."
+                status_code=400, detail="Elige al menos una categoria (equipos, jugadores o ranked)."
             )
         unknown = categories - STAT_CATEGORIES
         if unknown:
@@ -335,9 +335,9 @@ def generate_head_to_head_preview(payload: HeadToHeadPreviewRequest) -> list[Hea
     team_a = payload.team_a.strip()
     team_b = payload.team_b.strip()
     if not team_a or not team_b:
-        raise HTTPException(status_code=400, detail="Elegi los dos equipos.")
+        raise HTTPException(status_code=400, detail="Elige los dos equipos.")
     if team_a.lower() == team_b.lower():
-        raise HTTPException(status_code=400, detail="Elegi dos equipos distintos.")
+        raise HTTPException(status_code=400, detail="Elige dos equipos distintos.")
 
     # Se combinan los torneos de LES con los de EMEA Masters -- un equipo de
     # LES que juega ahi se cruza con rivales que nunca jugaron en LES, y sin

@@ -12,7 +12,7 @@ En Compose hay nueve modos visibles por defecto — **Calendario**, **Dia de par
 - **Efeméride**: "un día como hoy" de la historia de la LES/Superliga, con una base curada de hitos verificados (no es scraping en vivo — ver limitaciones). 2 versiones: completa y "dato rápido".
 - **Cruce LEC**: conecta la LES con la LEC — comparativa de rendimiento en vivo (gol.gg de ambas ligas) o jugadores que pasaron por las dos ligas (base curada). 2 tonos: dato sorprendente y pregunta a debate.
 
-Cada resultado (y cada borrador/tweet del historial) tiene un botón **Copiar** para pegarlo directamente donde publiques manualmente, sin depender de la API de X. Calendario/Stats/Plantilla/Manual usan el editor compartido de abajo, con **Guardar borrador**/**Publicar ahora**; los modos que muestran varias variantes en tarjetas (H2H Hoy, Duelo 1v1, Efeméride, Cruce LEC) tienen un botón **Guardar** por tarjeta — nada se guarda solo, elegís qué variante(s) quedan como borrador.
+Cada resultado (y cada borrador/tweet del historial) tiene un botón **Copiar** para pegarlo directamente donde publiques manualmente, sin depender de la API de X. Calendario/Stats/Manual usan el editor compartido de abajo, con **Guardar borrador**/**Publicar ahora**; los modos que muestran varias variantes en tarjetas (H2H Hoy, Duelo 1v1, Efeméride, Cruce LEC) tienen un botón **Guardar** por tarjeta — nada se guarda solo, eliges qué variante(s) quedan como borrador.
 
 ### Imagen adjunta (opcional)
 
@@ -20,7 +20,7 @@ Cualquier tweet (el del editor compartido, cada tarjeta de los modos múltiples,
 
 - **Automática**: cuando el resultado tiene un equipo de LES como protagonista claro (ej. Stats de un equipo puntual, H2H, Duelo, Top/Ranking de categoría de equipo, Efeméride con equipos, Cruce LEC de un equipo), aparece un botón "🛡️ Nombre del equipo" que trae su escudo directo de la API de LoL Esports (`getTeams`, campo `image`) — no hay imágenes curadas a mano, ni en categorías de jugador (gol.gg no da el equipo de cada jugador, no se inventa).
 - **Fusión de escudos ("VS")**: cuando hay exactamente 2 equipos sugeridos (H2H, Duelo), aparece además "⚔️ Fusionar escudos" — arma un composite con los dos escudos lado a lado y un círculo "VS" en el medio (Pillow, server-side). Si no se encuentra el escudo de alguno de los dos, el botón directamente no aparece en vez de armar un composite a medias.
-- **Fondo de marca**: el botón "🎨 Fondo del programa" (siempre disponible, no depende de equipos) arma un composite con el fondo del programa (`app/data/branding/background.png`) y el logo (`app/data/branding/logo.png`, PNG con fondo transparente) pegado del lado derecho (Pillow, server-side, ver `image_service.compose_branded_image`). Para cambiar el fondo o el logo, reemplazá esos dos archivos (mismos nombres) — no hace falta tocar código.
+- **Fondo de marca**: el botón "🎨 Fondo del programa" (siempre disponible, no depende de equipos) arma un composite con el fondo del programa (`app/data/branding/background.png`) y el logo (`app/data/branding/logo.png`, PNG con fondo transparente) pegado del lado derecho (Pillow, server-side, ver `image_service.compose_branded_image`). Para cambiar el fondo o el logo, reemplaza esos dos archivos (mismos nombres) — no hace falta tocar código.
 - **Manual**: botón "🖼️ Imagen" para subir cualquier archivo (PNG/JPG/GIF/WEBP, máx. 5 MB) — reemplaza a la sugerencia automática si había una.
 
 La subida de medios a X sigue el endpoint v1.1 (`media/upload`) aunque el tweet se publique con la API v2 — usa las mismas 4 credenciales de X ya configuradas, sin permisos extra.
@@ -41,26 +41,26 @@ pip install -r requirements-dev.txt
 copy .env.example .env
 ```
 
-Después completá `.env` con tus credenciales (ver abajo).
+Después completa `.env` con tus credenciales (ver abajo).
 
 ## Conseguir las credenciales de X (Twitter)
 
 Este es el paso más delicado, seguilo en orden:
 
-1. Andá a [developer.x.com](https://developer.x.com) y aplicá para una cuenta de developer (el plan **Free** alcanza, incluye ~500 posts/mes).
-2. Creá un **Project** y una **App** dentro del portal.
-3. En la configuración de la App → **"User authentication settings"** → habilitá OAuth 1.0a, tipo de app "Web App" (o similar). Elegí permisos **"Read and Write"** (por defecto viene en solo lectura). Vas a tener que completar un Callback URL (podés poner `http://localhost:8000/callback`, no se usa realmente) y una Website URL (puede ser cualquiera, ej. tu perfil de X).
-4. En la sección **"Keys and tokens"** de la App, copiá:
+1. Ve a [developer.x.com](https://developer.x.com) y aplica para una cuenta de developer (el plan **Free** alcanza, incluye ~500 posts/mes).
+2. Crea un **Project** y una **App** dentro del portal.
+3. En la configuración de la App → **"User authentication settings"** → habilita OAuth 1.0a, tipo de app "Web App" (o similar). Elige permisos **"Read and Write"** (por defecto viene en solo lectura). Vas a tener que completar un Callback URL (puedes poner `http://localhost:8000/callback`, no se usa realmente) y una Website URL (puede ser cualquiera, ej. tu perfil de X).
+4. En la sección **"Keys and tokens"** de la App, copia:
    - **API Key** y **API Key Secret** → van en `X_API_KEY` / `X_API_SECRET`.
-5. En la misma pantalla, generá (botón **"Generate"**) el **Access Token and Secret**.
+5. En la misma pantalla, genera (botón **"Generate"**) el **Access Token and Secret**.
    > Importante: si ya los habías generado *antes* de configurar los permisos "Read and Write", **regeneralos** — si no, la publicación va a fallar con error 403.
-6. Copiá esos valores en `X_ACCESS_TOKEN` / `X_ACCESS_TOKEN_SECRET`.
+6. Copia esos valores en `X_ACCESS_TOKEN` / `X_ACCESS_TOKEN_SECRET`.
 
 ## Calendario LES/LEC/EMEA Masters
 
 No requiere configuración: `LOLESPORTS_API_KEY` en `.env.example` ya trae un valor funcional (la key pública que usa el propio sitio lolesports.com). Solo tendrías que tocarla si Riot la rota en el futuro y el modo Calendario empieza a fallar con error 502.
 
-Además de LES y LEC, el Calendario tiene una tercera liga: **EMEA Masters** (torneo semi-profesional que reúne a los mejores equipos de las ligas regionales europeas, incluida la LES — ej. el clasificatorio de Movistar KOI Fénix a EMEA Masters Summer 2026, que a su vez es la vía de la región EMEA para clasificar al WSCI). Mismo mecanismo que LES/LEC: `LEAGUE_HANDLE_EMEA_MASTERS` en `.env` controla la arroba de cierre (default `@EMEAmasters`, la cuenta oficial). Si Riot lanza otra liga/torneo nuevo y querés sumarlo, hay que resolver su `leagueId` a mano contra `GET /persisted/gw/getLeagues` (mismo endpoint, ver comentario en `lolesports_service.py`) y agregarlo a `LEAGUE_IDS`/`LEAGUE_LABELS`/`LEAGUE_HASHTAGS`/`LEAGUE_ORDER`/`LEAGUE_HANDLE_SETTINGS`.
+Además de LES y LEC, el Calendario tiene una tercera liga: **EMEA Masters** (torneo semi-profesional que reúne a los mejores equipos de las ligas regionales europeas, incluida la LES — ej. el clasificatorio de Movistar KOI Fénix a EMEA Masters Summer 2026, que a su vez es la vía de la región EMEA para clasificar al WSCI). Mismo mecanismo que LES/LEC: `LEAGUE_HANDLE_EMEA_MASTERS` en `.env` controla la arroba de cierre (default `@EMEAmasters`, la cuenta oficial). Si Riot lanza otra liga/torneo nuevo y quieres sumarlo, hay que resolver su `leagueId` a mano contra `GET /persisted/gw/getLeagues` (mismo endpoint, ver comentario en `lolesports_service.py`) y agregarlo a `LEAGUE_IDS`/`LEAGUE_LABELS`/`LEAGUE_HASHTAGS`/`LEAGUE_ORDER`/`LEAGUE_HANDLE_SETTINGS`.
 
 ## Stats (gol.gg)
 
@@ -86,11 +86,11 @@ La categoría **Ranked (SoloQ)** de Stats no usa gol.gg sino [lolpros.gg](https:
 
 ### Arrobas y hashtags
 
-`LEAGUE_HANDLE_LES`, `LEAGUE_HANDLE_LEC`, `CUSTOM_HASHTAGS` y `TEAM_HANDLES` en `.env` controlan qué se agrega al final de cada tweet generado. `TEAM_HANDLES` es una lista `Nombre de equipo:@handle` separada por comas, cargada a mano — la app nunca adivina un handle de equipo, así que si agregás una liga/torneo con equipos nuevos hay que sumarlos ahí. **Ojo**: `UB Alma Mater` queda **sin handle a propósito** — se probaron `@UniBarcelona` (cuenta general de la universidad) y `@EsportsUB` (que resultó ser el Servei d'Esports general de la UB, no el equipo de LoL) y ninguno de los dos es correcto. Agregalo si conseguís el handle real del equipo.
+`LEAGUE_HANDLE_LES`, `LEAGUE_HANDLE_LEC`, `CUSTOM_HASHTAGS` y `TEAM_HANDLES` en `.env` controlan qué se agrega al final de cada tweet generado. `TEAM_HANDLES` es una lista `Nombre de equipo:@handle` separada por comas, cargada a mano — la app nunca adivina un handle de equipo, así que si agregas una liga/torneo con equipos nuevos hay que sumarlos ahí. **Ojo**: `UB Alma Mater` queda **sin handle a propósito** — se probaron `@UniBarcelona` (cuenta general de la universidad) y `@EsportsUB` (que resultó ser el Servei d'Esports general de la UB, no el equipo de LoL) y ninguno de los dos es correcto. Agregalo si consigues el handle real del equipo.
 
 ## Cruce LEC: base de jugadores
 
-`app/data/les_lec_players.json` es una base curada (no scraping en vivo) de jugadores verificados que jugaron en LES/Superliga y en LEC. Para sumar uno nuevo, agregá una entrada con `player`, `fact` (el dato, con números/fechas concretas), `context` (matiz o dato secundario) y `source` (de dónde salió, no se muestra en el tweet) — verificando bien antes de cargarlo, la app no chequea esto por vos.
+`app/data/les_lec_players.json` es una base curada (no scraping en vivo) de jugadores verificados que jugaron en LES/Superliga y en LEC. Para sumar uno nuevo, agrega una entrada con `player`, `fact` (el dato, con números/fechas concretas), `context` (matiz o dato secundario) y `source` (de dónde salió, no se muestra en el tweet) — verificando bien antes de cargarlo, la app no chequea esto por vos.
 
 ## Efeméride: base de hitos históricos
 
@@ -102,27 +102,27 @@ La categoría **Ranked (SoloQ)** de Stats no usa gol.gg sino [lolpros.gg](https:
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-Abrí [http://localhost:8000](http://localhost:8000) en el navegador.
+Abre [http://localhost:8000](http://localhost:8000) en el navegador.
 
-Si te faltan credenciales, la app va a arrancar igual y te va a avisar con un cartel en la parte superior — podés seguir usando lo que sí esté configurado (por ejemplo, generar y copiar tweets sin credenciales de X).
+Si te faltan credenciales, la app va a arrancar igual y te va a avisar con un cartel en la parte superior — puedes seguir usando lo que sí esté configurado (por ejemplo, generar y copiar tweets sin credenciales de X).
 
 ## Usarla desde el móvil (PWA / APK)
 
-La app es instalable como PWA: desde Chrome en Android, abrís la URL y elegís **"Instalar app"** (o "Agregar a pantalla principal"). Queda con ícono propio y abre a pantalla completa. La interfaz se adapta a pantallas chicas. Toda la lógica (gol.gg, lolesports, lolpros.gg, publicación en X) sigue corriendo en el servidor, así que el móvil necesita llegar a un servidor donde corra la app.
+La app es instalable como PWA: desde Chrome en Android, abres la URL y eliges **"Instalar app"** (o "Agregar a pantalla principal"). Queda con ícono propio y abre a pantalla completa. La interfaz se adapta a pantallas chicas. Toda la lógica (gol.gg, lolesports, lolpros.gg, publicación en X) sigue corriendo en el servidor, así que el móvil necesita llegar a un servidor donde corra la app.
 
-**Opción rápida, en casa:** corré la app en tu PC con `--host 0.0.0.0` y abrí `http://IP-de-tu-PC:8000` desde el móvil en la misma Wi-Fi. Ojo: sin HTTPS Chrome no ofrece instalarla como app, pero se puede usar desde el navegador.
+**Opción rápida, en casa:** corre la app en tu PC con `--host 0.0.0.0` y abre `http://IP-de-tu-PC:8000` desde el móvil en la misma Wi-Fi. Ojo: sin HTTPS Chrome no ofrece instalarla como app, pero se puede usar desde el navegador.
 
-**Opción completa, desde cualquier lado:** subí la app a un servidor con HTTPS (Render, Fly.io, un VPS...). En ese caso:
+**Opción completa, desde cualquier lado:** sube la app a un servidor con HTTPS (Render, Fly.io, un VPS...). En ese caso:
 
-1. **Activá el login, es obligatorio.** Cargá `APP_PASSWORD` (la contraseña para entrar) y `SESSION_SECRET` (generalo con `python -c "import secrets; print(secrets.token_hex(32))"`). Sin `APP_PASSWORD` cualquiera que encuentre la URL podría publicar en tu cuenta de X.
-2. Arrancá uvicorn detrás del proxy HTTPS con `--proxy-headers --forwarded-allow-ips="*"`, para que la cookie de sesión se marque como `Secure`:
+1. **Activa el login, es obligatorio.** Carga `APP_PASSWORD` (la contraseña para entrar) y `SESSION_SECRET` (genéralo con `python -c "import secrets; print(secrets.token_hex(32))"`). Sin `APP_PASSWORD` cualquiera que encuentre la URL podría publicar en tu cuenta de X.
+2. Arranca uvicorn detrás del proxy HTTPS con `--proxy-headers --forwarded-allow-ips="*"`, para que la cookie de sesión se marque como `Secure`:
    ```
    uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips="*"
    ```
 3. La base SQLite tiene que estar en un disco persistente (`DATABASE_URL`), si no se pierden borradores e historial en cada deploy.
-4. Cargá también en el servidor las credenciales de X y la config de gol.gg que tenías en `.env`.
+4. Carga también en el servidor las credenciales de X y la config de gol.gg que tenías en `.env`.
 
-**Render:** el repo incluye `render.yaml` (Blueprint). En render.com: New → Blueprint → elegí este repo, y cargá `APP_PASSWORD` y las 4 claves de X cuando lo pida. `SESSION_SECRET` se genera solo. Ojo: el plan gratuito tiene disco efímero (se pierden borradores e historial en cada deploy/reinicio) y duerme tras ~15 min sin uso; para persistir la base hace falta un disco de pago.
+**Render:** el repo incluye `render.yaml` (Blueprint). En render.com: New → Blueprint → elige este repo, y carga `APP_PASSWORD` y las 4 claves de X cuando lo pida. `SESSION_SECRET` se genera solo. Ojo: el plan gratuito tiene disco efímero (se pierden borradores e historial en cada deploy/reinicio) y duerme tras ~15 min sin uso; para persistir la base hace falta un disco de pago.
 
 **Base de datos persistente (recomendado en Render gratis):** el disco del plan gratuito se borra en cada deploy/reinicio, y con él los borradores, el historial y las plantillas. Para evitarlo crea una base Postgres gratuita en [Neon](https://neon.tech) o [Supabase](https://supabase.com) (no uses el Postgres gratis de Render: caduca a los 30 días), copia su cadena de conexión y ponla en Render → Environment como `DATABASE_URL` (vale el formato `postgres://...` o `postgresql://...`). Las tablas se crean solas al arrancar. Las imágenes subidas a mano siguen en disco y no persisten. Como respaldo extra, abajo de la web hay botones **Descargar / Restaurar** que exportan e importan borradores, historial y plantillas en JSON (restaurar dos veces no duplica nada).
 
@@ -185,5 +185,5 @@ Los tests corren sin necesidad de credenciales reales (mockean las llamadas a X 
 |---|---|
 | "credenciales... invalidas o expiraron" (401) | Keys de X mal copiadas o revocadas. |
 | "permisos insuficientes" (403) | La app no tiene permisos "Read and Write", o el Access Token se generó antes de cambiarlos (hay que regenerarlo). |
-| "muy similar a uno reciente" (403 duplicado) | X no permite publicar el mismo texto dos veces seguidas. Modificá el tweet. |
+| "muy similar a uno reciente" (403 duplicado) | X no permite publicar el mismo texto dos veces seguidas. Modifica el tweet. |
 | "Limite de publicaciones alcanzado" (429) | Se llegó al límite del plan Free (~500 posts/mes). |

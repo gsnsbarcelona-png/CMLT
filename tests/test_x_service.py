@@ -77,7 +77,7 @@ def test_server_error_translated(mocker):
     error = tweepy.errors.TwitterServerError(_FakeHttpResponse(500, "Server Error", {"detail": "oops"}))
     mocker.patch("tweepy.Client.create_tweet", side_effect=error)
 
-    with pytest.raises(x_service.XPublishError, match="proba de nuevo"):
+    with pytest.raises(x_service.XPublishError, match="prueba de nuevo"):
         x_service.publish_tweet("hola")
 
 

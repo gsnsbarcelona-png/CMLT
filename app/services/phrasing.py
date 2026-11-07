@@ -15,9 +15,9 @@ _recent: deque[str] = deque(maxlen=_RECENT_SIZE)
 
 # pregunta original -> alternativas (tono neutro, sin voseo).
 QUESTION_ALTERNATIVES: dict[str, list[str]] = {
-    "¿A cual preferis tener en tu equipo?": ["¿Con cual te quedarias en tu equipo?", "¿A cual ficharias primero?"],
+    "¿A cual prefieres tener en tu equipo?": ["¿Con cual te quedarias en tu equipo?", "¿A cual ficharias primero?"],
     "¿A cual te gustaria tener en tu equipo?": ["¿Con cual te quedarias en tu equipo?", "¿A cual ficharias primero?"],
-    "¿A que elo estas vos?": ["¿Y tu en que elo estas?", "¿Cuantos de estos te ganarias en soloQ?"],
+    "¿En que elo estas tu?": ["¿Cual es tu elo en soloQ?", "¿Cuantos de estos te ganarias en soloQ?"],
     "¿Alguien lo va a superar antes de que termine el split?": [
         "¿Alguien le arrebata ese puesto antes del final del split?",
         "¿Aguanta esa marca hasta el final del split?",

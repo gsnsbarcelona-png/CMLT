@@ -80,7 +80,7 @@ def publish_tweet(text: str, image_url: str | None = None) -> str:
         try:
             media = get_x_api_v1().media_upload(filename=filename, file=BytesIO(contents))
         except tweepy.errors.TweepyException as exc:
-            raise XPublishError("X rechazo la imagen adjunta. Proba con otra o sin imagen.") from exc
+            raise XPublishError("X rechazo la imagen adjunta. Prueba con otra o sin imagen.") from exc
         media_ids.append(str(media.media_id))
 
     client = get_x_client()
@@ -107,7 +107,7 @@ def publish_tweet(text: str, image_url: str | None = None) -> str:
     except tweepy.errors.BadRequest as exc:
         raise XPublishError(f"X rechazo la solicitud: {exc}") from exc
     except tweepy.errors.TwitterServerError as exc:
-        raise XPublishError("Error del lado de X, proba de nuevo en unos minutos.") from exc
+        raise XPublishError("Error del lado de X, prueba de nuevo en unos minutos.") from exc
     except tweepy.TweepyException as exc:
         raise XPublishError("No se pudo conectar con X. Revisa tu conexion a internet.") from exc
 
