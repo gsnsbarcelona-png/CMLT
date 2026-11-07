@@ -33,6 +33,8 @@
     <section id="tab-compose" class="tab-panel active">
       <div class="mode-selector" role="radiogroup" aria-label="Modo">
         <label><input type="radio" name="mode" value="calendar" checked /> Calendario</label>
+        <label><input type="radio" name="mode" value="match-day" /> Dia de partido</label>
+        <label><input type="radio" name="mode" value="results" /> Resultados</label>
         <label><input type="radio" name="mode" value="stats" /> Stats</label>
         <label><input type="radio" name="mode" value="h2h" /> H2H Hoy</label>
         <label><input type="radio" name="mode" value="duel" /> Duelo 1v1</label>
@@ -47,6 +49,20 @@
         <label class="checkbox-inline"><input type="checkbox" id="calendar-emea-masters" /> EMEA Masters</label>
         <button id="calendar-generate-btn">Generar calendario</button>
         <p class="hint">Los horarios y equipos siempre vienen de la API oficial de LoL Esports (datos reales).</p>
+      </div>
+
+      <div id="mode-match-day" class="mode-panel" hidden>
+        <button id="match-day-generate-btn">Generar pack del dia</button>
+        <p class="hint">Un clic: calendario de la semana + preview H2H (historial y forma reciente) de cada partido de LES de hoy. Guarda o copia solo lo que quieras.</p>
+        <div id="match-day-results" class="list"></div>
+      </div>
+
+      <div id="mode-results" class="mode-panel" hidden>
+        <label class="checkbox-inline"><input type="checkbox" id="results-les" checked /> LES</label>
+        <label class="checkbox-inline"><input type="checkbox" id="results-lec" /> LEC</label>
+        <label class="checkbox-inline"><input type="checkbox" id="results-emea-masters" /> EMEA Masters</label>
+        <button id="results-generate-btn">Generar resultados</button>
+        <p class="hint">Marcadores reales de la ultima jornada con partidos terminados (ultimos 7 dias), de la API oficial de LoL Esports.</p>
       </div>
 
       <div id="mode-stats" class="mode-panel" hidden>

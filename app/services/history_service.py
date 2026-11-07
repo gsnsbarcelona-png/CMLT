@@ -5,6 +5,7 @@ from datetime import date
 from pathlib import Path
 
 from app.config import settings
+from app.services.phrasing import vary_question
 from app.services import char_count
 
 DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "les_anniversaries.json"
@@ -124,7 +125,7 @@ def format_anniversary_plain(anniversary: Anniversary, is_exact: bool, today: da
             f"🗓️ No es de hoy exacto -- lo mas cercano: {anniversary.day:02d}/{anniversary.month:02d}/"
             f"{anniversary.year} (hace {years_ago} años)"
         )
-    question = "¿Lo viviste en directo? 👀"
+    question = vary_question("¿Lo viviste en directo?") + " 👀"
 
     # El cierre (arrobas/hashtags) lo agrega el router despues de esta
     # funcion, pero hay que reservarle presupuesto aca: lo unico que puede

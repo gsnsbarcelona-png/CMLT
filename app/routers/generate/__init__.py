@@ -10,6 +10,7 @@ from app.routers.generate import (
     calendar,
     duel,
     league_comparison,
+    results,
     stats,
     template,
     top_ranking,
@@ -17,6 +18,7 @@ from app.routers.generate import (
 
 router = APIRouter(prefix="/api/generate", tags=["generate"])
 router.include_router(calendar.router)
+router.include_router(results.router)
 router.include_router(stats.router)
 router.include_router(duel.router)
 router.include_router(anniversary.router)

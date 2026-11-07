@@ -11,6 +11,7 @@ import httpx
 from bs4 import BeautifulSoup
 
 from app.config import settings
+from app.services.phrasing import vary_question
 
 logger = logging.getLogger(__name__)
 
@@ -739,7 +740,7 @@ def format_h2h_variant_plain(preview: HeadToHeadPreviewData, angle: str, today_c
         else:
             nuance = "Todavia no hay antecedentes directos esta temporada."
 
-        question = "¿Se repite la historia hoy?"
+        question = vary_question("¿Se repite la historia hoy?")
     else:
         parts = []
         for team, form in ((preview.team_a, preview.recent_form_a), (preview.team_b, preview.recent_form_b)):
@@ -752,7 +753,7 @@ def format_h2h_variant_plain(preview: HeadToHeadPreviewData, angle: str, today_c
         else:
             nuance = "Sin cruces previos esta temporada para comparar."
 
-        question = "¿Quien llega mejor hoy?"
+        question = vary_question("¿Quien llega mejor hoy?")
 
     lines.extend([headline, nuance, f"{question} 👀"])
     return "\n".join(lines)
@@ -936,7 +937,7 @@ def format_stat_tweet_plain(candidate: StatCandidate) -> str:
     return (
         f"{candidate.plano_emoji} {candidate.plano_title}\n"
         f"{candidate.fact_sentence}\n"
-        f"{candidate.plano_question} {candidate.plano_emoji}"
+        f"{vary_question(candidate.plano_question)} {candidate.plano_emoji}"
     )
 
 
@@ -1046,10 +1047,10 @@ def pick_league_comparison_candidate(
 def format_league_comparison_plain(candidate: LeagueComparisonCandidate, tone: str) -> str:
     if tone == "debate":
         header = "🤔 DEBATE LES-LEC"
-        question = "¿Se sostendria esa cifra en la LEC? 👀"
+        question = vary_question("¿Se sostendria esa cifra en la LEC?") + " 👀"
     else:
         header = "🔎 DATO LES-LEC"
-        question = "¿Aguantaria el ritmo LEC? 👀"
+        question = vary_question("¿Aguantaria el ritmo LEC?") + " 👀"
 
     lines = [header, candidate.fact_sentence, candidate.nuance, question]
     return "\n".join(lines)
@@ -1187,12 +1188,12 @@ def format_top_ranking_plain(candidate: TopRankingCandidate, variant: str) -> st
         lines.append(f"{leader.name} manda con {leader.value_display} {candidate.unit_label} ({leader.games} partidos).")
         if candidate.league_average_display:
             lines.append(f"Media de la liga: {candidate.league_average_display} {candidate.unit_label}.")
-        lines.append(f"¿Se mantiene arriba? {candidate.plano_emoji}")
+        lines.append(f"{vary_question('¿Se mantiene arriba?')} {candidate.plano_emoji}")
     else:
         if candidate.total_pool_size < TOP_RANKING_TOP_N:
             lines.append(f"Solo hay {candidate.total_pool_size} con datos suficientes este split:")
         for i, entry in enumerate(candidate.entries, start=1):
             lines.append(f"{i}. {entry.name} — {entry.value_display} {candidate.unit_label}")
-        lines.append(f"¿Se mantiene el top 1? {candidate.plano_emoji}")
+        lines.append(f"{vary_question('¿Se mantiene el top 1?')} {candidate.plano_emoji}")
 
     return "\n".join(lines)

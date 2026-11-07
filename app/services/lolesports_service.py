@@ -7,6 +7,7 @@ from zoneinfo import ZoneInfo
 import httpx
 
 from app.config import settings
+from app.services.phrasing import choose
 
 LOLESPORTS_API_BASE = "https://esports-api.lolesports.com/persisted/gw"
 
@@ -237,6 +238,98 @@ def fetch_upcoming_matches(league_slugs: list[str], now: datetime | None = None)
     matches.sort(key=lambda m: m.start_time)
     _relabel_final_four_blocks(matches)
     return matches
+
+
+@dataclass
+class ResultInfo:
+    start_time: datetime  # aware, hora Madrid
+    league_slug: str
+    block_name: str
+    team1_name: str
+    team1_code: str
+    team2_name: str
+    team2_code: str
+    score1: int
+    score2: int
+
+    @property
+    def winner_code(self) -> str:
+        return self.team1_code if self.score1 > self.score2 else self.team2_code
+
+
+RESULTS_LOOKBACK_DAYS = 7
+
+
+def fetch_latest_results(
+    league_slugs: list[str], now: datetime | None = None, lookback_days: int = RESULTS_LOOKBACK_DAYS
+) -> list[ResultInfo]:
+    """Resultados de la ULTIMA jornada con partidos terminados (el dia de
+    calendario, hora Madrid, mas reciente con al menos un partido completado
+    en los ultimos `lookback_days`). Solo partidos con marcador real
+    (gameWins de la API); nunca se inventa un resultado."""
+    if now is None:
+        now = datetime.now(timezone.utc)
+    oldest = (now.astimezone(MADRID_TZ) - timedelta(days=lookback_days)).date()
+
+    results: list[ResultInfo] = []
+    for slug in league_slugs:
+        for event in _fetch_league_events(slug):
+            if event.get("type") != "match" or event.get("state") != "completed":
+                continue
+            teams = event.get("match", {}).get("teams") or []
+            if len(teams) < 2 or not teams[0] or not teams[1]:
+                continue
+            try:
+                score1 = int(teams[0]["result"]["gameWins"])
+                score2 = int(teams[1]["result"]["gameWins"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            if score1 == score2:
+                continue
+            start_time = datetime.fromisoformat(event["startTime"].replace("Z", "+00:00")).astimezone(MADRID_TZ)
+            if start_time.date() < oldest or start_time.astimezone(timezone.utc) > now:
+                continue
+            name1, code1 = _parse_team(teams[0])
+            name2, code2 = _parse_team(teams[1])
+            results.append(
+                ResultInfo(
+                    start_time=start_time,
+                    league_slug=slug,
+                    block_name=event.get("blockName") or "",
+                    team1_name=name1,
+                    team1_code=code1,
+                    team2_name=name2,
+                    team2_code=code2,
+                    score1=score1,
+                    score2=score2,
+                )
+            )
+
+    if not results:
+        return []
+    latest_day = max(r.start_time.date() for r in results)
+    day_results = [r for r in results if r.start_time.date() == latest_day]
+    day_results.sort(key=lambda r: r.start_time)
+    return day_results
+
+
+def format_results_tweet(results: list[ResultInfo], league_slugs: list[str]) -> str:
+    label = league_label(league_slugs)
+    day = results[0].start_time
+    header = choose(
+        [
+            f"🏁 Resultados {label} ({day:%d/%m})",
+            f"📊 Asi quedo la jornada de {label} ({day:%d/%m})",
+        ]
+    )
+    lines = [header, ""]
+    for r in results:
+        winner_first = r.score1 > r.score2
+        w_code, l_code = (r.team1_code, r.team2_code) if winner_first else (r.team2_code, r.team1_code)
+        w_score, l_score = max(r.score1, r.score2), min(r.score1, r.score2)
+        block = f" ({r.block_name})" if r.block_name else ""
+        lines.append(f"✅ {_display_code(w_code)} {w_score}-{l_score} {_display_code(l_code)}{block}")
+    return "\n".join(lines)
 
 
 def _relabel_final_four_blocks(matches: list[MatchInfo]) -> None:

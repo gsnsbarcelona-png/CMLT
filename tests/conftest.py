@@ -7,6 +7,17 @@ from app.main import app
 
 
 @pytest.fixture(autouse=True)
+def _deterministic_phrasing(monkeypatch):
+    """La variedad de redaccion es aleatoria: apagada, los tests ven siempre
+    las frases originales. Se prueba aparte, activandola."""
+    from app.services import phrasing
+
+    monkeypatch.setattr(phrasing, "VARIETY_ENABLED", False)
+    phrasing.reset_recent()
+    yield
+
+
+@pytest.fixture(autouse=True)
 def _no_prewarm_and_clear_events_cache(monkeypatch):
     """Sin precalentamiento al arrancar (pegaria a la red) y con la cache del
     calendario limpia entre tests."""

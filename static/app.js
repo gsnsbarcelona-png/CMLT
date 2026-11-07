@@ -314,13 +314,25 @@ function variantResultCardHtml(result, source, metaFn) {
   `;
 }
 
-async function generateResultCards({ endpoint, payload, resultsElId, btnId, source, metaFn, loadingText, emptyMessage }) {
+async function generateResultCards({
+  endpoint,
+  payload,
+  fetchResults,
+  resultsElId,
+  btnId,
+  source,
+  metaFn,
+  loadingText,
+  emptyMessage,
+}) {
   const resultsEl = document.getElementById(resultsElId);
   const btn = document.getElementById(btnId);
   btn.disabled = true;
   resultsEl.innerHTML = loadingText;
   try {
-    const results = await api(endpoint, { method: "POST", body: JSON.stringify(payload) });
+    const results = fetchResults
+      ? await fetchResults()
+      : await api(endpoint, { method: "POST", body: JSON.stringify(payload) });
     if (!results.length && emptyMessage) {
       resultsEl.innerHTML = `<div class="empty-state">${emptyMessage}</div>`;
       return;
@@ -461,6 +473,8 @@ function initCompose() {
   document.getElementById("save-draft-btn").addEventListener("click", () => handleSave(false));
   document.getElementById("publish-now-btn").addEventListener("click", () => handleSave(true));
   document.getElementById("calendar-generate-btn").addEventListener("click", handleCalendarGenerate);
+  document.getElementById("results-generate-btn").addEventListener("click", handleResultsGenerate);
+  document.getElementById("match-day-generate-btn").addEventListener("click", handleMatchDayPack);
   document.getElementById("stats-generate-btn").addEventListener("click", handleStatsGenerate);
   document.getElementById("h2h-autofill-btn").addEventListener("click", handleH2hAutofill);
   document.getElementById("h2h-generate-btn").addEventListener("click", handleH2hGenerate);
@@ -534,6 +548,8 @@ function selectTeamOption(selectEl, rawName) {
 function updateComposeMode() {
   const mode = document.querySelector('input[name="mode"]:checked').value;
   document.getElementById("mode-calendar").hidden = mode !== "calendar";
+  document.getElementById("mode-match-day").hidden = mode !== "match-day";
+  document.getElementById("mode-results").hidden = mode !== "results";
   document.getElementById("mode-stats").hidden = mode !== "stats";
   document.getElementById("mode-h2h").hidden = mode !== "h2h";
   document.getElementById("mode-duel").hidden = mode !== "duel";
@@ -543,11 +559,78 @@ function updateComposeMode() {
   document.getElementById("mode-template").hidden = mode !== "template";
   document.getElementById("mode-manual").hidden = mode !== "manual";
   document.getElementById("single-compose-area").hidden =
+    mode === "match-day" ||
     mode === "h2h" ||
     mode === "duel" ||
     mode === "top-ranking" ||
     mode === "anniversary" ||
     mode === "lec-compare";
+}
+
+async function handleResultsGenerate() {
+  const leagues = [];
+  if (document.getElementById("results-les").checked) leagues.push("les");
+  if (document.getElementById("results-lec").checked) leagues.push("lec");
+  if (document.getElementById("results-emea-masters").checked) leagues.push("emea_masters");
+
+  if (!leagues.length) {
+    setComposeFeedback("Marca al menos una liga.", true);
+    return;
+  }
+  setComposeFeedback("Consultando resultados...", false);
+  await fillComposeFromGenerate(
+    "/api/generate/results",
+    { leagues },
+    "Resultados generados. Puedes editarlos antes de guardar o publicar."
+  );
+}
+
+// Pack "dia de partido": en un clic, el calendario de la semana + la preview
+// H2H (2 variantes) de CADA partido de LES de hoy. Reutiliza los endpoints
+// existentes (nada nuevo en el servidor). Los nombres de equipo de lolesports
+// se reconcilian con los de gol.gg (mismo criterio que "Autocompletar").
+async function handleMatchDayPack() {
+  await generateResultCards({
+    resultsElId: "match-day-results",
+    btnId: "match-day-generate-btn",
+    source: "match-day",
+    metaFn: (r) => r._meta,
+    loadingText: "Preparando el pack del dia...",
+    emptyMessage: "Hoy no hay partidos de LES. Prueba Resultados, Efemeride o Top/Ranking.",
+    fetchResults: async () => {
+      const matches = await api("/api/generate/stats/today-match");
+      if (!matches.length) return [];
+      const golTeams = await api("/api/generate/stats/h2h-teams").catch(() => []);
+      const toGolName = (name) => {
+        const wanted = normalizeTeamName(name);
+        return (
+          golTeams.find((t) => {
+            const norm = normalizeTeamName(t);
+            return norm === wanted || norm.includes(wanted) || wanted.includes(norm);
+          }) || name
+        );
+      };
+      const out = [];
+      const calendar = await api("/api/generate/calendar", { method: "POST", body: JSON.stringify({ leagues: ["les"] }) });
+      out.push({ ...calendar, _meta: "Calendario de la semana" });
+      for (const m of matches) {
+        const teamA = toGolName(m.team_a);
+        const teamB = toGolName(m.team_b);
+        try {
+          const variants = await api("/api/generate/stats/head-to-head-preview", {
+            method: "POST",
+            body: JSON.stringify({ team_a: teamA, team_b: teamB }),
+          });
+          variants.forEach((v) =>
+            out.push({ ...v, _meta: `${teamA} vs ${teamB} · ${v.angle === "historial" ? "historial" : "forma reciente"}` })
+          );
+        } catch (e) {
+          out.push({ content: null, error: `${teamA} vs ${teamB}: ${e.message}`, _meta: "H2H no disponible" });
+        }
+      }
+      return out;
+    },
+  });
 }
 
 async function loadTopRankingCategories() {
