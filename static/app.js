@@ -746,6 +746,8 @@ function initCompose() {
   document.getElementById("calendar-generate-btn").addEventListener("click", handleCalendarGenerate);
   document.getElementById("results-generate-btn").addEventListener("click", handleResultsGenerate);
   document.getElementById("match-day-generate-btn").addEventListener("click", handleMatchDayPack);
+  document.getElementById("weekly-pack-generate-btn").addEventListener("click", handleWeeklyPack);
+  document.getElementById("weekly-pack-save-all-btn").addEventListener("click", handleWeeklyPackSaveAll);
   document.getElementById("stats-generate-btn").addEventListener("click", handleStatsGenerate);
   document.getElementById("h2h-autofill-btn").addEventListener("click", handleH2hAutofill);
   document.getElementById("h2h-generate-btn").addEventListener("click", handleH2hGenerate);
@@ -824,6 +826,7 @@ function updateComposeMode() {
   document.getElementById("mode-calendar").hidden = mode !== "calendar";
   document.getElementById("mode-match-day").hidden = mode !== "match-day";
   document.getElementById("mode-results").hidden = mode !== "results";
+  document.getElementById("mode-weekly-pack").hidden = mode !== "weekly-pack";
   document.getElementById("mode-stats").hidden = mode !== "stats";
   document.getElementById("mode-h2h").hidden = mode !== "h2h";
   document.getElementById("mode-duel").hidden = mode !== "duel";
@@ -832,6 +835,7 @@ function updateComposeMode() {
   document.getElementById("mode-lec-compare").hidden = mode !== "lec-compare";
   document.getElementById("single-compose-area").hidden =
     mode === "match-day" ||
+    mode === "weekly-pack" ||
     mode === "h2h" ||
     mode === "duel" ||
     mode === "top-ranking" ||
@@ -903,6 +907,80 @@ async function handleMatchDayPack() {
       return out;
     },
   });
+}
+
+// Pack semanal: calendario + resultados + top + efemeride de un clic
+// (POST /api/generate/weekly-pack). Cada pieza es una tarjeta revisable; las que
+// fallan salen con su motivo y no tumban a las demas.
+async function handleWeeklyPack() {
+  const actions = document.getElementById("weekly-pack-actions");
+  actions.hidden = true;
+  let items = [];
+  await generateResultCards({
+    resultsElId: "weekly-pack-results",
+    btnId: "weekly-pack-generate-btn",
+    source: "weekly-pack",
+    metaFn: (r) => r.label,
+    loadingText: "Preparando el pack semanal...",
+    fetchResults: async () => {
+      const res = await api("/api/generate/weekly-pack", { method: "POST", body: JSON.stringify({ leagues: ["les"] }) });
+      items = res.items;
+      return items;
+    },
+  });
+  const resultsEl = document.getElementById("weekly-pack-results");
+  items.forEach((item, idx) => {
+    if (!item.content || !item.thread || !item.thread.length) return;
+    const card = resultsEl.children[idx];
+    const thread = document.createElement("div");
+    thread.className = "weekly-pack-thread";
+    thread.innerHTML =
+      `<div class="card-meta">Hilo completo (${item.thread.length} tweets)</div>` +
+      item.thread
+        .map(
+          (part, i) => `
+      <textarea class="card-edit thread-part" rows="4" aria-label="Parte ${i + 1} del hilo (editable)">${escapeHtml(part)}</textarea>
+      <div class="card-actions">
+        <button type="button" class="thread-save-btn">Guardar</button>
+        <button type="button" class="thread-copy-btn">Copiar</button>
+        <button type="button" class="thread-open-x-btn">Abrir en X</button>
+      </div>`
+        )
+        .join("");
+    card.appendChild(thread);
+    const areas = thread.querySelectorAll(".thread-part");
+    thread.querySelectorAll(".thread-save-btn").forEach((b, i) => bindSaveButton(b, () => areas[i].value, "weekly-pack"));
+    thread.querySelectorAll(".thread-copy-btn").forEach((b, i) => bindCopyButton(b, () => areas[i].value));
+    thread.querySelectorAll(".thread-open-x-btn").forEach((b, i) => bindOpenXButton(b, () => areas[i].value));
+  });
+  actions.hidden = !items.some((i) => i.content);
+}
+
+async function handleWeeklyPackSaveAll() {
+  const btn = document.getElementById("weekly-pack-save-all-btn");
+  const cards = Array.from(document.querySelectorAll("#weekly-pack-results > .card")).filter((c) =>
+    c.querySelector(".card-edit-result")
+  );
+  if (!cards.length) return;
+  btn.disabled = true;
+  let saved = 0;
+  let failed = 0;
+  for (const card of cards) {
+    const content = card.querySelector(".card-edit-result").value;
+    if (!content.trim()) continue;
+    try {
+      await api("/api/tweets", {
+        method: "POST",
+        body: JSON.stringify({ content, source: "weekly-pack", image_url: card.dataset.imageUrl || null }),
+      });
+      saved += 1;
+    } catch (e) {
+      failed += 1;
+    }
+  }
+  btn.disabled = false;
+  if (failed) toast(`Guardados ${saved} borradores; ${failed} no se pudieron guardar.`, "error");
+  else toast(`${saved} borradores guardados.`, "success");
 }
 
 async function loadTopRankingCategories() {

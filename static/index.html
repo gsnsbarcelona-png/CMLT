@@ -39,6 +39,7 @@
           <label class="mode-chip"><input type="radio" name="mode" value="calendar" checked /><span class="chip-ico" aria-hidden="true">📅</span><span class="chip-txt">Calendario</span></label>
           <label class="mode-chip"><input type="radio" name="mode" value="match-day" /><span class="chip-ico" aria-hidden="true">⚔️</span><span class="chip-txt">Día de partido</span></label>
           <label class="mode-chip"><input type="radio" name="mode" value="results" /><span class="chip-ico" aria-hidden="true">🏁</span><span class="chip-txt">Resultados</span></label>
+          <label class="mode-chip"><input type="radio" name="mode" value="weekly-pack" /><span class="chip-ico" aria-hidden="true">🗓️</span><span class="chip-txt">Pack semanal</span></label>
           </div>
         </div>
         <div class="mode-group" role="group" aria-label="Datos">
@@ -81,6 +82,16 @@
         <button id="results-generate-btn">Generar resultados</button>
         <p class="hint">Marcadores reales de la última jornada.</p>
         <details class="hint-more"><summary aria-label="Más información">?</summary><p>Marcadores reales de la última jornada con partidos terminados (últimos 7 días), de la API oficial de LoL Esports.</p></details>
+      </div>
+
+      <div id="mode-weekly-pack" class="mode-panel" hidden>
+        <button id="weekly-pack-generate-btn">Generar pack semanal</button>
+        <p class="hint">Calendario de la semana, resultados de la última jornada, top de la semana y efeméride de hoy (LES).</p>
+        <details class="hint-more"><summary aria-label="Más información">?</summary><p>Un clic genera las cuatro piezas con datos reales. Si alguna no se puede generar (por ejemplo, sin resultados recientes), las demás siguen y esa muestra el motivo. Edita, copia o guarda cada tarjeta, o guarda todas como borradores.</p></details>
+        <div id="weekly-pack-actions" class="card-actions" hidden>
+          <button id="weekly-pack-save-all-btn">Guardar todos como borradores</button>
+        </div>
+        <div id="weekly-pack-results" class="list"></div>
       </div>
 
       <div id="mode-stats" class="mode-panel" hidden>
