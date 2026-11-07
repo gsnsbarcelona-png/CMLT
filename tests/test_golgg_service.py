@@ -722,31 +722,52 @@ def _empty_preview():
 
 
 def test_format_h2h_variant_plain_historial_with_data():
-    text = format_h2h_variant_plain(_full_preview(), "historial")
+    lines = format_h2h_variant_plain(_full_preview(), "historial").splitlines()
 
-    assert "UCAM Esports 🆚 Barca eSports" in text
-    assert "UCAM Esports 1-3 Barca eSports (mapas: 5-6)" in text
-    assert "El último cruce (2026-08-20) lo ganó Barca eSports." in text
-    assert "¿Se repite la historia hoy? 👀" in text
+    assert lines[0] == "🥊 UCAM Esports 1-3 Barca eSports en la temporada"
+    assert "Mapas de la temporada: 5-6." in lines
+    assert "El último cruce (2026-08-20) lo ganó Barca eSports." in lines
+    assert lines[-1] == "¿Se repite la historia hoy? 👀"
 
 
 def test_format_h2h_variant_plain_forma_reciente_with_data():
-    text = format_h2h_variant_plain(_full_preview(), "forma_reciente")
+    lines = format_h2h_variant_plain(_full_preview(), "forma_reciente").splitlines()
 
-    assert "UCAM Esports 2V-3D" in text
-    assert "Barca eSports 4V-1D" in text
-    assert "manda Barca eSports (1-3)" in text
-    assert "¿Quién llega mejor hoy? 👀" in text
+    assert lines[0] == "🥊 UCAM Esports llega con 2V-3D y Barca eSports con 4V-1D"
+    assert "En el historial de la temporada manda Barca eSports (1-3)." in lines
+    assert lines[-1] == "¿Quién llega mejor hoy? 👀"
 
 
 def test_format_h2h_variant_plain_no_data_never_invents():
     historial = format_h2h_variant_plain(_empty_preview(), "historial")
     forma = format_h2h_variant_plain(_empty_preview(), "forma_reciente")
 
-    assert "Primer cruce del año entre UCAM Esports y GX esta temporada." in historial
-    assert "Todavía no hay antecedentes directos esta temporada." in historial
-    assert "sin datos recientes" in forma
-    assert "Sin cruces previos esta temporada para comparar." in forma
+    assert historial.splitlines()[0] == "🥊 UCAM Esports 🆚 GX: primer cruce de la temporada"
+    assert "Mapas" not in historial and "último cruce" not in historial
+    assert forma.splitlines()[0] == "🥊 UCAM Esports 🆚 GX"
+    assert "UCAM Esports sin datos recientes / GX sin datos recientes." in forma
+    assert "historial" not in forma
+
+
+def test_format_h2h_forma_tie_and_partial_data():
+    preview = _full_preview()
+    preview.total_wins_a, preview.total_wins_b = 2, 2
+    preview.recent_form_b = None
+    lines = format_h2h_variant_plain(preview, "forma_reciente").splitlines()
+    assert lines[0] == "🥊 UCAM Esports 🆚 Barca eSports"
+    assert "Barca eSports sin datos recientes." in lines
+    assert "En el historial de la temporada están empatados (2-2)." in lines
+
+
+def test_format_h2h_hook_varies_when_variety_enabled(monkeypatch):
+    from app.services import phrasing
+
+    monkeypatch.setattr(phrasing, "VARIETY_ENABLED", True)
+    hooks = set()
+    for _ in range(30):
+        phrasing.reset_recent()
+        hooks.add(format_h2h_variant_plain(_full_preview(), "historial").splitlines()[0])
+    assert len(hooks) == 2 and all("1-3" in h for h in hooks)
 
 
 def test_format_h2h_variant_plain_includes_today_context():

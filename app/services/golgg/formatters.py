@@ -2,49 +2,65 @@
 from app.services.golgg.config import get_current_tournament
 from app.services.golgg.models import HeadToHeadPreviewData, LeagueComparisonCandidate, StatCandidate, TopRankingCandidate
 from app.services.golgg.top_ranking import TOP_RANKING_CATEGORIES, TOP_RANKING_TOP_N
-from app.services.phrasing import vary_question
+from app.services.phrasing import choose, vary_question
+
+
+def _h2h_hook(preview: HeadToHeadPreviewData, angle: str) -> str:
+    """Primera linea con dato: marcador de la temporada (historial) o forma
+    reciente comparada. Sin el dato necesario, cae a la linea neutra."""
+    a, b = preview.team_a, preview.team_b
+    total = preview.total_wins_a + preview.total_wins_b
+    if angle == "historial":
+        if not total:
+            return f"{a} 🆚 {b}: primer cruce de la temporada"
+        score = f"{preview.total_wins_a}-{preview.total_wins_b}"
+        return choose([
+            f"{a} {score} {b} en la temporada",
+            f"Cara a cara de la temporada: {a} {score} {b}",
+        ])
+    if preview.recent_form_a and preview.recent_form_b:
+        fa, fb = preview.recent_form_a, preview.recent_form_b
+        return choose([
+            f"{a} llega con {fa.wins}V-{fa.losses}D y {b} con {fb.wins}V-{fb.losses}D",
+            f"Forma reciente: {a} {fa.wins}V-{fa.losses}D, {b} {fb.wins}V-{fb.losses}D",
+        ])
+    return f"{a} 🆚 {b}"
 
 
 def format_h2h_variant_plain(preview: HeadToHeadPreviewData, angle: str, today_context: str | None = None) -> str:
-    """Texto de la preview head-to-head. Misma idea de las 4 partes
-    (gancho / dato protagonista / matiz / pregunta) con frases fijas por
-    angulo, usando solo los datos reales que haya -- si algo falta, frase
-    neutra en vez de inventar."""
+    """Texto de la preview head-to-head: gancho con dato / contexto de hoy /
+    matiz / pregunta, usando solo los datos reales que haya -- si algo falta,
+    se omite la frase en vez de inventar."""
     total = preview.total_wins_a + preview.total_wins_b
-    lines = [f"🥊 {preview.team_a} 🆚 {preview.team_b}"]
+    lines = [f"🥊 {_h2h_hook(preview, angle)}"]
     if today_context:
         lines.append(today_context)
 
     if angle == "historial":
         if total:
-            headline = (
-                f"Historial de la temporada: {preview.team_a} {preview.total_wins_a}-"
-                f"{preview.total_wins_b} {preview.team_b} (mapas: {preview.total_maps_a}-{preview.total_maps_b})."
-            )
-        else:
-            headline = f"Primer cruce del año entre {preview.team_a} y {preview.team_b} esta temporada."
-
+            lines.append(f"Mapas de la temporada: {preview.total_maps_a}-{preview.total_maps_b}.")
         if preview.last_meeting:
-            nuance = f"El último cruce ({preview.last_meeting.date}) lo ganó {preview.last_meeting.winner}."
-        else:
-            nuance = "Todavía no hay antecedentes directos esta temporada."
-
+            lines.append(f"El último cruce ({preview.last_meeting.date}) lo ganó {preview.last_meeting.winner}.")
         question = vary_question("¿Se repite la historia hoy?")
     else:
         parts = []
         for team, form in ((preview.team_a, preview.recent_form_a), (preview.team_b, preview.recent_form_b)):
-            parts.append(f"{team} {form.wins}V-{form.losses}D" if form else f"{team} sin datos recientes")
-        headline = f"Forma reciente: {' / '.join(parts)}."
+            if not form:
+                parts.append(f"{team} sin datos recientes")
+        if parts:
+            lines.append(f"{' / '.join(parts)}.")
 
         if total:
-            leader = preview.team_a if preview.total_wins_a >= preview.total_wins_b else preview.team_b
-            nuance = f"En el historial de la temporada manda {leader} ({preview.total_wins_a}-{preview.total_wins_b})."
-        else:
-            nuance = "Sin cruces previos esta temporada para comparar."
-
+            if preview.total_wins_a == preview.total_wins_b:
+                lines.append(f"En el historial de la temporada están empatados ({preview.total_wins_a}-{preview.total_wins_b}).")
+            else:
+                leader = preview.team_a if preview.total_wins_a > preview.total_wins_b else preview.team_b
+                lines.append(
+                    f"En el historial de la temporada manda {leader} ({preview.total_wins_a}-{preview.total_wins_b})."
+                )
         question = vary_question("¿Quién llega mejor hoy?")
 
-    lines.extend([headline, nuance, f"{question} 👀"])
+    lines.append(f"{question} 👀")
     return "\n".join(lines)
 
 
