@@ -470,3 +470,8 @@ input[type="password"] {
 .confirm-actions .secondary { background: var(--panel); color: var(--text); border: 1px solid var(--border); }
 .confirm-actions .confirm-ok { background: var(--primary); color: var(--on-primary); border: 1px solid var(--primary); }
 .confirm-actions button:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+
+.image-loading { width: 90px; height: 90px; border-radius: 6px; border: 1px solid var(--border); background: var(--border); opacity: .6; animation: image-pulse 1.2s ease-in-out infinite; }
+@keyframes image-pulse { 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .image-loading { animation: none; } }
+.auto-image-setting { font-size: 12px; opacity: .8; margin-top: 8px; }

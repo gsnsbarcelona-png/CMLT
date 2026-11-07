@@ -357,6 +357,16 @@ function bindImagePicker(root, { suggestedTeams = [], initialUrl = null } = {}) 
     removeBtn.hidden = !url;
     refreshDownloadLink(root);
   }
+  root._setImage = setImage;
+  // Cualquier accion manual sobre la imagen cancela la auto-adjuncion pendiente.
+  root.addEventListener("click", (ev) => {
+    if (ev.target.closest(".image-suggestions, .use-branded-bg-btn, .remove-image-btn, .create-card-btn")) {
+      root.dataset.imageTouched = "1";
+    }
+  });
+  fileInput.addEventListener("change", () => {
+    root.dataset.imageTouched = "1";
+  });
 
   if (suggestedTeams.length) {
     const vsButton =
@@ -443,6 +453,80 @@ function bindImagePicker(root, { suggestedTeams = [], initialUrl = null } = {}) 
 // `card` es el objeto `card` que devuelve el endpoint de generacion (con
 // `kind` "results" o "top"); sin card quita el boton. Deja la imagen en el
 // mismo estado que usa el image-picker (root.dataset.imageUrl + vista previa).
+function applyCardImage(root, picker, url) {
+  if (root._setImage) {
+    root._setImage(url);
+    return;
+  }
+  root.dataset.imageUrl = url;
+  const preview = picker.querySelector(".image-preview");
+  preview.src = url;
+  preview.hidden = false;
+  picker.querySelector(".remove-image-btn").hidden = false;
+  refreshDownloadLink(root);
+}
+
+// ---------- Adjuntar imagen automaticamente ----------
+// Ajuste "Adjuntar imagen automaticamente" (checkbox #auto-image, guardado en
+// ta-prefs por el mecanismo generico de prefs). Sin el elemento o sin
+// localStorage, se considera activado.
+function autoImageEnabled() {
+  const el = document.getElementById("auto-image");
+  return el ? el.checked : true;
+}
+
+// Peticiones en vuelo/resueltas por clave: evita lanzar dos veces la misma imagen.
+const autoImageRequests = new Map();
+function autoImageFetch(key, fn) {
+  if (!autoImageRequests.has(key)) {
+    const p = fn();
+    autoImageRequests.set(key, p);
+    p.catch(() => autoImageRequests.delete(key));
+  }
+  return autoImageRequests.get(key);
+}
+
+// Se dispara DESPUES de pintar el texto, sin bloquear. Si el usuario quita,
+// sube o elige otra imagen mientras llega, no se sobrescribe.
+// teams: equipos sugeridos (VS -> fondo de marca); card: tarjeta de Resultados/Top.
+async function autoAttachImage(root, { teams = [], card = null } = {}) {
+  if (!autoImageEnabled()) return;
+  const picker = root.querySelector(".image-picker") || root;
+  const isCard = card && (card.kind === "results" || card.kind === "top");
+  if (!isCard && teams.length !== 2) return;
+  const placeholder = document.createElement("div");
+  placeholder.className = "image-loading";
+  placeholder.setAttribute("aria-label", "Cargando imagen");
+  picker.appendChild(placeholder);
+  root.dataset.imageTouched = "";
+  let url = null;
+  try {
+    if (isCard) {
+      const { kind, ...body } = card;
+      const res = await autoImageFetch(`card:${JSON.stringify(card)}`, () =>
+        api(`/api/images/card/${kind}`, { method: "POST", body: JSON.stringify(body) })
+      );
+      url = res.image_url;
+    } else {
+      const params = new URLSearchParams({ team_a: teams[0], team_b: teams[1] });
+      try {
+        const res = await autoImageFetch(`vs:${params}`, () => api(`/api/generate/team-vs-logo?${params}`));
+        url = res.image_url;
+      } catch (e) {
+        const res = await autoImageFetch(`bg:${params}`, () => api(`/api/generate/branded-image?${params}`));
+        url = res.image_url;
+      }
+    }
+  } catch (e) {
+    toast("No se pudo adjuntar la imagen automática.", "info");
+  } finally {
+    placeholder.remove();
+  }
+  if (url && root.isConnected && !root.dataset.imageUrl && !root.dataset.imageTouched) {
+    applyCardImage(root, picker, url);
+  }
+}
+
 function attachCardButton(root, card) {
   const picker = root.querySelector(".image-picker") || root;
   picker.querySelectorAll(".create-card-btn").forEach((b) => b.remove());
@@ -456,12 +540,7 @@ function attachCardButton(root, card) {
     try {
       const { kind, ...body } = card;
       const res = await api(`/api/images/card/${kind}`, { method: "POST", body: JSON.stringify(body) });
-      root.dataset.imageUrl = res.image_url;
-      const preview = picker.querySelector(".image-preview");
-      preview.src = res.image_url;
-      preview.hidden = false;
-      picker.querySelector(".remove-image-btn").hidden = false;
-      refreshDownloadLink(root);
+      applyCardImage(root, picker, res.image_url);
     } catch (e) {
       toast(e.message, "error");
     } finally {
@@ -534,6 +613,7 @@ async function generateResultCards({
         const card = resultsEl.children[idx];
         bindImagePicker(card, { suggestedTeams: r.suggested_teams || [] });
         attachCardButton(card, r.card);
+        autoAttachImage(card, { teams: r.suggested_teams || [], card: r.card });
         // El texto es editable: todos los botones leen lo que haya en el textarea.
         const textarea = card.querySelector(".card-edit-result");
         const counter = card.querySelector(".result-char-counter");
@@ -660,7 +740,8 @@ function initCompose() {
 
   document.getElementById("image-picker").innerHTML = imagePickerHtml();
   bindImagePicker(document.getElementById("image-picker"));
-  document.getElementById("save-draft-btn").addEventListener("click", () => handleSave(false));
+
+  document.getElementById("save-draft-btn").addEventListener("click", () => handleSave(false));
   document.getElementById("publish-now-btn").addEventListener("click", () => handleSave(true));
   document.getElementById("calendar-generate-btn").addEventListener("click", handleCalendarGenerate);
   document.getElementById("results-generate-btn").addEventListener("click", handleResultsGenerate);
@@ -1173,6 +1254,7 @@ async function fillComposeFromGenerate(endpoint, payload, successMessage) {
       bindImagePicker(imagePicker, { suggestedTeams: result.suggested_teams });
     }
     attachCardButton(imagePicker, result.card);
+    if (result.card) autoAttachImage(imagePicker, { card: result.card });
     renderThread(result.thread || []);
     setComposeFeedback(successMessage, false);
   } catch (e) {
