@@ -147,3 +147,20 @@ def test_publish_media_upload_rejected_raises(mocker):
 
     with pytest.raises(x_service.XPublishError, match="rechazó la imagen"):
         x_service.publish_tweet("hola", "http://static.lolesports.com/teams/logo.png")
+
+
+def test_publish_with_generated_card_png(mocker, tmp_path, monkeypatch):
+    """image_url de una tarjeta generada (PNG en IMAGES_DIR) se sube y se adjunta."""
+    monkeypatch.setattr(x_service, "_PROJECT_ROOT", tmp_path)
+    images_dir = tmp_path / "data" / "images"
+    images_dir.mkdir(parents=True)
+    png = b"\x89PNG\r\n\x1a\n" + b"card"
+    (images_dir / "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.png").write_bytes(png)
+
+    upload_mock = mocker.patch("tweepy.API.media_upload", return_value=SimpleNamespace(media_id=7))
+    create_mock = mocker.patch("tweepy.Client.create_tweet", return_value=SimpleNamespace(data={"id": "9"}))
+
+    assert x_service.publish_tweet("hola", "/data/images/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.png") == "9"
+
+    assert upload_mock.call_args.kwargs["file"].read() == png
+    assert create_mock.call_args.kwargs["media_ids"] == ["7"]

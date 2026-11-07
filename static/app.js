@@ -185,12 +185,98 @@ function bindCopyButton(button, getText) {
 // Boton "Abrir en X": abre el compositor de X (web intent) con el texto ya
 // escrito, en la cuenta que este activa en ese navegador/app -- no usa la API
 // ni las credenciales del servidor. Limitacion: el intent no admite imagenes.
-function bindOpenXButton(button, getText) {
-  button.addEventListener("click", () => {
+function bindOpenXButton(button, getText, getImageUrl) {
+  button.addEventListener("click", async () => {
     const text = getText();
     if (!text || !text.trim()) return;
-    window.open(`https://x.com/intent/post?text=${encodeURIComponent(text)}`, "_blank", "noopener");
+    const intent = `https://x.com/intent/post?text=${encodeURIComponent(text)}`;
+    const imageUrl = getImageUrl ? getImageUrl() : "";
+    if (!imageUrl) {
+      window.open(intent, "_blank", "noopener");
+      return;
+    }
+    // Con imagen: la ventana se abre YA (sincrona, dentro del gesto del
+    // usuario, para que el bloqueador de popups no la frene tras el await) y
+    // se le asigna la URL cuando termina la copia.
+    const win = window.open("about:blank", "_blank");
+    try {
+      if (win) win.opener = null;
+    } catch (e) {
+      // sin importancia
+    }
+    let message = "";
+    let variant = "info";
+    try {
+      if (!navigator.clipboard || !navigator.clipboard.write || typeof ClipboardItem === "undefined") {
+        throw new Error("sin portapapeles de imagenes");
+      }
+      const pngPromise = fetchImageBlob(imageUrl).then(blobToPng);
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": pngPromise })]);
+      message = "Imagen copiada: pégala en X con Ctrl+V";
+    } catch (e) {
+      try {
+        triggerDownload(imageUrl);
+        message = "No se pudo copiar la imagen: se ha descargado, adjúntala en X a mano.";
+      } catch (e2) {
+        message = "No se pudo copiar ni descargar la imagen: usa «Descargar imagen».";
+      }
+      variant = "error";
+    }
+    if (win && !win.closed) win.location.href = intent;
+    else window.open(intent, "_blank", "noopener");
+    toast(message, variant);
   });
+}
+
+// ---------- Imagen -> X ----------
+// La web intent de X NO admite imagenes. Movil: Web Share API con el archivo.
+// Escritorio: copiar la imagen al portapapeles y pegarla con Ctrl+V.
+function refreshDownloadLink(root) {
+  const link = root.querySelector(".download-image-btn");
+  if (!link) return;
+  const url = root.dataset.imageUrl || "";
+  link.hidden = !url;
+  if (url) {
+    link.href = url;
+    link.setAttribute("download", url.split("/").pop().split("?")[0] || "imagen.png");
+  } else {
+    link.removeAttribute("href");
+  }
+}
+
+async function fetchImageBlob(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("No se pudo descargar la imagen.");
+  return res.blob();
+}
+
+// jpeg/webp/gif -> PNG con canvas: el portapapeles asincrono solo admite PNG de forma fiable.
+async function blobToPng(blob) {
+  if (blob.type === "image/png") return blob;
+  const bitmap = await createImageBitmap(blob);
+  const canvas = document.createElement("canvas");
+  canvas.width = bitmap.width;
+  canvas.height = bitmap.height;
+  canvas.getContext("2d").drawImage(bitmap, 0, 0);
+  return new Promise((resolve, reject) =>
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("No se pudo convertir la imagen."))), "image/png")
+  );
+}
+
+function imageFileFromBlob(blob, url) {
+  const type = blob.type || "image/png";
+  let name = (url.split("/").pop() || "imagen").split("?")[0];
+  if (!/\.(png|jpe?g|gif|webp)$/i.test(name)) name += type === "image/jpeg" ? ".jpg" : ".png";
+  return new File([blob], name, { type });
+}
+
+function triggerDownload(url) {
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = url.split("/").pop().split("?")[0] || "imagen.png";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 }
 
 // Boton "Compartir": hoja nativa del movil (X, WhatsApp, etc.) via Web Share
@@ -206,10 +292,14 @@ function bindShareButton(button, getText, getImageUrl) {
     const data = { text };
     try {
       const imageUrl = getImageUrl ? getImageUrl() : "";
-      if (imageUrl && imageUrl.startsWith("/data/images/")) {
-        const blob = await (await fetch(imageUrl)).blob();
-        const file = new File([blob], imageUrl.split("/").pop(), { type: blob.type });
-        if (navigator.canShare && navigator.canShare({ files: [file] })) data.files = [file];
+      if (imageUrl) {
+        try {
+          const file = imageFileFromBlob(await fetchImageBlob(imageUrl), imageUrl);
+          if (navigator.canShare && navigator.canShare({ files: [file] })) data.files = [file];
+          else toast("Tu dispositivo no puede compartir la imagen: se comparte solo el texto.", "error");
+        } catch (e) {
+          toast("No se pudo cargar la imagen: se comparte solo el texto.", "error");
+        }
       }
       await navigator.share(data);
     } catch (e) {
@@ -248,6 +338,7 @@ function imagePickerHtml() {
       <label class="image-upload-label">🖼️ Imagen<input type="file" accept="image/*" class="image-upload-input" /></label>
       <img class="image-preview" hidden />
       <button type="button" class="remove-image-btn" hidden>Quitar imagen</button>
+      <a class="download-image-btn" hidden download>Descargar imagen</a>
     </div>
   `;
 }
@@ -264,6 +355,7 @@ function bindImagePicker(root, { suggestedTeams = [], initialUrl = null } = {}) 
     preview.src = url || "";
     preview.hidden = !url;
     removeBtn.hidden = !url;
+    refreshDownloadLink(root);
   }
 
   if (suggestedTeams.length) {
@@ -369,6 +461,7 @@ function attachCardButton(root, card) {
       preview.src = res.image_url;
       preview.hidden = false;
       picker.querySelector(".remove-image-btn").hidden = false;
+      refreshDownloadLink(root);
     } catch (e) {
       toast(e.message, "error");
     } finally {
@@ -405,7 +498,7 @@ function variantResultCardHtml(result, source, metaFn) {
       <div class="card-actions">
         <button class="save-${source}-btn">Guardar</button>
         <button class="copy-${source}-btn">Copiar</button>
-        <button class="open-x-${source}-btn" title="Abre X con el texto listo (sin imagen)">Abrir en X</button>
+        <button class="open-x-${source}-btn" title="Abre X con el texto listo (con imagen: se copia, pégala con Ctrl+V)">Abrir en X</button>
         <button class="share-${source}-btn" hidden>Compartir</button>
       </div>
     </div>
@@ -447,7 +540,7 @@ async function generateResultCards({
         const getText = () => textarea.value;
         textarea.addEventListener("input", () => updateCounterEl(counter, getText()));
         bindCopyButton(card.querySelector(`.copy-${source}-btn`), getText);
-        bindOpenXButton(card.querySelector(`.open-x-${source}-btn`), getText);
+        bindOpenXButton(card.querySelector(`.open-x-${source}-btn`), getText, () => card.dataset.imageUrl);
         bindShareButton(card.querySelector(`.share-${source}-btn`), getText, () => card.dataset.imageUrl);
         bindSaveButton(card.querySelector(`.save-${source}-btn`), getText, source, () => card.dataset.imageUrl);
       }
@@ -581,7 +674,11 @@ function initCompose() {
   document.getElementById("anniversary-generate-btn").addEventListener("click", handleAnniversaryGenerate);
   document.getElementById("lec-compare-generate-btn").addEventListener("click", handleLecCompareGenerate);
   bindCopyButton(document.getElementById("copy-content-btn"), () => document.getElementById("compose-content").value);
-  bindOpenXButton(document.getElementById("open-x-btn"), () => document.getElementById("compose-content").value);
+  bindOpenXButton(
+    document.getElementById("open-x-btn"),
+    () => document.getElementById("compose-content").value,
+    () => document.getElementById("image-picker").dataset.imageUrl || ""
+  );
   bindShareButton(
     document.getElementById("share-btn"),
     () => document.getElementById("compose-content").value,
@@ -1077,12 +1174,56 @@ async function fillComposeFromGenerate(endpoint, payload, successMessage) {
       bindImagePicker(imagePicker, { suggestedTeams: result.suggested_teams });
     }
     attachCardButton(imagePicker, result.card);
+    renderThread(result.thread || []);
     setComposeFeedback(successMessage, false);
   } catch (e) {
     setComposeFeedback(e.message, true);
   } finally {
     generateButtons.forEach((b) => (b.disabled = false));
   }
+}
+
+// Hilo (Resultados cuando no caben en un tweet): una tarjeta por parte con
+// Guardar / Copiar / Abrir en X, y "Copiar todo el hilo".
+function renderThread(parts) {
+  let host = document.getElementById("thread-results");
+  if (!host) {
+    host = document.createElement("div");
+    host.id = "thread-results";
+    document.getElementById("compose-feedback").insertAdjacentElement("afterend", host);
+  }
+  if (!parts.length) {
+    host.innerHTML = "";
+    return;
+  }
+  host.innerHTML =
+    `<div class="card-meta">Hilo de ${parts.length} tweets</div>` +
+    parts
+      .map(
+        (part, i) => `
+    <div class="card thread-card">
+      <div class="card-meta">${i + 1}/${parts.length}</div>
+      <textarea class="card-edit thread-part" rows="4" aria-label="Parte ${i + 1} del hilo (editable)">${escapeHtml(part)}</textarea>
+      <div class="card-actions">
+        <button type="button" class="thread-save-btn">Guardar</button>
+        <button type="button" class="thread-copy-btn">Copiar</button>
+        <button type="button" class="thread-open-x-btn">Abrir en X</button>
+      </div>
+    </div>`
+      )
+      .join("") +
+    `<div class="card-actions"><button type="button" id="thread-copy-all-btn">Copiar todo el hilo</button></div>`;
+  host.querySelectorAll(".thread-card").forEach((card) => {
+    const getText = () => card.querySelector(".thread-part").value;
+    bindSaveButton(card.querySelector(".thread-save-btn"), getText, "results");
+    bindCopyButton(card.querySelector(".thread-copy-btn"), getText);
+    bindOpenXButton(card.querySelector(".thread-open-x-btn"), getText);
+  });
+  bindCopyButton(host.querySelector("#thread-copy-all-btn"), () =>
+    Array.from(host.querySelectorAll(".thread-part"))
+      .map((t) => t.value)
+      .join("\n\n")
+  );
 }
 
 async function handleSave(publishNow) {
@@ -1166,7 +1307,7 @@ function draftCardHtml(tweet) {
       <div class="card-actions">
         <button class="save-edit-btn">Guardar cambios</button>
         <button class="copy-draft-btn">Copiar</button>
-        <button class="open-x-draft-btn" title="Abre X con el texto listo (sin imagen)">Abrir en X</button>
+        <button class="open-x-draft-btn" title="Abre X con el texto listo (con imagen: se copia, pégala con Ctrl+V)">Abrir en X</button>
         <button class="share-draft-btn" hidden>Compartir</button>
         <button class="publish-btn primary">Publicar ahora</button>
         <button class="delete-btn">Eliminar</button>
@@ -1194,7 +1335,7 @@ function bindDraftCard(tweet) {
 
   bindImagePicker(card, { initialUrl: tweet.image_url || null });
   bindCopyButton(card.querySelector(".copy-draft-btn"), () => textarea.value);
-  bindOpenXButton(card.querySelector(".open-x-draft-btn"), () => textarea.value);
+  bindOpenXButton(card.querySelector(".open-x-draft-btn"), () => textarea.value, () => card.dataset.imageUrl);
   bindShareButton(card.querySelector(".share-draft-btn"), () => textarea.value, () => card.dataset.imageUrl || "");
 
   card.querySelector(".save-edit-btn").addEventListener("click", async () => {

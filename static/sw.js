@@ -4,7 +4,7 @@
 // durmiendo) se abre YA la copia cacheada mientras la red actualiza la cache
 // para la proxima vez. La API (/api/...) nunca se cachea: los datos y la
 // publicacion siempre van en vivo al servidor.
-const CACHE = "tweet-automation-v4";
+const CACHE = "tweet-automation-v5";
 const NETWORK_TIMEOUT_MS = 3000;
 const SHELL = ["/", "/static/app.js", "/static/styles.css", "/static/manifest.webmanifest"];
 

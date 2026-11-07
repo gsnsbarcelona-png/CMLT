@@ -330,6 +330,8 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .image-upload-label input[type="file"] { display: none; }
 .image-preview { max-width: 90px; max-height: 90px; border-radius: 6px; border: 1px solid var(--border); object-fit: cover; }
 .remove-image-btn { font-size: 12px; }
+.download-image-btn { font-size: 12px; display: inline-block; padding: 6px 10px; border: 1px solid currentColor; border-radius: 6px; text-decoration: none; color: inherit; cursor: pointer; }
+.download-image-btn[hidden] { display: none; }
 
 .empty-state { color: var(--muted); font-size: 14px; padding: 20px 0; text-align: center; }
 
