@@ -2,7 +2,6 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from app.routers.generate._shared import TodayMatchInfo, _closing_tags_for, _generate_variants
-from app.services.ai_service import generate_individual_duel_variant
 from app.services.duel_service import compute_duel_candidates, reconcile_player_casing
 from app.services.golgg_service import GolGGError, fetch_player_stats, format_stat_tweet_plain
 from app.services.lolesports_service import (
@@ -13,8 +12,6 @@ from app.services.lolesports_service import (
 )
 
 router = APIRouter()
-
-DUEL_STYLES = {"plain", "ai"}
 
 
 @router.get("/duel/today-match")
@@ -37,7 +34,6 @@ def get_duel_today_or_tomorrow_matches() -> list[TodayMatchInfo]:
 class DuelGenerateRequest(BaseModel):
     team_a: str
     team_b: str
-    style: str = "plain"
 
 
 class DuelVariantResult(BaseModel):
@@ -46,7 +42,6 @@ class DuelVariantResult(BaseModel):
     content: str | None = None
     char_count: int | None = None
     within_limit: bool | None = None
-    error: str | None = None
     suggested_teams: list[str] = []
 
 
@@ -58,10 +53,6 @@ def generate_duel(payload: DuelGenerateRequest) -> list[DuelVariantResult]:
         raise HTTPException(status_code=400, detail="Elegi los dos equipos.")
     if team_a.lower() == team_b.lower():
         raise HTTPException(status_code=400, detail="Elegi dos equipos distintos.")
-
-    style = payload.style.strip().lower()
-    if style not in DUEL_STYLES:
-        raise HTTPException(status_code=400, detail="Estilo no reconocido (usa 'plain' o 'ai').")
 
     try:
         roster_a = fetch_les_team_roster_with_roles(team_a)
@@ -89,8 +80,6 @@ def generate_duel(payload: DuelGenerateRequest) -> list[DuelVariantResult]:
 
     return _generate_variants(
         candidates,
-        style=style,
-        ai_fn=lambda c: generate_individual_duel_variant(c.fact_sentence, c.subject),
         plain_fn=format_stat_tweet_plain,
         closing=closing,
         build_result=lambda c, content, count, within: DuelVariantResult(
@@ -101,5 +90,4 @@ def generate_duel(payload: DuelGenerateRequest) -> list[DuelVariantResult]:
             within_limit=within,
             suggested_teams=[team_a, team_b],
         ),
-        build_error_result=lambda c, error: DuelVariantResult(role=c.plano_title, subject=c.subject, error=error),
     )

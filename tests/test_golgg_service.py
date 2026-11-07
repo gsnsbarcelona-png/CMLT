@@ -21,14 +21,11 @@ from app.services.golgg_service import (
     fetch_player_stats,
     fetch_team_stats,
     find_head_to_head,
-    format_h2h_context,
     format_h2h_variant_plain,
     format_stat_tweet_plain,
-    format_top_ranking_context,
     format_top_ranking_plain,
     compute_league_comparison_candidates,
     discover_tournaments,
-    format_league_comparison_context,
     format_league_comparison_plain,
     get_emea_masters_tournaments,
     get_lec_tournament,
@@ -667,51 +664,8 @@ def test_build_head_to_head_preview_no_prior_meetings(mocker):
     assert preview.recent_form_b is None  # Barca no aparece en ningun resultado
 
 
-def test_format_h2h_context_states_missing_data_explicitly():
-    import app.services.golgg_service as golgg_service
-
-    preview = golgg_service.HeadToHeadPreviewData(
-        team_a="UCAM Esports",
-        team_b="Barca eSports",
-        total_wins_a=0,
-        total_wins_b=0,
-        total_maps_a=0,
-        total_maps_b=0,
-        last_meeting=None,
-        last_win_by_a=None,
-        last_win_by_b=None,
-        recent_form_a=None,
-        recent_form_b=None,
-    )
-
-    context = format_h2h_context(preview)
-
-    assert "sin enfrentamientos previos registrados" in context
-    assert "Ultimo enfrentamiento: no hay registro." in context
-    assert "Forma reciente de UCAM Esports: sin datos disponibles." in context
-    assert "Forma reciente de Barca eSports: sin datos disponibles." in context
 
 
-def test_format_h2h_context_includes_today_context_when_given():
-    import app.services.golgg_service as golgg_service
-
-    preview = golgg_service.HeadToHeadPreviewData(
-        team_a="UCAM Esports",
-        team_b="Barca eSports",
-        total_wins_a=1,
-        total_wins_b=0,
-        total_maps_a=2,
-        total_maps_b=0,
-        last_meeting=_result("UCAM Esports", "Barca eSports", "2026-01-01"),
-        last_win_by_a=_result("UCAM Esports", "Barca eSports", "2026-01-01"),
-        last_win_by_b=None,
-        recent_form_a=None,
-        recent_form_b=None,
-    )
-
-    context = format_h2h_context(preview, today_context="Partido de hoy: fase 'Final', horario 17:00 (Madrid).")
-
-    assert "Partido de hoy: fase 'Final', horario 17:00 (Madrid)." in context
 
 
 def test_fetch_all_match_results_combines_tournaments(mocker):
@@ -917,17 +871,6 @@ def test_format_league_comparison_plain_sorprendente_and_debate_tones():
     assert sorprendente != debate
 
 
-def test_format_league_comparison_context_includes_tone_and_nuance():
-    candidates = compute_league_comparison_candidates(_les_teams(), _les_players(), _lec_teams(), _lec_players())
-    candidate = next(c for c in candidates if c.kind == "team_kda")
-
-    context = format_league_comparison_context(candidate, "debate")
-
-    assert "Tono pedido: debate" in context
-    assert candidate.fact_sentence in context
-    assert candidate.nuance in context
-
-
 def _top_ranking_teams():
     return [
         TeamStat(
@@ -1006,26 +949,6 @@ def test_compute_top_ranking_candidate_unknown_category_raises():
 def test_top_ranking_category_labels_match_categories():
     assert set(TOP_RANKING_CATEGORY_LABELS.keys()) == set(TOP_RANKING_CATEGORIES.keys())
     assert TOP_RANKING_CATEGORY_LABELS["player_kda"] == "KDA"
-
-
-def test_format_top_ranking_context_warns_when_incomplete():
-    candidate = compute_top_ranking_candidate("team_fb", _top_ranking_teams()[:2], [])
-
-    context = format_top_ranking_context(candidate)
-
-    assert "Aviso: solo hay 2" in context
-    assert "1. UCAM Esports" in context
-    assert "Dato de contraste" in context
-
-
-def test_format_top_ranking_context_no_warning_with_full_top():
-    candidate = compute_top_ranking_candidate("team_fb", _top_ranking_teams(), [])
-
-    context = format_top_ranking_context(candidate)
-
-    assert "Aviso" not in context
-    assert "1. UCAM Esports" in context
-    assert "2. Falke Esports" in context or "2. Barca eSports" in context
 
 
 def test_format_top_ranking_plain_top1_focuses_on_leader():

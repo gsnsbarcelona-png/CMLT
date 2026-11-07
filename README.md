@@ -1,8 +1,8 @@
 # Tweet Automation
 
-Aplicación web local para generar tweets (por IA, en lote a partir de una lista de temas, por plantilla, o manualmente), revisarlos, copiarlos y opcionalmente publicarlos en X (Twitter) con un click.
+Aplicación web local para generar tweets a partir de datos reales de la LES/LEC (o por plantilla, o manualmente), revisarlos, copiarlos y opcionalmente publicarlos en X (Twitter) con un click.
 
-En Compose hay ocho modos visibles por defecto — **Calendario**, **Stats**, **H2H Hoy**, **Duelo 1v1**, **Top/Ranking**, **Efeméride**, **Cruce LEC** e **IA** — más **Lote (IA)**, **Plantilla** y **Manual** disponibles en el código pero ocultos del selector (reactivarlos es agregar su `<label>` en `static/index.html`). Todos los modos de datos reales (todos menos IA/Lote/Plantilla/Manual) tienen estilo **Plano** (sin IA, texto fijo con los datos reales) y varios también **IA** (misma info real, redacción con más onda) — la IA nunca decide los hechos, solo la forma de contarlos.
+En Compose hay siete modos visibles por defecto — **Calendario**, **Stats**, **H2H Hoy**, **Duelo 1v1**, **Top/Ranking**, **Efeméride** y **Cruce LEC** — más **Plantilla** y **Manual** disponibles en el código pero ocultos del selector (reactivarlos es agregar su `<label>` en `static/index.html`). Los modos de datos reales arman el texto con frases fijas a partir de los datos reales; la app no usa IA.
 
 - **Calendario**: próximos partidos de **LES** y/o **LEC**, datos reales de la API pública de LoL Esports.
 - **Stats**: "stats curiosas" (KDA, winrate, first blood, rivalidad/head-to-head entre equipos, y rango en ranked SoloQ vía lolpros.gg) con datos reales de **gol.gg** y **lolpros.gg**. **Split actual** o **Todo el año** (todos los torneos del año combinados), foco en un equipo/jugador, o rivalidad de un par puntual.
@@ -11,9 +11,8 @@ En Compose hay ocho modos visibles por defecto — **Calendario**, **Stats**, **
 - **Top/Ranking**: top 3 real de una categoría de **gol.gg** para el split actual — KDA y farmeo (CS/min) por jugador; dragones/partida, torres/partida, primera sangre % y duración media (equipos que más rápido cierran) por equipo. Si hay menos de 3 con datos suficientes lo dice en vez de inventar posiciones. 2 variantes: foco en el líder y top 3 resumido. No incluye "partidas más rápidas" individuales (gol.gg no lo expone en listado, requeriría visitar cada partida una por una) ni el líder del split anterior como dato de contraste (la app no guarda histórico entre splits) — solo la media del split actual.
 - **Efeméride**: "un día como hoy" de la historia de la LES/Superliga, con una base curada de hitos verificados (no es scraping en vivo — ver limitaciones). 2 versiones: completa y "dato rápido".
 - **Cruce LEC**: conecta la LES con la LEC — comparativa de rendimiento en vivo (gol.gg de ambas ligas) o jugadores que pasaron por las dos ligas (base curada). 2 tonos: dato sorprendente y pregunta a debate.
-- **Lote (IA)**: pegás una lista de temas (uno por línea, hasta 25) y genera un tweet por cada uno.
 
-Cada resultado (y cada borrador/tweet del historial) tiene un botón **Copiar** para pegarlo directamente donde publiques manualmente, sin depender de la API de X. Calendario/Stats/IA/Plantilla/Manual usan el editor compartido de abajo, con **Guardar borrador**/**Publicar ahora**; los modos que muestran varias variantes en tarjetas (H2H Hoy, Duelo 1v1, Top/Ranking, Efeméride, Cruce LEC, Lote) tienen un botón **Guardar** por tarjeta — nada se guarda solo, elegís qué variante(s) quedan como borrador.
+Cada resultado (y cada borrador/tweet del historial) tiene un botón **Copiar** para pegarlo directamente donde publiques manualmente, sin depender de la API de X. Calendario/Stats/Plantilla/Manual usan el editor compartido de abajo, con **Guardar borrador**/**Publicar ahora**; los modos que muestran varias variantes en tarjetas (H2H Hoy, Duelo 1v1, Efeméride, Cruce LEC) tienen un botón **Guardar** por tarjeta — nada se guarda solo, elegís qué variante(s) quedan como borrador.
 
 ### Imagen adjunta (opcional)
 
@@ -30,7 +29,6 @@ La subida de medios a X sigue el endpoint v1.1 (`media/upload`) aunque el tweet 
 
 - Python 3.11 o superior.
 - Una cuenta de X (Twitter) y acceso a [developer.x.com](https://developer.x.com).
-- Una cuenta en [console.anthropic.com](https://console.anthropic.com) con billing habilitado.
 
 ## Instalación
 
@@ -44,15 +42,6 @@ copy .env.example .env
 ```
 
 Después completá `.env` con tus credenciales (ver abajo).
-
-## Conseguir la API key de Anthropic
-
-1. Entrá a [console.anthropic.com](https://console.anthropic.com/settings/keys).
-2. Settings → API Keys → **Create Key**.
-3. Copiá el valor y pegalo en `ANTHROPIC_API_KEY` dentro de `.env`.
-4. Verificá que tu cuenta tenga saldo/billing habilitado, si no las llamadas van a fallar.
-
-`ANTHROPIC_MODEL` viene configurado en `claude-sonnet-5` por defecto (buen balance costo/calidad para tweets). Podés cambiarlo a `claude-opus-5` o `claude-haiku-4-5` si querés.
 
 ## Conseguir las credenciales de X (Twitter)
 
@@ -115,26 +104,47 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 
 Abrí [http://localhost:8000](http://localhost:8000) en el navegador.
 
-Si te faltan credenciales, la app va a arrancar igual y te va a avisar con un cartel en la parte superior — podés seguir usando lo que sí esté configurado (por ejemplo, borradores manuales sin IA).
+Si te faltan credenciales, la app va a arrancar igual y te va a avisar con un cartel en la parte superior — podés seguir usando lo que sí esté configurado (por ejemplo, generar y copiar tweets sin credenciales de X).
+
+## Usarla desde el móvil (PWA / APK)
+
+La app es instalable como PWA: desde Chrome en Android, abrís la URL y elegís **"Instalar app"** (o "Agregar a pantalla principal"). Queda con ícono propio y abre a pantalla completa. La interfaz se adapta a pantallas chicas. Toda la lógica (gol.gg, lolesports, lolpros.gg, publicación en X) sigue corriendo en el servidor, así que el móvil necesita llegar a un servidor donde corra la app.
+
+**Opción rápida, en casa:** corré la app en tu PC con `--host 0.0.0.0` y abrí `http://IP-de-tu-PC:8000` desde el móvil en la misma Wi-Fi. Ojo: sin HTTPS Chrome no ofrece instalarla como app, pero se puede usar desde el navegador.
+
+**Opción completa, desde cualquier lado:** subí la app a un servidor con HTTPS (Render, Fly.io, un VPS...). En ese caso:
+
+1. **Activá el login, es obligatorio.** Cargá `APP_PASSWORD` (la contraseña para entrar) y `SESSION_SECRET` (generalo con `python -c "import secrets; print(secrets.token_hex(32))"`). Sin `APP_PASSWORD` cualquiera que encuentre la URL podría publicar en tu cuenta de X.
+2. Arrancá uvicorn detrás del proxy HTTPS con `--proxy-headers --forwarded-allow-ips="*"`, para que la cookie de sesión se marque como `Secure`:
+   ```
+   uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips="*"
+   ```
+3. La base SQLite tiene que estar en un disco persistente (`DATABASE_URL`), si no se pierden borradores e historial en cada deploy.
+4. Cargá también en el servidor las credenciales de X y la config de gol.gg que tenías en `.env`.
+
+**Render:** el repo incluye `render.yaml` (Blueprint). En render.com: New → Blueprint → elegí este repo, y cargá `APP_PASSWORD` y las 4 claves de X cuando lo pida. `SESSION_SECRET` se genera solo. Ojo: el plan gratuito tiene disco efímero (se pierden borradores e historial en cada deploy/reinicio) y duerme tras ~15 min sin uso; para persistir la base hace falta un disco de pago.
+
+**APK:** con la PWA ya publicada en HTTPS, [Bubblewrap](https://github.com/GoogleChromeLabs/bubblewrap) (`npx @bubblewrap/cli init --manifest https://TU-DOMINIO/static/manifest.webmanifest` y después `build`) genera un `.apk` que abre la app a pantalla completa. Para que no muestre la barra de URL hay que guardar el `assetlinks.json` que te genera Bubblewrap en `static/well-known/assetlinks.json`; la app lo sirve en `/.well-known/assetlinks.json`, y esa ruta queda abierta aunque el login esté activo.
+
+Con `APP_PASSWORD` vacía (el valor por defecto) no se pide login, y la app funciona en local igual que siempre.
 
 ## Estructura del proyecto
 
 ```
 app/
-  main.py, config.py, db.py, models.py
+  main.py, config.py, db.py, models.py, auth.py (login opcional)
   data/         # les_anniversaries.json, les_lec_players.json (bases curadas)
-                # branding/background.png, branding/logo.png (fondo de marca, ver seccion de imagen adjunta)
   routers/      # tweets, templates, images (subida de imagenes)
-                # generate/ (paquete, un sub-router por dominio: ai, calendar, stats, duel,
+                # generate/ (paquete, un sub-router por dominio: calendar, stats, duel,
                 #            anniversary, league_comparison, top_ranking, template)
-  services/     # ai_service, x_service, char_count,
-                # lolesports_service (Calendario, escudos de equipo), golgg_service (Stats/H2H/Cruce LEC),
+  services/     # x_service, char_count,
+                # lolesports_service (Calendario), golgg_service (Stats/H2H/Cruce LEC),
                 # history_service (Efemeride), crossover_service (Cruce LEC: jugadores),
                 # ranked_service (Stats: ranked SoloQ via lolpros.gg),
                 # duel_service (Duelo 1v1: roster/rol de lolesports.com + stats de gol.gg),
                 # image_service (composite "VS" de dos escudos y fondo de marca, con Pillow)
-static/         # frontend (HTML/CSS/JS, sin build step)
-tests/          # pytest, con mocks para IA, X, LoL Esports y gol.gg
+static/         # frontend (HTML/CSS/JS, sin build step) + PWA (manifest, sw.js, icons/)
+tests/          # pytest, con mocks para X, LoL Esports y gol.gg
 
 data/             # gitignored -- generado en runtime
   tweets.db       # SQLite (borradores, historial)
@@ -147,13 +157,13 @@ data/             # gitignored -- generado en runtime
 pytest
 ```
 
-Los tests corren sin necesidad de credenciales reales (mockean las llamadas a Anthropic y a X).
+Los tests corren sin necesidad de credenciales reales (mockean las llamadas a X y a las fuentes de datos).
 
 ## Limitaciones conocidas
 
 - El conteo de caracteres es una aproximación: las URLs se cuentan siempre como 23 caracteres (igual que el acortador t.co de X) y el resto se cuenta por code point Unicode. Puede diferir levemente del conteo real de X en casos extremos (emojis raros, texto CJK).
 - No hay scheduler/calendario: la publicación es siempre manual e inmediata.
-- Pensada para un solo usuario, corriendo en local.
+- Pensada para un solo usuario: el login es una única contraseña (`APP_PASSWORD`), no hay cuentas.
 - Stats "Todo el año" combina splits con **promedio ponderado por partidos jugados** — una aproximación razonable para stats curiosas, no matemáticamente exacta para ratios como K:D (no es lo mismo que recalcular desde los totales crudos de kills/deaths).
 - gol.gg necesita mantenimiento manual cada split nuevo (ver sección Stats arriba, incluye cómo encontrar el nombre del torneo nuevo sin buscar a mano) — si Stats empieza a devolver "no hay datos" o 502, seguramente hay que actualizar `GOLGG_TOURNAMENT`/`GOLGG_YEAR_TOURNAMENTS`.
 - Las respuestas de gol.gg y de lolpros.gg se cachean en memoria 5 minutos (por proceso, se pierde al reiniciar el server) para no repetir pedidos innecesarios — si el dato en vivo cambia, puede tardar hasta 5 minutos en reflejarse.
@@ -173,4 +183,3 @@ Los tests corren sin necesidad de credenciales reales (mockean las llamadas a An
 | "permisos insuficientes" (403) | La app no tiene permisos "Read and Write", o el Access Token se generó antes de cambiarlos (hay que regenerarlo). |
 | "muy similar a uno reciente" (403 duplicado) | X no permite publicar el mismo texto dos veces seguidas. Modificá el tweet. |
 | "Limite de publicaciones alcanzado" (429) | Se llegó al límite del plan Free (~500 posts/mes). |
-| "API key de Anthropic es invalida" | Revisá `ANTHROPIC_API_KEY` en `.env`. |

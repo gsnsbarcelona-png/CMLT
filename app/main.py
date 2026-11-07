@@ -1,11 +1,12 @@
-import base64
-import secrets
 from contextlib import asynccontextmanager
+from pathlib import Path
 
-from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, Response
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from app.auth import auth_middleware
+from app.auth import router as auth_router
 from app.config import settings
 from app.db import init_db
 from app.routers import generate, images, templates, tweets
@@ -20,25 +21,13 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Tweet Automation", lifespan=lifespan)
+app.middleware("http")(auth_middleware)
 
-@app.middleware("http")
-async def basic_auth(request: Request, call_next):
-    if not settings.app_password or request.url.path == "/api/health":
-        return await call_next(request)
-    header = request.headers.get("authorization", "")
-    if header.lower().startswith("basic "):
-        try:
-            _, _, password = base64.b64decode(header[6:]).decode("utf-8").partition(":")
-        except Exception:
-            password = ""
-        if secrets.compare_digest(password.encode(), settings.app_password.encode()):
-            return await call_next(request)
-    return Response(status_code=401, headers={"WWW-Authenticate": 'Basic realm="Tweet Automation"'})
-
-
+app.include_router(auth_router)
 app.include_router(tweets.router)
 app.include_router(generate.router)
 app.include_router(templates.router)
+app.include_router(images.router)
 app.include_router(images.router)
 
 
@@ -50,7 +39,6 @@ def health() -> dict:
 @app.get("/api/config/check")
 def config_check() -> dict:
     return {
-        "anthropic_configured": settings.anthropic_configured,
         "x_configured": settings.x_configured,
     }
 
@@ -62,3 +50,25 @@ app.mount("/data/images", StaticFiles(directory=str(IMAGES_DIR), check_dir=False
 @app.get("/")
 def index() -> FileResponse:
     return FileResponse("static/index.html")
+
+
+@app.get("/login")
+def login_page() -> FileResponse:
+    return FileResponse("static/login.html")
+
+
+# El service worker se sirve desde la raiz (y no desde /static/) para que su
+# alcance cubra toda la app.
+@app.get("/sw.js")
+def service_worker() -> FileResponse:
+    return FileResponse("static/sw.js", media_type="text/javascript", headers={"Cache-Control": "no-cache"})
+
+
+# Verificacion de dominio para el APK generado con Bubblewrap (Trusted Web
+# Activity): sin este archivo el APK muestra la barra de URL de Chrome.
+@app.get("/.well-known/assetlinks.json")
+def asset_links() -> FileResponse:
+    path = Path("static/well-known/assetlinks.json")
+    if not path.is_file():
+        raise HTTPException(status_code=404)
+    return FileResponse(path, media_type="application/json")

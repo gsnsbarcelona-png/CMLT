@@ -1,7 +1,7 @@
 """Helpers compartidos por los sub-routers de /api/generate (ver
 app/routers/generate/__init__.py): construccion de GenerateResult, sugerencia
 de escudos, cierre de arrobas/hashtags para candidatos sinteticos y el patron
-de "variante con IA + fallback a texto plano" que reusan H2H, Duelo,
+de "generar variantes" que reusan H2H, Duelo,
 Efemeride, Cruce LEC y Top/Ranking. Nada de esto es especifico de un dominio
 -- por eso vive aca en vez de en cualquiera de los sub-routers."""
 
@@ -10,7 +10,6 @@ from typing import Any, Callable, Iterable
 from pydantic import BaseModel
 
 from app.services import char_count
-from app.services.ai_service import AIGenerationError
 from app.services.golgg_service import TEAM_LEVEL_KINDS, StatCandidate, stat_closing_tags
 
 
@@ -64,32 +63,19 @@ def _closing_tags_for(kind: str, subject: str) -> str:
 def _generate_variants(
     items: Iterable[Any],
     *,
-    style: str,
-    ai_fn: Callable[[Any], str],
     plain_fn: Callable[[Any], str],
     closing: str,
     build_result: Callable[[Any, str, int, bool], Any],
-    build_error_result: Callable[[Any, str], Any],
 ) -> list:
     """Patron compartido por H2H, Duelo, Efemeride, Cruce LEC y Top/Ranking:
     para cada `item` de una tanda ya calculada (un angulo, un candidato, un
-    tono...), generar el contenido -- con IA (con fallback a una tarjeta de
-    error individual si falla) o en texto plano --, pegarle `closing`,
-    contar caracteres y armar el resultado tipado de cada endpoint via
-    `build_result`/`build_error_result` (que solo conocen la forma del
-    modelo Pydantic de ese endpoint, no la logica de generacion)."""
+    tono...), generar el contenido con `plain_fn`, pegarle `closing`, contar
+    caracteres y armar el resultado tipado de cada endpoint via
+    `build_result` (que solo conoce la forma del modelo Pydantic de ese
+    endpoint, no la logica de generacion)."""
     results = []
     for item in items:
-        if style == "ai":
-            try:
-                content = ai_fn(item)
-            except AIGenerationError as exc:
-                results.append(build_error_result(item, str(exc)))
-                continue
-        else:
-            content = plain_fn(item)
-
-        content = f"{content}\n\n{closing}"
+        content = f"{plain_fn(item)}\n\n{closing}"
         count = char_count.count_chars(content)
         results.append(build_result(item, content, count, count <= char_count.TWEET_CHAR_LIMIT))
     return results

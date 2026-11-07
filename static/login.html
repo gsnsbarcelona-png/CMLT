@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#1d9bf0" />
+  <title>Tweet Automation - Entrar</title>
+  <link rel="manifest" href="/static/manifest.webmanifest" />
+  <link rel="icon" href="/static/icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="/static/icons/icon-192.png" />
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <main class="login-main">
+    <form id="login-form" class="mode-panel login-panel">
+      <h1>Tweet Automation</h1>
+      <label>Contraseña
+        <input type="password" id="login-password" autocomplete="current-password" required autofocus />
+      </label>
+      <button type="submit" class="primary">Entrar</button>
+      <div id="login-feedback" class="feedback error"></div>
+    </form>
+  </main>
+
+  <script>
+    document.getElementById("login-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const feedback = document.getElementById("login-feedback");
+      const button = event.target.querySelector("button");
+      feedback.textContent = "";
+      button.disabled = true;
+      try {
+        const res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password: document.getElementById("login-password").value }),
+        });
+        if (res.ok) {
+          window.location.replace("/");
+          return;
+        }
+        const body = await res.json().catch(() => null);
+        feedback.textContent = body?.detail || `Error ${res.status}`;
+      } catch (e) {
+        feedback.textContent = "No se pudo conectar con el servidor.";
+      } finally {
+        button.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

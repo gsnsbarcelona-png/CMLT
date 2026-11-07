@@ -8,9 +8,6 @@ logger = logging.getLogger(__name__)
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
-    anthropic_api_key: str = ""
-    anthropic_model: str = "claude-sonnet-5"
-
     x_api_key: str = ""
     x_api_secret: str = ""
     x_access_token: str = ""
@@ -64,9 +61,11 @@ class Settings(BaseSettings):
         "UCAM Esports:@UCAM_esports"
     )
 
-    # Si se define, toda la app (menos /api/health) pide HTTP Basic auth con
-    # esta contrasena (usuario: cualquiera). Obligatorio al exponerla en internet.
+    # Login: con APP_PASSWORD vacia la app no pide contraseña (uso local). Para
+    # exponerla en internet (ej. usarla desde el movil) hay que cargarla, y
+    # conviene fijar SESSION_SECRET para que las sesiones sobrevivan reinicios.
     app_password: str = ""
+    session_secret: str = ""
 
     app_host: str = "127.0.0.1"
     app_port: int = 8000
@@ -77,17 +76,11 @@ class Settings(BaseSettings):
         return [h.strip() for h in self.custom_hashtags.split() if h.strip()]
 
     @property
-    def anthropic_configured(self) -> bool:
-        return bool(self.anthropic_api_key)
-
-    @property
     def x_configured(self) -> bool:
         return bool(self.x_api_key and self.x_api_secret and self.x_access_token and self.x_access_token_secret)
 
 
 settings = Settings()
 
-if not settings.anthropic_configured:
-    logger.warning("ANTHROPIC_API_KEY no configurada: la generacion por IA no va a funcionar hasta que la cargues en .env")
 if not settings.x_configured:
     logger.warning("Credenciales de X incompletas: la publicacion no va a funcionar hasta que las cargues en .env")

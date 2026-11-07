@@ -500,45 +500,10 @@ def build_head_to_head_preview(team_a: str, team_b: str, tournaments: list[str])
     )
 
 
-def format_h2h_context(preview: HeadToHeadPreviewData, today_context: str | None = None) -> str:
-    """Bloque de hechos en texto plano para pasarle a la IA. Cuando un dato no
-    esta disponible lo dice explicitamente (nunca lo omite en silencio), para
-    que la IA nunca tenga que adivinar/inventar para rellenar el hueco."""
-    lines = [f"Partido: {preview.team_a} vs {preview.team_b}"]
-    if today_context:
-        lines.append(today_context)
-
-    total = preview.total_wins_a + preview.total_wins_b
-    if total:
-        lines.append(
-            f"Historial directo esta temporada: {preview.team_a} {preview.total_wins_a}-"
-            f"{preview.total_wins_b} {preview.team_b} (mapas: {preview.total_maps_a}-{preview.total_maps_b})."
-        )
-    else:
-        lines.append("Historial directo: sin enfrentamientos previos registrados esta temporada.")
-
-    if preview.last_meeting:
-        m = preview.last_meeting
-        lines.append(f"Ultimo enfrentamiento ({m.date}, {m.tournament}): gano {m.winner} a {m.loser}.")
-    else:
-        lines.append("Ultimo enfrentamiento: no hay registro.")
-
-    if preview.last_win_by_a and preview.last_win_by_a is not preview.last_meeting:
-        lines.append(f"Ultima vez que gano {preview.team_a}: {preview.last_win_by_a.date}.")
-    if preview.last_win_by_b and preview.last_win_by_b is not preview.last_meeting:
-        lines.append(f"Ultima vez que gano {preview.team_b}: {preview.last_win_by_b.date}.")
-
-    for team, form in ((preview.team_a, preview.recent_form_a), (preview.team_b, preview.recent_form_b)):
-        if form:
-            lines.append(f"Forma reciente de {team} (ultimos {form.games} partidos): {form.wins}V-{form.losses}D.")
-        else:
-            lines.append(f"Forma reciente de {team}: sin datos disponibles.")
-
-    return "\n".join(lines)
 
 
 def format_h2h_variant_plain(preview: HeadToHeadPreviewData, angle: str, today_context: str | None = None) -> str:
-    """Version sin IA de la preview head-to-head. Misma idea de las 4 partes
+    """Texto de la preview head-to-head. Misma idea de las 4 partes
     (gancho / dato protagonista / matiz / pregunta) con frases fijas por
     angulo, usando solo los datos reales que haya -- si algo falta, frase
     neutra en vez de inventar."""
@@ -743,8 +708,7 @@ def get_team_handles() -> dict[str, str]:
 
 def stat_closing_tags(candidate: StatCandidate) -> str:
     """Arrobas de equipo (solo si el candidato es de nivel equipo) + arroba de
-    liga + hashtags personalizados, para agregar al final de un tweet de stats
-    (plano o IA por igual)."""
+    liga + hashtags personalizados, para agregar al final de un tweet de stats."""
     team_handles: list[str] = []
     if candidate.kind in TEAM_LEVEL_KINDS:
         handles_map = get_team_handles()
@@ -878,10 +842,6 @@ def format_league_comparison_plain(candidate: LeagueComparisonCandidate, tone: s
     return "\n".join(lines)
 
 
-def format_league_comparison_context(candidate: LeagueComparisonCandidate, tone: str) -> str:
-    return f"Tono pedido: {tone}\nProtagonista: {candidate.subject}\nDato real: {candidate.fact_sentence}\nMatiz obligatorio: {candidate.nuance}"
-
-
 # ---------------------------------------------------------------------------
 # Top / ranking (top N de una categoria, no solo el lider)
 # ---------------------------------------------------------------------------
@@ -1003,25 +963,6 @@ def compute_top_ranking_candidate(
         league_average_display=league_average_display,
         plano_emoji=spec.plano_emoji,
     )
-
-
-def format_top_ranking_context(candidate: TopRankingCandidate) -> str:
-    """Bloque de hechos en texto plano para pasarle a la IA -- misma logica que
-    el resto de la app: si algo no esta disponible (menos de un top 3 completo,
-    sin dato de contraste) lo dice explicitamente, nunca lo omite en silencio."""
-    lines = [f"Categoria: {candidate.category_label} ({settings.golgg_tournament})."]
-    if candidate.total_pool_size < TOP_RANKING_TOP_N:
-        lines.append(
-            f"Aviso: solo hay {candidate.total_pool_size} con datos suficientes este split "
-            "(no hay un top 3 completo, no inventes posiciones que faltan)."
-        )
-    for i, entry in enumerate(candidate.entries, start=1):
-        lines.append(f"{i}. {entry.name} - {entry.value_display} {candidate.unit_label} ({entry.games} partidos).")
-    if candidate.league_average_display:
-        lines.append(f"Dato de contraste (media de la liga en esta categoria): {candidate.league_average_display} {candidate.unit_label}.")
-    else:
-        lines.append("Dato de contraste (media de la liga): no disponible.")
-    return "\n".join(lines)
 
 
 def format_top_ranking_plain(candidate: TopRankingCandidate, variant: str) -> str:

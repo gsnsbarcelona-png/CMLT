@@ -6,7 +6,6 @@ from pydantic import BaseModel
 
 from app.routers.generate._shared import GenerateResult, TodayMatchInfo, _closing_tags_for, _generate_variants, _result, _suggested_teams_for
 from app.routers.images import IMAGES_DIR
-from app.services.ai_service import AIGenerationError, generate_head_to_head_variant, generate_stat_tweet
 from app.services.duel_service import reconcile_player_casing
 from app.services.golgg_service import (
     GolGGError,
@@ -20,7 +19,6 @@ from app.services.golgg_service import (
     fetch_player_stats,
     fetch_team_stats,
     find_head_to_head,
-    format_h2h_context,
     format_h2h_variant_plain,
     format_stat_tweet_plain,
     get_emea_masters_tournaments,
@@ -48,15 +46,10 @@ from app.services.ranked_service import (
 router = APIRouter()
 
 STAT_CATEGORIES = {"teams", "players", "ranked"}
-STAT_STYLES = {"plain", "ai"}
 STAT_SCOPES = {"split", "year"}
-HEAD_TO_HEAD_STYLES = {"plain", "ai"}
-
-
 class StatGenerateRequest(BaseModel):
     categories: list[str] = []
     focus: str | None = None
-    style: str = "plain"
     scope: str = "split"
     rivalry_team_a: str | None = None
     rivalry_team_b: str | None = None
@@ -183,10 +176,6 @@ def list_available_tournaments(season: str | None = None, region: str | None = "
 
 @router.post("/stats")
 def generate_stats(payload: StatGenerateRequest) -> GenerateResult:
-    style = payload.style.strip().lower()
-    if style not in STAT_STYLES:
-        raise HTTPException(status_code=400, detail="Estilo no reconocido (usa 'plain' o 'ai').")
-
     rivalry_a = (payload.rivalry_team_a or "").strip()
     rivalry_b = (payload.rivalry_team_b or "").strip()
     ranked_player_a = (payload.ranked_player_a or "").strip()
@@ -299,15 +288,7 @@ def generate_stats(payload: StatGenerateRequest) -> GenerateResult:
         except GolGGError as exc:
             raise HTTPException(status_code=502, detail=str(exc)) from exc
 
-    if style == "ai":
-        try:
-            content = generate_stat_tweet(candidate.fact_sentence, candidate.subject)
-        except AIGenerationError as exc:
-            raise HTTPException(status_code=502, detail=str(exc)) from exc
-    else:
-        content = format_stat_tweet_plain(candidate)
-
-    content = f"{content}\n\n{stat_closing_tags(candidate)}"
+    content = f"{format_stat_tweet_plain(candidate)}\n\n{stat_closing_tags(candidate)}"
     return _result(content, _suggested_teams_for(candidate))
 
 
@@ -331,7 +312,6 @@ def get_todays_matches() -> list[TodayMatchInfo]:
 class HeadToHeadPreviewRequest(BaseModel):
     team_a: str
     team_b: str
-    style: str = "plain"
 
 
 class HeadToHeadVariantResult(BaseModel):
@@ -339,7 +319,6 @@ class HeadToHeadVariantResult(BaseModel):
     content: str | None = None
     char_count: int | None = None
     within_limit: bool | None = None
-    error: str | None = None
     suggested_teams: list[str] = []
 
 
@@ -351,10 +330,6 @@ def generate_head_to_head_preview(payload: HeadToHeadPreviewRequest) -> list[Hea
         raise HTTPException(status_code=400, detail="Elegi los dos equipos.")
     if team_a.lower() == team_b.lower():
         raise HTTPException(status_code=400, detail="Elegi dos equipos distintos.")
-
-    style = payload.style.strip().lower()
-    if style not in HEAD_TO_HEAD_STYLES:
-        raise HTTPException(status_code=400, detail="Estilo no reconocido (usa 'plain' o 'ai').")
 
     # Se combinan los torneos de LES con los de EMEA Masters -- un equipo de
     # LES que juega ahi se cruza con rivales que nunca jugaron en LES, y sin
@@ -379,22 +354,17 @@ def generate_head_to_head_preview(payload: HeadToHeadPreviewRequest) -> list[Hea
     except LoLEsportsError:
         pass  # best-effort: si falla, seguimos sin ese contexto extra
 
-    context = format_h2h_context(preview, today_context)
     closing = _closing_tags_for("team_head_to_head", f"{team_a} vs {team_b}")
 
-    angles = (("historial", "historial"), ("forma_reciente", "forma reciente"))
     return _generate_variants(
-        angles,
-        style=style,
-        ai_fn=lambda angle: generate_head_to_head_variant(context, angle[1]),
-        plain_fn=lambda angle: format_h2h_variant_plain(preview, angle[0], today_context),
+        ("historial", "forma_reciente"),
+        plain_fn=lambda angle: format_h2h_variant_plain(preview, angle, today_context),
         closing=closing,
         build_result=lambda angle, content, count, within: HeadToHeadVariantResult(
-            angle=angle[0],
+            angle=angle,
             content=content,
             char_count=count,
             within_limit=within,
             suggested_teams=[team_a, team_b],
         ),
-        build_error_result=lambda angle, error: HeadToHeadVariantResult(angle=angle[0], error=error),
     )

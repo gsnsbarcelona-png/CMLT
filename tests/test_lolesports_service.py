@@ -7,7 +7,6 @@ from app.services.lolesports_service import (
     LoLEsportsError,
     MatchInfo,
     TeamRosterNotFoundError,
-    build_matches_context,
     closing_tags,
     fetch_les_team_roster,
     fetch_les_team_roster_with_roles,
@@ -282,15 +281,8 @@ def test_league_label():
     assert league_label(["emea_masters", "les"]) == "LES + EMEA Masters"
 
 
-def test_build_matches_context_empty():
-    assert build_matches_context([]) == "No hay partidos programados en los proximos 7 dias."
 
 
-def test_build_matches_context_lists_matches():
-    match = _match_info(datetime(2026, 9, 1, 17, 0, tzinfo=timezone.utc))
-    context = build_matches_context([match])
-
-    assert context == "Mar 01/09 17:00 MKF 🆚 UCAM (Grupos)"
 
 
 def _team_entry(name, code, league_name="LES", players=("Escik", "Andariel"), roles=None, image=None):

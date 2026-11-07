@@ -1,6 +1,5 @@
 from datetime import datetime, timezone
 
-from app.services.ai_service import AIGenerationError
 from app.services.golgg_service import GolGGError, HeadToHeadPreviewData, TeamStat
 from app.services.lolesports_service import LoLEsportsError, MatchInfo
 
@@ -32,41 +31,13 @@ def _mock_today_no_match(mocker):
     return mocker.patch("app.routers.generate.stats.fetch_todays_matches", return_value=[])
 
 
-def test_h2h_preview_ai_style_does_not_save_drafts(client, mocker):
-    # El preview ya no auto-guarda -- el usuario elige que variante guardar
+
+
+def test_h2h_preview_returns_two_variants_and_does_not_save_drafts(client, mocker):
+    # El preview no auto-guarda -- el usuario elige que variante guardar
     # con el boton "Guardar" de su tarjeta (POST /api/tweets).
     mocker.patch("app.routers.generate.stats.build_head_to_head_preview", return_value=_preview())
     _mock_today_no_match(mocker)
-    ai_mock = mocker.patch(
-        "app.routers.generate.stats.generate_head_to_head_variant",
-        side_effect=["Variante historial", "Variante forma"],
-    )
-
-    res = client.post(
-        "/api/generate/stats/head-to-head-preview",
-        json={"team_a": "UCAM Esports", "team_b": "Barca eSports", "style": "ai"},
-    )
-
-    assert res.status_code == 200
-    body = res.json()
-    assert len(body) == 2
-    assert body[0]["angle"] == "historial"
-    assert body[0]["content"].startswith("Variante historial")
-    assert "draft_id" not in body[0]
-    assert body[1]["angle"] == "forma_reciente"
-    assert body[1]["content"].startswith("Variante forma")
-    assert body[0]["suggested_teams"] == ["UCAM Esports", "Barca eSports"]
-    assert body[1]["suggested_teams"] == ["UCAM Esports", "Barca eSports"]
-    assert ai_mock.call_count == 2
-
-    drafts = client.get("/api/tweets?status=draft").json()
-    assert len(drafts) == 0
-
-
-def test_h2h_preview_default_style_is_plain_and_skips_ai(client, mocker):
-    mocker.patch("app.routers.generate.stats.build_head_to_head_preview", return_value=_preview())
-    _mock_today_no_match(mocker)
-    ai_mock = mocker.patch("app.routers.generate.stats.generate_head_to_head_variant")
 
     res = client.post(
         "/api/generate/stats/head-to-head-preview",
@@ -76,19 +47,14 @@ def test_h2h_preview_default_style_is_plain_and_skips_ai(client, mocker):
     assert res.status_code == 200
     body = res.json()
     assert len(body) == 2
-    assert all(item["error"] is None for item in body)
-    ai_mock.assert_not_called()
+    assert body[0]["angle"] == "historial"
+    assert body[1]["angle"] == "forma_reciente"
+    assert "draft_id" not in body[0]
+
+    drafts = client.get("/api/tweets?status=draft").json()
+    assert len(drafts) == 0
 
 
-def test_h2h_preview_rejects_unknown_style(client, mocker):
-    mocker.patch("app.routers.generate.stats.build_head_to_head_preview", return_value=_preview())
-
-    res = client.post(
-        "/api/generate/stats/head-to-head-preview",
-        json={"team_a": "UCAM Esports", "team_b": "Barca eSports", "style": "flashy"},
-    )
-
-    assert res.status_code == 400
 
 
 def test_h2h_preview_requires_both_teams(client):
@@ -119,27 +85,6 @@ def test_h2h_preview_golgg_failure_returns_502(client, mocker):
     assert res.status_code == 502
 
 
-def test_h2h_preview_partial_ai_failure_still_returns_the_other_variant(client, mocker):
-    mocker.patch("app.routers.generate.stats.build_head_to_head_preview", return_value=_preview())
-    _mock_today_no_match(mocker)
-    mocker.patch(
-        "app.routers.generate.stats.generate_head_to_head_variant",
-        side_effect=[AIGenerationError("Falta configurar ANTHROPIC_API_KEY"), "Variante forma"],
-    )
-
-    res = client.post(
-        "/api/generate/stats/head-to-head-preview",
-        json={"team_a": "UCAM Esports", "team_b": "Barca eSports", "style": "ai"},
-    )
-
-    assert res.status_code == 200
-    body = res.json()
-    assert body[0]["angle"] == "historial"
-    assert body[0]["error"] is not None
-    assert body[0]["content"] is None
-    assert body[1]["angle"] == "forma_reciente"
-    assert body[1]["error"] is None
-    assert body[1]["content"].startswith("Variante forma")
 
 
 def _match_info(team1, team2, block_name="Final"):
@@ -195,16 +140,15 @@ def test_h2h_preview_includes_today_context_with_accent_insensitive_match(client
         "app.routers.generate.stats.fetch_todays_matches",
         return_value=[_match_info("UCAM Esports Club", "Barça Esports")],
     )
-    ai_mock = mocker.patch("app.routers.generate.stats.generate_head_to_head_variant", return_value="ok")
 
-    client.post(
+    res = client.post(
         "/api/generate/stats/head-to-head-preview",
-        json={"team_a": "UCAM Esports", "team_b": "Barca eSports", "style": "ai"},
+        json={"team_a": "UCAM Esports", "team_b": "Barca eSports"},
     )
 
-    context_arg = ai_mock.call_args_list[0].args[0]
-    assert "Partido de hoy" in context_arg
-    assert "Final" in context_arg
+    content = res.json()[0]["content"]
+    assert "Partido de hoy" in content
+    assert "Final" in content
 
 
 def test_today_match_endpoint_returns_matches(client, mocker):

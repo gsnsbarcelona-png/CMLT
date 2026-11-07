@@ -6,7 +6,6 @@ cambian (siguen bajo /api/generate, mismo prefijo y tags de siempre)."""
 from fastapi import APIRouter
 
 from app.routers.generate import (
-    ai,
     anniversary,
     calendar,
     duel,
@@ -17,7 +16,6 @@ from app.routers.generate import (
 )
 
 router = APIRouter(prefix="/api/generate", tags=["generate"])
-router.include_router(ai.router)
 router.include_router(calendar.router)
 router.include_router(stats.router)
 router.include_router(duel.router)

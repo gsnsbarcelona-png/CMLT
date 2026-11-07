@@ -208,3 +208,35 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .empty-state { color: var(--muted); font-size: 14px; padding: 20px 0; text-align: center; }
 
 .var-input { margin-bottom: 10px; }
+
+.logout-btn { margin-left: auto; padding: 6px 12px; font-size: 13px; }
+
+.login-main { max-width: 360px; padding-top: 15vh; }
+.login-panel h1 { font-size: 20px; margin: 0 0 16px; }
+.login-panel button { width: 100%; }
+input[type="password"] {
+  width: 100%;
+  margin-top: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--text);
+  background: var(--panel);
+}
+
+/* ---------- Movil ---------- */
+@media (max-width: 600px) {
+  .topbar { flex-wrap: wrap; gap: 8px; padding: 12px 16px; }
+  .tabs { padding: 8px 8px 0; overflow-x: auto; }
+  .tab-btn { padding: 10px 12px; white-space: nowrap; }
+  main { padding: 16px; }
+  .mode-selector { flex-wrap: wrap; gap: 10px 14px; }
+  .rivalry-row { flex-direction: column; }
+  .actions { flex-direction: column; }
+  .actions button { width: 100%; }
+  button { padding: 11px 16px; }
+  /* 16px evita que iOS haga zoom al enfocar un campo */
+  input[type="text"], input[type="password"], textarea, select { font-size: 16px; }
+}

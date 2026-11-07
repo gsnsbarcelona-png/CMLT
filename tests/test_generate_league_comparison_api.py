@@ -1,4 +1,3 @@
-from app.services.ai_service import AIGenerationError
 from app.services.crossover_service import CrossoverDataError
 from app.services.golgg_service import GolGGError, PlayerStat, StatFocusNotFoundError, TeamStat
 
@@ -30,11 +29,10 @@ def _mock_fetches(mocker):
     mocker.patch("app.routers.generate.league_comparison.fetch_player_stats", side_effect=[[_les_player()], [_lec_player()]])
 
 
-def test_league_comparison_default_style_is_plain_and_does_not_save_drafts(client, mocker):
+def test_league_comparison_returns_two_tones_and_does_not_save_drafts(client, mocker):
     # La comparativa LES-LEC ya no auto-guarda -- el usuario elige que tono
     # guardar con el boton "Guardar" de su tarjeta (POST /api/tweets).
     _mock_fetches(mocker)
-    ai_mock = mocker.patch("app.routers.generate.league_comparison.generate_league_comparison_variant")
 
     res = client.post("/api/generate/league-comparison", json={})
 
@@ -43,52 +41,14 @@ def test_league_comparison_default_style_is_plain_and_does_not_save_drafts(clien
     assert len(body) == 2
     assert body[0]["tone"] == "sorprendente"
     assert body[1]["tone"] == "debate"
-    assert all(item["error"] is None for item in body)
     assert "draft_id" not in body[0]
-    ai_mock.assert_not_called()
 
     drafts = client.get("/api/tweets?status=draft").json()
     assert len(drafts) == 0
 
 
-def test_league_comparison_ai_style_returns_two_variants(client, mocker):
-    _mock_fetches(mocker)
-    ai_mock = mocker.patch(
-        "app.routers.generate.league_comparison.generate_league_comparison_variant",
-        side_effect=["Dato sorprendente!", "Pregunta a debate!"],
-    )
-
-    res = client.post("/api/generate/league-comparison", json={"style": "ai"})
-
-    assert res.status_code == 200
-    body = res.json()
-    assert body[0]["content"].startswith("Dato sorprendente!")
-    assert body[1]["content"].startswith("Pregunta a debate!")
-    assert ai_mock.call_count == 2
 
 
-def test_league_comparison_partial_ai_failure_still_returns_the_other(client, mocker):
-    _mock_fetches(mocker)
-    mocker.patch(
-        "app.routers.generate.league_comparison.generate_league_comparison_variant",
-        side_effect=[AIGenerationError("Falta configurar ANTHROPIC_API_KEY"), "Pregunta a debate!"],
-    )
-
-    res = client.post("/api/generate/league-comparison", json={"style": "ai"})
-
-    assert res.status_code == 200
-    body = res.json()
-    assert body[0]["tone"] == "sorprendente"
-    assert body[0]["error"] is not None
-    assert body[0]["content"] is None
-    assert body[1]["tone"] == "debate"
-    assert body[1]["error"] is None
-    assert body[1]["content"].startswith("Pregunta a debate!")
-
-
-def test_league_comparison_rejects_unknown_style(client):
-    res = client.post("/api/generate/league-comparison", json={"style": "flashy"})
-    assert res.status_code == 400
 
 
 def test_league_comparison_focus_with_match(client, mocker):

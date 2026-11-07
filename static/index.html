@@ -3,13 +3,18 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#1d9bf0" />
   <title>Tweet Automation</title>
+  <link rel="manifest" href="/static/manifest.webmanifest" />
+  <link rel="icon" href="/static/icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="/static/icons/icon-192.png" />
   <link rel="stylesheet" href="/static/styles.css" />
 </head>
 <body>
   <header class="topbar">
     <h1>Tweet Automation</h1>
     <div id="config-banner" class="config-banner" hidden></div>
+    <button id="logout-btn" class="logout-btn" type="button" hidden>Salir</button>
   </header>
 
   <nav class="tabs">
@@ -30,19 +35,14 @@
         <label><input type="radio" name="mode" value="top-ranking" /> Top/Ranking</label>
         <label><input type="radio" name="mode" value="anniversary" /> Efemeride</label>
         <label><input type="radio" name="mode" value="lec-compare" /> Cruce LEC</label>
-        <label><input type="radio" name="mode" value="ai" /> IA</label>
       </div>
 
       <div id="mode-calendar" class="mode-panel">
         <label class="checkbox-inline"><input type="checkbox" id="calendar-les" checked /> LES</label>
         <label class="checkbox-inline"><input type="checkbox" id="calendar-lec" /> LEC</label>
         <label class="checkbox-inline"><input type="checkbox" id="calendar-emea-masters" /> EMEA Masters</label>
-        <div class="mode-selector" style="margin-top: 4px;">
-          <label><input type="radio" name="calendar-style" value="plain" checked /> Plano</label>
-          <label><input type="radio" name="calendar-style" value="hype" /> Hype (IA)</label>
-        </div>
         <button id="calendar-generate-btn">Generar calendario</button>
-        <p class="hint">Los horarios y equipos siempre vienen de la API oficial de LoL Esports (datos reales). El estilo "Hype" usa IA solo para la redaccion, no para los datos, y requiere ANTHROPIC_API_KEY configurada.</p>
+        <p class="hint">Los horarios y equipos siempre vienen de la API oficial de LoL Esports (datos reales).</p>
       </div>
 
       <div id="mode-stats" class="mode-panel" hidden>
@@ -73,15 +73,11 @@
         </label>
         <p class="hint">Las comparaciones de elo consultan lolpros.gg en vivo (equipo vs equipo tarda un poco mas, son ~10 jugadores).</p>
         <div class="mode-selector" style="margin-top: 4px;">
-          <label><input type="radio" name="stats-style" value="plain" checked /> Plano</label>
-          <label><input type="radio" name="stats-style" value="ai" /> IA</label>
-        </div>
-        <div class="mode-selector" style="margin-top: 4px;">
           <label><input type="radio" name="stats-scope" value="split" checked /> Split actual</label>
           <label><input type="radio" name="stats-scope" value="year" /> Todo el año</label>
         </div>
         <button id="stats-generate-btn">Generar stat</button>
-        <p class="hint">Los numeros siempre vienen de gol.gg (datos reales). "Todo el año" combina Spring+Summer y suma un angulo de rivalidad (head-to-head) entre equipos. El estilo "IA" redacta el gancho/pregunta siguiendo tu guia de estilo, y requiere ANTHROPIC_API_KEY configurada.</p>
+        <p class="hint">Los numeros siempre vienen de gol.gg (datos reales). "Todo el año" combina Spring+Summer y suma un angulo de rivalidad (head-to-head) entre equipos.</p>
       </div>
 
       <div id="mode-h2h" class="mode-panel" hidden>
@@ -93,12 +89,8 @@
         <label>Equipo B
           <select id="h2h-team-b"><option value="">-- equipo B --</option></select>
         </label>
-        <div class="mode-selector" style="margin-top: 4px;">
-          <label><input type="radio" name="h2h-style" value="plain" checked /> Plano</label>
-          <label><input type="radio" name="h2h-style" value="ai" /> IA</label>
-        </div>
         <button id="h2h-generate-btn">Generar preview (2 variantes)</button>
-        <p class="hint">Genera 2 tweets head-to-head (historial y forma reciente) con datos reales de gol.gg. Guarda solo el/los que quieras con el boton "Guardar" de cada tarjeta. El estilo "Plano" no usa IA. El estilo "IA" redacta con mas onda y requiere ANTHROPIC_API_KEY configurada.</p>
+        <p class="hint">Genera 2 tweets head-to-head (historial y forma reciente) con datos reales de gol.gg. Guarda solo el/los que quieras con el boton "Guardar" de cada tarjeta.</p>
         <div id="h2h-results" class="list"></div>
       </div>
 
@@ -111,10 +103,6 @@
         <label>Equipo B
           <select id="duel-team-b"><option value="">-- equipo B --</option></select>
         </label>
-        <div class="mode-selector" style="margin-top: 4px;">
-          <label><input type="radio" name="duel-style" value="plain" checked /> Plano</label>
-          <label><input type="radio" name="duel-style" value="ai" /> IA</label>
-        </div>
         <button id="duel-generate-btn">Generar duelos</button>
         <p class="hint">Compara el KDA de temporada (gol.gg) del jugador con mas partidos jugados en cada carril compartido por ambos equipos (segun el roster de lolesports.com) -- una tarjeta por carril. No confirma alineaciones oficiales ni cruces directos historicos entre esos jugadores, esos datos no estan disponibles hoy. Guarda solo las que quieras con el boton "Guardar" de cada tarjeta.</p>
         <div id="duel-results" class="list"></div>
@@ -124,22 +112,14 @@
         <label>Categoria
           <select id="top-ranking-category"></select>
         </label>
-        <div class="mode-selector" style="margin-top: 4px;">
-          <label><input type="radio" name="top-ranking-style" value="plain" checked /> Plano</label>
-          <label><input type="radio" name="top-ranking-style" value="ai" /> IA</label>
-        </div>
         <button id="top-ranking-generate-btn">Generar top</button>
         <p class="hint">Calcula el top 3 real de gol.gg para el split actual (nunca a mano) -- si hay menos de 3 con datos suficientes, lo dice en vez de inventar posiciones. Las categorias de jugador no muestran equipo (gol.gg no lo expone en esa tabla). Genera 2 variantes: foco en el lider y top 3 resumido. Guarda solo las que quieras con el boton "Guardar" de cada tarjeta.</p>
         <div id="top-ranking-results" class="list"></div>
       </div>
 
       <div id="mode-anniversary" class="mode-panel" hidden>
-        <div class="mode-selector" style="margin-top: 4px;">
-          <label><input type="radio" name="anniversary-style" value="plain" checked /> Plano</label>
-          <label><input type="radio" name="anniversary-style" value="ai" /> IA</label>
-        </div>
         <button id="anniversary-generate-btn">Generar efemeride de hoy</button>
-        <p class="hint">Busca un hecho verificado de la historia de la LES/Superliga para la fecha de hoy en una base curada (no es scraping en vivo -- si no hay nada para hoy exacto, muestra el hito mas cercano y lo aclara). Genera 2 versiones: completa y "dato rapido". El estilo "Plano" no usa IA.</p>
+        <p class="hint">Busca un hecho verificado de la historia de la LES/Superliga para la fecha de hoy en una base curada (no es scraping en vivo -- si no hay nada para hoy exacto, muestra el hito mas cercano y lo aclara). Genera 2 versiones: completa y "dato rapido".</p>
         <div id="anniversary-results" class="list"></div>
       </div>
 
@@ -147,41 +127,9 @@
         <label>Enfocar en un equipo/jugador de LES (opcional)
           <input type="text" id="lec-compare-focus" placeholder="ej: UCAM, Escik..." />
         </label>
-        <div class="mode-selector" style="margin-top: 4px;">
-          <label><input type="radio" name="lec-compare-style" value="plain" checked /> Plano</label>
-          <label><input type="radio" name="lec-compare-style" value="ai" /> IA</label>
-        </div>
         <button id="lec-compare-generate-btn">Generar cruce LES-LEC</button>
         <p class="hint">Compara una metrica real de la LES (equipo o jugador destacado) contra el promedio de la LEC en esa misma metrica, con datos reales de gol.gg de ambas ligas. Siempre incluye el matiz de que son ligas de nivel/muestra distintos. Genera 2 tonos: dato sorprendente y pregunta a debate.</p>
         <div id="lec-compare-results" class="list"></div>
-      </div>
-
-      <div id="mode-ai" class="mode-panel" hidden>
-        <label>Tema
-          <input type="text" id="ai-topic" placeholder="ej: lanzamiento de nuestro nuevo producto" />
-        </label>
-        <label>Tono (opcional)
-          <input type="text" id="ai-tone" placeholder="ej: entusiasta, formal, humoristico" />
-        </label>
-        <label>Instrucciones adicionales (opcional)
-          <textarea id="ai-instructions" rows="2"></textarea>
-        </label>
-        <button id="ai-generate-btn">Generar con IA</button>
-      </div>
-
-      <div id="mode-batch" class="mode-panel" hidden>
-        <label>Temas (uno por linea, hasta 25)
-          <textarea id="batch-topics" rows="6" placeholder="lanzamiento del producto X&#10;oferta de fin de semana&#10;testimonio de un cliente"></textarea>
-        </label>
-        <label>Tono (opcional)
-          <input type="text" id="batch-tone" placeholder="ej: entusiasta, formal, humoristico" />
-        </label>
-        <label>Instrucciones adicionales (opcional)
-          <textarea id="batch-instructions" rows="2"></textarea>
-        </label>
-        <button id="batch-generate-btn">Generar lote</button>
-        <p class="hint">Guarda solo los tweets que quieras con el boton "Guardar" de cada tarjeta.</p>
-        <div id="batch-results" class="list"></div>
       </div>
 
       <div id="mode-template" class="mode-panel" hidden>

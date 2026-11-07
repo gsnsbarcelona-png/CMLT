@@ -45,7 +45,6 @@ def test_generate_top_ranking_player_category_success(client, mocker):
     assert "Escik" in top1["content"]
     assert "Escik" in top3["content"]
     assert "Andariel" in top3["content"]
-    assert top1["error"] is None
     assert top1["suggested_teams"] == []  # gol.gg no da equipo por jugador -- nunca se inventa
 
 
@@ -76,32 +75,12 @@ def test_generate_top_ranking_unknown_category_returns_400(client):
     assert res.status_code == 400
 
 
-def test_generate_top_ranking_unknown_style_returns_400(client, mocker):
-    mocker.patch("app.routers.generate.top_ranking.fetch_player_stats", return_value=_players())
-
-    res = client.post("/api/generate/top-ranking", json={"category": "player_kda", "style": "flashy"})
-
-    assert res.status_code == 400
-
-
 def test_generate_top_ranking_golgg_failure_returns_502(client, mocker):
     mocker.patch("app.routers.generate.top_ranking.fetch_player_stats", side_effect=GolGGError("no se pudo obtener"))
 
     res = client.post("/api/generate/top-ranking", json={"category": "player_kda"})
 
     assert res.status_code == 502
-
-
-def test_generate_top_ranking_ai_style_uses_ai(client, mocker):
-    mocker.patch("app.routers.generate.top_ranking.fetch_player_stats", return_value=_players())
-    ai_mock = mocker.patch("app.routers.generate.top_ranking.generate_top_ranking_variant", return_value="Top con onda!")
-
-    res = client.post("/api/generate/top-ranking", json={"category": "player_kda", "style": "ai"})
-
-    assert res.status_code == 200
-    body = res.json()
-    assert all(r["content"].startswith("Top con onda!") for r in body)
-    assert ai_mock.call_count == 2
 
 
 def test_generate_top_ranking_team_category_includes_leader_team_handle(client, mocker, monkeypatch):

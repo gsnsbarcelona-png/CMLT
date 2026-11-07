@@ -15,6 +15,11 @@ async function api(path, options = {}) {
   });
   const isJson = res.status !== 204 && res.headers.get("content-type")?.includes("application/json");
   const body = isJson ? await res.json() : null;
+  if (res.status === 401) {
+    // Sesion expirada (solo pasa con APP_PASSWORD configurada).
+    window.location.replace("/login");
+    throw new Error("Sesion expirada.");
+  }
   if (!res.ok) {
     const message = body?.detail || `Error ${res.status}`;
     throw new Error(message);
@@ -280,7 +285,6 @@ async function checkConfig() {
     const cfg = await api("/api/config/check");
     const banner = document.getElementById("config-banner");
     const missing = [];
-    if (!cfg.anthropic_configured) missing.push("Anthropic (IA)");
     if (!cfg.x_configured) missing.push("X (publicacion)");
     if (missing.length) {
       banner.textContent = `Falta configurar en .env: ${missing.join(", ")}.`;
@@ -305,12 +309,9 @@ function initCompose() {
 
   document.getElementById("image-picker").innerHTML = imagePickerHtml();
   bindImagePicker(document.getElementById("image-picker"));
-
-  document.getElementById("ai-generate-btn").addEventListener("click", handleAiGenerate);
-  document.getElementById("template-render-btn").addEventListener("click", handleTemplateRender);
+  document.getElementById("template-render-btn").addEventListener("click", handleTemplateRender);
   document.getElementById("save-draft-btn").addEventListener("click", () => handleSave(false));
   document.getElementById("publish-now-btn").addEventListener("click", () => handleSave(true));
-  document.getElementById("batch-generate-btn").addEventListener("click", handleBatchGenerate);
   document.getElementById("calendar-generate-btn").addEventListener("click", handleCalendarGenerate);
   document.getElementById("stats-generate-btn").addEventListener("click", handleStatsGenerate);
   document.getElementById("h2h-autofill-btn").addEventListener("click", handleH2hAutofill);
@@ -380,12 +381,9 @@ function updateComposeMode() {
   document.getElementById("mode-top-ranking").hidden = mode !== "top-ranking";
   document.getElementById("mode-anniversary").hidden = mode !== "anniversary";
   document.getElementById("mode-lec-compare").hidden = mode !== "lec-compare";
-  document.getElementById("mode-ai").hidden = mode !== "ai";
-  document.getElementById("mode-batch").hidden = mode !== "batch";
   document.getElementById("mode-template").hidden = mode !== "template";
   document.getElementById("mode-manual").hidden = mode !== "manual";
   document.getElementById("single-compose-area").hidden =
-    mode === "batch" ||
     mode === "h2h" ||
     mode === "duel" ||
     mode === "top-ranking" ||
@@ -406,12 +404,11 @@ async function loadTopRankingCategories() {
 }
 
 async function handleLecCompareGenerate() {
-  const style = document.querySelector('input[name="lec-compare-style"]:checked').value;
   const focus = document.getElementById("lec-compare-focus").value.trim();
 
   await generateResultCards({
     endpoint: "/api/generate/league-comparison",
-    payload: { style, focus: focus || null },
+    payload: { focus: focus || null },
     resultsElId: "lec-compare-results",
     btnId: "lec-compare-generate-btn",
     source: "lec-compare",
@@ -421,11 +418,9 @@ async function handleLecCompareGenerate() {
 }
 
 async function handleAnniversaryGenerate() {
-  const style = document.querySelector('input[name="anniversary-style"]:checked').value;
-
   await generateResultCards({
     endpoint: "/api/generate/anniversary",
-    payload: { style },
+    payload: {},
     resultsElId: "anniversary-results",
     btnId: "anniversary-generate-btn",
     source: "anniversary",
@@ -487,11 +482,9 @@ async function handleH2hGenerate() {
     return;
   }
 
-  const style = document.querySelector('input[name="h2h-style"]:checked').value;
-
   await generateResultCards({
     endpoint: "/api/generate/stats/head-to-head-preview",
-    payload: { team_a: teamA, team_b: teamB, style },
+    payload: { team_a: teamA, team_b: teamB },
     resultsElId: "h2h-results",
     btnId: "h2h-generate-btn",
     source: "h2h",
@@ -520,11 +513,9 @@ async function handleDuelGenerate() {
     return;
   }
 
-  const style = document.querySelector('input[name="duel-style"]:checked').value;
-
   await generateResultCards({
     endpoint: "/api/generate/duel",
-    payload: { team_a: teamA, team_b: teamB, style },
+    payload: { team_a: teamA, team_b: teamB },
     resultsElId: "duel-results",
     btnId: "duel-generate-btn",
     source: "duel",
@@ -541,11 +532,9 @@ async function handleTopRankingGenerate() {
     return;
   }
 
-  const style = document.querySelector('input[name="top-ranking-style"]:checked').value;
-
   await generateResultCards({
     endpoint: "/api/generate/top-ranking",
-    payload: { category, style },
+    payload: { category },
     resultsElId: "top-ranking-results",
     btnId: "top-ranking-generate-btn",
     source: "top-ranking",
@@ -580,7 +569,6 @@ async function handleStatsGenerate() {
     return;
   }
   const focus = document.getElementById("stats-focus").value.trim();
-  const style = document.querySelector('input[name="stats-style"]:checked').value;
   const scope = document.querySelector('input[name="stats-scope"]:checked').value;
 
   const usesLolpros = categories.includes("ranked") || usingRankedPlayers || usingRankedTeams;
@@ -593,7 +581,6 @@ async function handleStatsGenerate() {
     {
       categories,
       focus: focus || null,
-      style,
       scope,
       rivalry_team_a: rivalryTeamA || null,
       rivalry_team_b: rivalryTeamB || null,
@@ -616,39 +603,12 @@ async function handleCalendarGenerate() {
     setComposeFeedback("Marca al menos una liga (LES o LEC).", true);
     return;
   }
-  const style = document.querySelector('input[name="calendar-style"]:checked').value;
-
   setComposeFeedback("Consultando calendario...", false);
   await fillComposeFromGenerate(
     "/api/generate/calendar",
-    { leagues, style },
+    { leagues },
     "Calendario generado. Podes editarlo antes de guardar o publicar."
   );
-}
-
-async function handleBatchGenerate() {
-  const topics = document
-    .getElementById("batch-topics")
-    .value.split("\n")
-    .map((t) => t.trim())
-    .filter(Boolean);
-  if (!topics.length) {
-    document.getElementById("batch-results").innerHTML =
-      '<div class="empty-state">Ingresa al menos un tema, uno por linea.</div>';
-    return;
-  }
-  const tone = document.getElementById("batch-tone").value.trim();
-  const instructions = document.getElementById("batch-instructions").value.trim();
-
-  await generateResultCards({
-    endpoint: "/api/generate/ai/batch",
-    payload: { topics, tone: tone || null, instructions: instructions || null },
-    resultsElId: "batch-results",
-    btnId: "batch-generate-btn",
-    source: "batch",
-    metaFn: (r) => `Tema: ${r.topic}`,
-    loadingText: "Generando...",
-  });
 }
 
 function updateCharCounter() {
@@ -670,7 +630,7 @@ function setComposeFeedback(message, isError) {
 }
 
 // Patron compartido por los modos de Compose que generan texto y lo vuelcan
-// en el editor (IA, Calendario, Stats, Plantilla): pegarle al endpoint,
+// en el editor (Calendario, Stats, Plantilla): pegarle al endpoint,
 // llenar compose-content, y mostrar feedback de exito/error.
 async function fillComposeFromGenerate(endpoint, payload, successMessage) {
   try {
@@ -689,22 +649,6 @@ async function fillComposeFromGenerate(endpoint, payload, successMessage) {
   } catch (e) {
     setComposeFeedback(e.message, true);
   }
-}
-
-async function handleAiGenerate() {
-  const topic = document.getElementById("ai-topic").value.trim();
-  if (!topic) {
-    setComposeFeedback("Ingresa un tema para generar el tweet.", true);
-    return;
-  }
-  const tone = document.getElementById("ai-tone").value.trim();
-  const instructions = document.getElementById("ai-instructions").value.trim();
-  setComposeFeedback("Generando...", false);
-  await fillComposeFromGenerate(
-    "/api/generate/ai",
-    { topic, tone: tone || null, instructions: instructions || null },
-    "Tweet generado. Podes editarlo antes de guardar o publicar."
-  );
 }
 
 async function loadTemplateSelect() {
@@ -800,9 +744,6 @@ async function handleSave(publishNow) {
 
 function resetCompose() {
   document.getElementById("compose-content").value = "";
-  document.getElementById("ai-topic").value = "";
-  document.getElementById("ai-tone").value = "";
-  document.getElementById("ai-instructions").value = "";
   const imagePicker = document.getElementById("image-picker");
   imagePicker.innerHTML = imagePickerHtml();
   bindImagePicker(imagePicker);
@@ -1065,10 +1006,31 @@ function bindTemplateCard(template) {
   });
 }
 
+// ---------- Sesion ----------
+async function initLogout() {
+  try {
+    const status = await api("/api/auth/status");
+    if (!status.enabled) return;
+    const btn = document.getElementById("logout-btn");
+    btn.hidden = false;
+    btn.addEventListener("click", async () => {
+      await api("/api/auth/logout", { method: "POST" });
+      window.location.replace("/login");
+    });
+  } catch (e) {
+    // silencioso: sin boton de salir, el resto de la app sigue andando
+  }
+}
+
 // ---------- Init ----------
 document.addEventListener("DOMContentLoaded", () => {
   initTabs();
   initCompose();
   initTemplateForm();
   checkConfig();
+  initLogout();
 });
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/sw.js").catch(() => {});
+}
