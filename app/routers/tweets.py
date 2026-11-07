@@ -98,7 +98,7 @@ def publish(tweet_id: int, session: Session = Depends(get_session)) -> Tweet:
     if current_count > char_count.TWEET_CHAR_LIMIT:
         raise HTTPException(
             status_code=400,
-            detail=f"El tweet supera el limite de {char_count.TWEET_CHAR_LIMIT} caracteres ({current_count}).",
+            detail=f"El tweet supera el límite de {char_count.TWEET_CHAR_LIMIT} caracteres ({current_count}).",
         )
 
     try:

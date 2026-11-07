@@ -36,7 +36,7 @@ async def lifespan(app: FastAPI):
     # En Render (que define RENDER=true) la app es publica: sin contrasena
     # cualquiera podria usar la API, asi que mejor no arrancar.
     if os.environ.get("RENDER") and not settings.app_password:
-        raise RuntimeError("APP_PASSWORD no esta configurada: la app es publica en Render y quedaria abierta.")
+        raise RuntimeError("APP_PASSWORD no está configurada: la app es pública en Render y quedaría abierta.")
     init_db()
     IMAGES_DIR.mkdir(parents=True, exist_ok=True)
     if settings.prewarm_cache:

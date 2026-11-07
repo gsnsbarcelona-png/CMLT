@@ -35,7 +35,7 @@ _RATE_LIMIT_STATUSES = {403, 429}
 
 
 def _purge(cache: dict, ttl: float, now: float) -> None:
-    """Purga simple: primero lo vencido y, si sigue lleno, lo mas viejo."""
+    """Purga simple: primero lo vencido y, si sigue lleno, lo más viejo."""
     if len(cache) < _CACHE_MAX_ENTRIES:
         return
     for key in [k for k, v in cache.items() if now - v[0] >= ttl]:
@@ -66,16 +66,16 @@ def _cached_get(url: str) -> tuple[int, str]:
 
     status = response.status_code
     if status in _RATE_LIMIT_STATUSES:
-        logger.warning("lolpros.gg respondio %s para %s (limitacion de peticiones)", status, url)
+        logger.warning("lolpros.gg respondió %s para %s (limitación de peticiones)", status, url)
         raise RankedError(
-            "lolpros.gg nos esta limitando las peticiones. Espera unos minutos y vuelve a intentarlo."
+            "lolpros.gg nos está limitando las peticiones. Espera unos minutos y vuelve a intentarlo."
         )
     if status >= 400:
         if status in _NOT_FOUND_STATUSES:
             _purge(_negative_cache, _NEGATIVE_TTL_SECONDS, now)
             _negative_cache[url] = (now, status)
         else:
-            logger.warning("lolpros.gg respondio %s para %s", status, url)
+            logger.warning("lolpros.gg respondió %s para %s", status, url)
         return status, ""
 
     _purge(_http_cache, _CACHE_TTL_SECONDS, now)
@@ -114,10 +114,10 @@ KNOWN_SLUG_OVERRIDES = {
     "macaquinho": "macaquino",  # Barca eSports (BAR) -- gol.gg dice "Macaquinho", el jugador es "Macaquiño"
     "kaii1": "kaii",
     "mercy9": "mercy",  # Team Heretics Academy (HRTS)
-    "pasamelcelo": "pasameelcelo",  # UB Alma Mater -- confirmado por su propia pagina de equipo
-    "adrianlanei": "adrianlaneitor",  # UB Alma Mater -- LP cruzado con la lista de companeros de Pasameelcelo
+    "pasamelcelo": "pasameelcelo",  # UB Alma Mater -- confirmado por su propia página de equipo
+    "adrianlanei": "adrianlaneitor",  # UB Alma Mater -- LP cruzado con la lista de compañeros de Pasameelcelo
     "nightslayer": "night-slayer",
-    "koido": "koldo",  # Barca eSports -- confirmado por el usuario, pagina propia con tab "BARÇA ESPORTS"
+    "koido": "koldo",  # Barca eSports -- confirmado por el usuario, página propia con tab "BARÇA ESPORTS"
 }
 
 
@@ -262,12 +262,12 @@ def compute_rank_candidates(ranks: list[PlayerRank]) -> list[StatCandidate]:
                 kind="player_rank_current",
                 subject=rank.player,
                 fact_sentence=(
-                    f"{rank.player} esta en {rank.tier} con {rank.lp} LP "
+                    f"{rank.player} está en {rank.tier} con {rank.lp} LP "
                     f"({rank.wins}-{rank.losses}, {rank.winrate}%) en SoloQ ahora mismo."
                 ),
                 emoji="🏆",
                 title="RANGO EN SOLOQ",
-                question="¿En que elo estas tu?",
+                question="¿En qué elo estás tú?",
             )
         )
 
@@ -278,12 +278,12 @@ def compute_rank_candidates(ranks: list[PlayerRank]) -> list[StatCandidate]:
                 kind="player_rank_leader",
                 subject=leader.player,
                 fact_sentence=(
-                    f"{leader.player} es el jugador con el rango mas alto de la LES ahora mismo: "
+                    f"{leader.player} es el jugador con el rango más alto de la LES ahora mismo: "
                     f"{leader.tier} ({leader.lp} LP)."
                 ),
                 emoji="👑",
-                title="EL ELO MAS ALTO DE LA LIGA",
-                question="¿Quien le hace sombra?",
+                title="EL ELO MÁS ALTO DE LA LIGA",
+                question="¿Quién le hace sombra?",
             )
         )
 
@@ -298,8 +298,8 @@ def compute_rank_candidates(ranks: list[PlayerRank]) -> list[StatCandidate]:
                     kind="player_rank_peak_drop",
                     subject=rank.player,
                     fact_sentence=(
-                        f"{rank.player} llego a tocar {rank.peak_tier} ({rank.peak_lp} LP) en SoloQ, "
-                        f"hoy esta en {rank.tier} ({rank.lp} LP)."
+                        f"{rank.player} llegó a tocar {rank.peak_tier} ({rank.peak_lp} LP) en SoloQ, "
+                        f"hoy está en {rank.tier} ({rank.lp} LP)."
                     ),
                     emoji="📉",
                     title="LEJOS DE SU PICO",
@@ -317,13 +317,13 @@ def compute_player_vs_player_candidate(rank_a: PlayerRank, rank_b: PlayerRank) -
         kind="player_rank_vs_player",
         subject=f"{rank_a.player} vs {rank_b.player}",
         fact_sentence=(
-            f"{rank_a.player} esta en {rank_a.tier} ({rank_a.lp} LP) en SoloQ, "
-            f"{rank_b.player} esta en {rank_b.tier} ({rank_b.lp} LP). "
+            f"{rank_a.player} está en {rank_a.tier} ({rank_a.lp} LP) en SoloQ, "
+            f"{rank_b.player} está en {rank_b.tier} ({rank_b.lp} LP). "
             f"Ahora mismo va arriba {higher.player}."
         ),
         emoji="⚔️",
         title="DUELO DE ELO",
-        question="¿A cual te gustaria tener en tu equipo?",
+        question="¿A cuál te gustaría tener en tu equipo?",
     )
 
 
@@ -334,9 +334,9 @@ def compute_team_vs_team_candidate(
     los tiers no tienen una escala numerica real (Iron a Challenger no es
     lineal), asi que "el mas alto de cada equipo" es el dato defendible."""
     if not ranks_a:
-        raise RankedError(f"No se pudo obtener el elo de ningun jugador de {team_a}.")
+        raise RankedError(f"No se pudo obtener el elo de ningún jugador de {team_a}.")
     if not ranks_b:
-        raise RankedError(f"No se pudo obtener el elo de ningun jugador de {team_b}.")
+        raise RankedError(f"No se pudo obtener el elo de ningún jugador de {team_b}.")
 
     best_a = max(ranks_a, key=lambda r: (_tier_rank(r.tier), r.lp))
     best_b = max(ranks_b, key=lambda r: (_tier_rank(r.tier), r.lp))
@@ -350,5 +350,5 @@ def compute_team_vs_team_candidate(
         ),
         emoji="🛡️",
         title="MEJOR ELO DE CADA PLANTILLA",
-        question="¿A cual prefieres tener en tu equipo?",
+        question="¿A cuál prefieres tener en tu equipo?",
     )

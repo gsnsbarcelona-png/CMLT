@@ -7,7 +7,7 @@ class GolGGError(Exception):
 
 
 class StatFocusNotFoundError(GolGGError):
-    """El foco pedido por el usuario (equipo/jugador) no matchea ningun candidato."""
+    """El foco pedido por el usuario (equipo/jugador) no matchea ningún candidato."""
 
 
 @dataclass
@@ -60,7 +60,7 @@ class MatchResult:
     loser: str
     winner_maps: int
     loser_maps: int
-    date: str  # "YYYY-MM-DD", ya viene asi de gol.gg (ordenable como string)
+    date: str  # "YYYY-MM-DD", ya viene así de gol.gg (ordenable como string)
     tournament: str
 
 
@@ -97,9 +97,9 @@ class LeagueComparisonCandidate:
 @dataclass
 class TopRankingEntry:
     name: str
-    team: str | None  # gol.gg no da el equipo de cada jugador -- siempre None en categorias de jugador, nunca inventado
+    team: str | None  # gol.gg no da el equipo de cada jugador -- siempre None en categorías de jugador, nunca inventado
     value: float  # crudo, para ordenar/testear
-    value_display: str  # ya formateado segun la categoria (ej. "9.4", "62.5%", "29:10")
+    value_display: str  # ya formateado según la categoría (ej. "9.4", "62.5%", "29:10")
     games: int
 
 

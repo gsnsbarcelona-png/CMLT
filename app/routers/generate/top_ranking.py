@@ -37,7 +37,7 @@ def generate_top_ranking(payload: TopRankingGenerateRequest) -> list[TopRankingV
     category = payload.category.strip().lower()
     spec = TOP_RANKING_CATEGORIES.get(category)
     if spec is None:
-        raise HTTPException(status_code=400, detail=f"Categoria no reconocida: {category}.")
+        raise HTTPException(status_code=400, detail=f"Categoría no reconocida: {category}.")
 
     try:
         team_stats = fetch_team_stats() if spec.level == "team" else []

@@ -1,4 +1,4 @@
-"""Candidatos de stats curiosas (mejor equipo/jugador por metrica) y arrobas de cierre."""
+"""Candidatos de stats curiosas (mejor equipo/jugador por métrica) y arrobas de cierre."""
 import random
 
 from app.config import settings
@@ -33,7 +33,7 @@ def compute_candidates(
                 fact_sentence=f"{best_winrate.name} lidera el winrate de la liga con {best_winrate.win_rate}% ({wins}-{best_winrate.games - wins}).",
                 emoji="📈",
                 title="EL MEJOR REGISTRO DE LA LIGA",
-                question="¿Quien le puede parar el paso?",
+                question="¿Quién le puede parar el paso?",
             )
         )
 
@@ -72,10 +72,10 @@ def compute_candidates(
             StatCandidate(
                 kind="player_kda",
                 subject=best_kda.name,
-                fact_sentence=f"{best_kda.name} cerro el split con {best_kda.kda} de KDA en {best_kda.games} partidos.",
+                fact_sentence=f"{best_kda.name} cerró el split con {best_kda.kda} de KDA en {best_kda.games} partidos.",
                 emoji="🔥",
                 title="KDA DEL SPLIT",
-                question="¿Puede sostener ese nivel bajo presion?",
+                question="¿Puede sostener ese nivel bajo presión?",
             )
         )
 
@@ -97,10 +97,10 @@ def compute_candidates(
                 StatCandidate(
                     kind="player_solo_kills",
                     subject=best_solo.name,
-                    fact_sentence=f"{best_solo.name} acumula {best_solo.solo_kills} solo kills este split, el maximo de la liga.",
+                    fact_sentence=f"{best_solo.name} acumula {best_solo.solo_kills} solo kills este split, el máximo de la liga.",
                     emoji="🗡️",
-                    title="EL QUE MAS 1V1 GANA",
-                    question="¿Te animas a duelear contra el?",
+                    title="EL QUE MÁS 1V1 GANA",
+                    question="¿Te animas a duelear contra él?",
                 )
             )
 
@@ -128,7 +128,7 @@ def pick_candidate(candidates: list[StatCandidate], focus: str | None = None) ->
         if not pool:
             raise StatFocusNotFoundError(f"No encontramos datos de '{focus}' en {get_current_tournament()}.")
     if not pool:
-        raise GolGGError(f"No hay datos estadisticos disponibles para {get_current_tournament()} todavia.")
+        raise GolGGError(f"No hay datos estadísticos disponibles para {get_current_tournament()} todavía.")
     return random.choice(pool)
 
 

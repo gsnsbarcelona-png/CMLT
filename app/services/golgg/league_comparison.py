@@ -75,7 +75,7 @@ def compute_league_comparison_candidates(
                 kind="player_kda",
                 subject=best_kda.name,
                 fact_sentence=(
-                    f"{best_kda.name} cerro con {best_kda.kda} de KDA en la LES, frente al "
+                    f"{best_kda.name} cerró con {best_kda.kda} de KDA en la LES, frente al "
                     f"{lec_avg_kda} de promedio entre los jugadores de la LEC."
                 ),
                 nuance="El KDA en la LES suele estar inflado vs la LEC por la diferencia de nivel.",
@@ -95,5 +95,5 @@ def pick_league_comparison_candidate(
         if not pool:
             raise StatFocusNotFoundError(f"No encontramos datos de '{focus}' para comparar con la LEC.")
     if not pool:
-        raise GolGGError("No hay datos suficientes de LES y LEC todavia para comparar.")
+        raise GolGGError("No hay datos suficientes de LES y LEC todavía para comparar.")
     return random.choice(pool)

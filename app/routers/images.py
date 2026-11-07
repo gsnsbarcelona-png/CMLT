@@ -31,9 +31,9 @@ async def upload_image(file: UploadFile) -> dict:
 
     contents = await file.read(MAX_IMAGE_BYTES + 1)
     if not contents:
-        raise HTTPException(status_code=400, detail="El archivo esta vacio.")
+        raise HTTPException(status_code=400, detail="El archivo está vacío.")
     if len(contents) > MAX_IMAGE_BYTES:
-        raise HTTPException(status_code=400, detail="La imagen supera el limite de 5 MB.")
+        raise HTTPException(status_code=400, detail="La imagen supera el límite de 5 MB.")
 
     IMAGES_DIR.mkdir(parents=True, exist_ok=True)
     filename = f"{uuid.uuid4().hex}{ext}"

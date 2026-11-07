@@ -52,7 +52,7 @@ def prewarm() -> None:
 def _header_index(table: BeautifulSoup) -> tuple[dict[str, int], list]:
     rows = table.find_all("tr")
     if not rows:
-        raise GolGGError("gol.gg devolvio una tabla vacia.")
+        raise GolGGError("gol.gg devolvió una tabla vacía.")
     headers = [cell.get_text(strip=True) for cell in rows[0].find_all(["th", "td"])]
     return {name: i for i, name in enumerate(headers)}, rows[1:]
 
@@ -95,7 +95,7 @@ def _check_dropped_rows(kind: str, url: str, parsed: int, dropped: int, index_ma
     if parsed == 0:
         logger.error("gol.gg: se descartaron las %d filas de %s en %s. Cabeceras: %s", dropped, kind, url, list(index_map))
         raise GolGGError(
-            f"gol.gg parece haber cambiado el formato de la tabla de {kind}, asi que no se pueden leer los datos."
+            f"gol.gg parece haber cambiado el formato de la tabla de {kind}, así que no se pueden leer los datos."
         )
     logger.warning("gol.gg: se descartaron %d filas de %s (y %d si se leyeron) en %s", dropped, kind, parsed, url)
 

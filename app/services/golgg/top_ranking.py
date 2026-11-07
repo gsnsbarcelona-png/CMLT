@@ -1,4 +1,4 @@
-"""Top / ranking (top N de una categoria, no solo el lider)."""
+"""Top / ranking (top N de una categoría, no solo el líder)."""
 from dataclasses import dataclass
 from typing import Callable
 
@@ -19,7 +19,7 @@ class TopRankingCategorySpec:
     label: str
     level: str  # "player" | "team"
     attr: str  # atributo de PlayerStat/TeamStat a ordenar
-    ascending: bool  # True = menor valor es mejor (solo la de duracion)
+    ascending: bool  # True = menor valor es mejor (solo la de duración)
     unit_label: str  # texto que acompaña la cifra en el tweet
     emoji: str
     value_formatter: Callable[[float], str]
@@ -47,9 +47,9 @@ TOP_RANKING_CATEGORIES: dict[str, TopRankingCategorySpec] = {
         unit_label="de primera sangre", emoji="🩸", value_formatter=_fmt_pct,
     ),
     "team_fastest": TopRankingCategorySpec(
-        label="Equipos que mas rapido cierran sus partidas", level="team",
+        label="Equipos que más rápido cierran sus partidas", level="team",
         attr="avg_game_duration_seconds", ascending=True,
-        unit_label="de duracion media", emoji="⏱️", value_formatter=_seconds_to_duration,
+        unit_label="de duración media", emoji="⏱️", value_formatter=_seconds_to_duration,
     ),
 }
 
@@ -63,7 +63,7 @@ def compute_top_ranking_candidate(
 ) -> TopRankingCandidate:
     spec = TOP_RANKING_CATEGORIES.get(category)
     if spec is None:
-        raise GolGGError(f"Categoria de top no reconocida: {category}.")
+        raise GolGGError(f"Categoría de top no reconocida: {category}.")
 
     pool = player_stats if spec.level == "player" else team_stats
     if not pool:

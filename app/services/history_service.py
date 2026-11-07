@@ -32,7 +32,7 @@ def load_anniversaries() -> list[Anniversary]:
     try:
         raw = json.loads(DATA_PATH.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
-        raise HistoryDataError(f"No se pudo leer la base de efemerides ({DATA_PATH}).") from exc
+        raise HistoryDataError(f"No se pudo leer la base de efemérides ({DATA_PATH}).") from exc
 
     return [
         Anniversary(
@@ -91,7 +91,7 @@ def find_for_today(today: date | None = None) -> tuple[Anniversary, bool, int]:
 
     nearest = find_nearest(today.month, today.day)
     if nearest is None:
-        raise HistoryDataError("No hay ninguna efemeride cargada todavia en la base.")
+        raise HistoryDataError("No hay ninguna efeméride cargada todavía en la base.")
     anniversary, days_away = nearest
     return anniversary, False, days_away
 
@@ -108,7 +108,7 @@ def _truncate(text: str, budget: int) -> str:
         return text
     cut = text[: max(budget - 1, 0)]
     last_space = cut.rfind(" ")
-    if last_space > budget * 0.6:  # no cortar si perderiamos demasiado texto
+    if last_space > budget * 0.6:  # no cortar si perderíamos demasiado texto
         cut = cut[:last_space]
     return cut.rstrip(" .,;:-") + "…"
 
@@ -119,10 +119,10 @@ def format_anniversary_plain(anniversary: Anniversary, is_exact: bool, today: da
     years_ago = today.year - anniversary.year
 
     if is_exact:
-        header = f"🗓️ UN DIA COMO HOY, hace {years_ago} años ({anniversary.year})"
+        header = f"🗓️ UN DÍA COMO HOY, hace {years_ago} años ({anniversary.year})"
     else:
         header = (
-            f"🗓️ No es de hoy exacto -- lo mas cercano: {anniversary.day:02d}/{anniversary.month:02d}/"
+            f"🗓️ No es de hoy exacto -- lo más cercano: {anniversary.day:02d}/{anniversary.month:02d}/"
             f"{anniversary.year} (hace {years_ago} años)"
         )
     question = vary_question("¿Lo viviste en directo?") + " 👀"
@@ -135,7 +135,7 @@ def format_anniversary_plain(anniversary: Anniversary, is_exact: bool, today: da
     # del limite, sea cual sea el largo del dato cargado.
     reserved = (
         char_count.count_chars(header)
-        + 2  # saltos de linea: encabezado->cuerpo y cuerpo->pregunta
+        + 2  # saltos de línea: encabezado->cuerpo y cuerpo->pregunta
         + char_count.count_chars(question)
         + 2  # "\n\n" antes del cierre que agrega el router
         + char_count.count_chars(closing_tags())
@@ -159,10 +159,10 @@ def format_anniversary_quick_fact_plain(anniversary: Anniversary, is_exact: bool
     years_ago = today.year - anniversary.year
 
     if is_exact:
-        prefix = f"📌 Dato rapido: un {anniversary.day:02d}/{anniversary.month:02d} de {anniversary.year}"
+        prefix = f"📌 Dato rápido: un {anniversary.day:02d}/{anniversary.month:02d} de {anniversary.year}"
     else:
         prefix = (
-            f"📌 Dato rapido (no es de hoy, del {anniversary.day:02d}/{anniversary.month:02d}/"
+            f"📌 Dato rápido (no es de hoy, del {anniversary.day:02d}/{anniversary.month:02d}/"
             f"{anniversary.year}, hace {years_ago} años)"
         )
 

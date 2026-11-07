@@ -90,4 +90,4 @@ class Settings(BaseSettings):
 settings = Settings()
 
 if not settings.x_configured:
-    logger.warning("Credenciales de X incompletas: la publicacion no va a funcionar hasta que las cargues en .env")
+    logger.warning("Credenciales de X incompletas: la publicación no va a funcionar hasta que las cargues en .env")

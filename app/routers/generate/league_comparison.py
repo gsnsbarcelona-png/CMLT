@@ -60,7 +60,7 @@ def generate_league_comparison(payload: LeagueComparisonRequest) -> list[LeagueC
         lec_players = fetch_player_stats(get_lec_tournament())
         metric_candidates = compute_league_comparison_candidates(les_teams, les_players, lec_teams, lec_players)
     except GolGGError:
-        metric_candidates = []  # degradacion elegante: seguimos con los cruces de jugadores igual
+        metric_candidates = []  # degradación elegante: seguimos con los cruces de jugadores igual
 
     try:
         crossover_candidates = compute_player_crossover_candidates()

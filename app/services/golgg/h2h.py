@@ -123,7 +123,7 @@ def compute_head_to_head_candidates(tournaments: list[str]) -> list[StatCandidat
                 else (team_b, wins_b, maps_b, team_a, wins_a, maps_a)
             )
             fact = (
-                f"{leader} le gano a {other} en {leader_wins} de sus {total} cruces esta temporada "
+                f"{leader} le ganó a {other} en {leader_wins} de sus {total} cruces esta temporada "
                 f"({leader_wins}-{other_wins}, mapas: {leader_maps}-{other_maps})."
             )
 
@@ -134,7 +134,7 @@ def compute_head_to_head_candidates(tournaments: list[str]) -> list[StatCandidat
                 fact_sentence=fact,
                 emoji="🤜🤛",
                 title="RIVALIDAD DEL AÑO",
-                question="¿Se repite la historia la proxima vez que se crucen?",
+                question="¿Se repite la historia la próxima vez que se crucen?",
             )
         )
     return candidates

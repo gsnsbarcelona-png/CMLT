@@ -44,7 +44,7 @@ def _load_image_bytes(image_url: str) -> tuple[bytes, str]:
     ("/data/images/x.png", armada por POST /api/images) se lee directo del
     disco; una externa (ej. escudo de static.lolesports.com) se descarga."""
     if not is_allowed_image_url(image_url):
-        raise XPublishError("La imagen adjunta no es valida.")
+        raise XPublishError("La imagen adjunta no es válida.")
 
     if urlparse(image_url).scheme in ("http", "https"):
         try:
@@ -58,7 +58,7 @@ def _load_image_bytes(image_url: str) -> tuple[bytes, str]:
     try:
         return local_path.read_bytes(), local_path.name
     except OSError as exc:
-        raise XPublishError("No se encontro la imagen adjunta en el servidor.") from exc
+        raise XPublishError("No se encontró la imagen adjunta en el servidor.") from exc
 
 
 def publish_tweet(text: str, image_url: str | None = None) -> str:
@@ -80,7 +80,7 @@ def publish_tweet(text: str, image_url: str | None = None) -> str:
         try:
             media = get_x_api_v1().media_upload(filename=filename, file=BytesIO(contents))
         except tweepy.errors.TweepyException as exc:
-            raise XPublishError("X rechazo la imagen adjunta. Prueba con otra o sin imagen.") from exc
+            raise XPublishError("X rechazó la imagen adjunta. Prueba con otra o sin imagen.") from exc
         media_ids.append(str(media.media_id))
 
     client = get_x_client()
@@ -88,27 +88,27 @@ def publish_tweet(text: str, image_url: str | None = None) -> str:
         response = client.create_tweet(text=text, media_ids=media_ids or None)
     except tweepy.errors.Unauthorized as exc:
         raise XPublishError(
-            "Las credenciales de X son invalidas o expiraron. Revisa las keys en tu archivo .env."
+            "Las credenciales de X son inválidas o expiraron. Revisa las keys en tu archivo .env."
         ) from exc
     except tweepy.errors.Forbidden as exc:
         body = str(exc).lower()
         if "duplicate" in body:
             raise XPublishError(
-                "X rechazo el tweet por ser muy similar a uno reciente. Modifica el texto e intenta de nuevo."
+                "X rechazó el tweet por ser muy similar a uno reciente. Modifica el texto e intenta de nuevo."
             ) from exc
         raise XPublishError(
-            "X rechazo la publicacion (permisos insuficientes). Verifica que tu app tenga permisos "
-            "'Read and Write' y que hayas regenerado el Access Token despues de cambiarlos."
+            "X rechazó la publicación (permisos insuficientes). Verifica que tu app tenga permisos "
+            "'Read and Write' y que hayas regenerado el Access Token después de cambiarlos."
         ) from exc
     except tweepy.errors.TooManyRequests as exc:
         raise XPublishError(
-            "Limite de publicaciones alcanzado (plan Free: ~500 posts/mes). Reintenta mas tarde."
+            "Límite de publicaciones alcanzado (plan Free: ~500 posts/mes). Reintenta más tarde."
         ) from exc
     except tweepy.errors.BadRequest as exc:
-        raise XPublishError(f"X rechazo la solicitud: {exc}") from exc
+        raise XPublishError(f"X rechazó la solicitud: {exc}") from exc
     except tweepy.errors.TwitterServerError as exc:
         raise XPublishError("Error del lado de X, prueba de nuevo en unos minutos.") from exc
     except tweepy.TweepyException as exc:
-        raise XPublishError("No se pudo conectar con X. Revisa tu conexion a internet.") from exc
+        raise XPublishError("No se pudo conectar con X. Revisa tu conexión a internet.") from exc
 
     return str(response.data["id"])

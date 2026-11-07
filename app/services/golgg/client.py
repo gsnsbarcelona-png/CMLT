@@ -36,7 +36,7 @@ def _cached_get(url: str) -> str:
         return cached[1]
 
     last_error: Exception | None = None
-    message = "No se pudo obtener las estadisticas de gol.gg. Intenta de nuevo en unos minutos."
+    message = "No se pudo obtener las estadísticas de gol.gg. Intenta de nuevo en unos minutos."
     for attempt in range(_MAX_ATTEMPTS):
         try:
             response = httpx.get(url, headers=GOLGG_HEADERS, timeout=10.0)
@@ -46,7 +46,7 @@ def _cached_get(url: str) -> str:
             status = exc.response.status_code
             logger.warning("gol.gg %s en %s (intento %d/%d)", status, url, attempt + 1, _MAX_ATTEMPTS)
             if status in (403, 429):
-                message = "gol.gg nos esta limitando las peticiones. Espera unos minutos y vuelve a probar."
+                message = "gol.gg nos está limitando las peticiones. Espera unos minutos y vuelve a probar."
             if status not in (429, 500, 502, 503, 504):
                 break  # 403/404...: reintentar no ayuda
         except httpx.HTTPError as exc:
@@ -61,7 +61,7 @@ def _cached_get(url: str) -> str:
     # Si gol.gg falla pero hay una copia caducada, mejor datos algo viejos
     # que un error (los stats cambian por partido, no por minuto).
     if cached is not None:
-        logger.warning("gol.gg caido: se usa la copia cacheada (%.0f s de antiguedad) de %s", now - cached[0], url)
+        logger.warning("gol.gg caído: se usa la copia cacheada (%.0f s de antigüedad) de %s", now - cached[0], url)
         return cached[1]
     raise GolGGError(message) from last_error
 
@@ -78,7 +78,7 @@ def _parse_table(html: str, table_class: str):
 def _fetch_table(url: str, table_class: str) -> BeautifulSoup:
     table = _parse_table(_cached_get(url), table_class)
     if table is None:
-        raise GolGGError("gol.gg devolvio una pagina sin la tabla de estadisticas esperada.")
+        raise GolGGError("gol.gg devolvió una página sin la tabla de estadísticas esperada.")
     return table
 
 

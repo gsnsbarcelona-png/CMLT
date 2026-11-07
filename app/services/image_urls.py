@@ -26,5 +26,5 @@ def validate_image_url(url: str | None) -> str | None:
     if url is None or url == "":
         return None
     if not is_allowed_image_url(url):
-        raise ValueError("image_url no valida: solo imagenes propias (/data/images/...) o escudos de lolesports.")
+        raise ValueError("image_url no válida: solo imágenes propias (/data/images/...) o escudos de lolesports.")
     return url

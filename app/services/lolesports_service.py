@@ -35,7 +35,7 @@ LEAGUE_HASHTAGS = {
 LEAGUE_ORDER = ["les", "lec", "emea_masters"]
 
 MADRID_TZ = ZoneInfo("Europe/Madrid")
-WEEKDAY_ABBR = ["Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom"]
+WEEKDAY_ABBR = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
 
 UPCOMING_STATES = {"unstarted", "inProgress"}
 
@@ -45,7 +45,7 @@ class LoLEsportsError(Exception):
 
 
 class TeamRosterNotFoundError(LoLEsportsError):
-    """El nombre de equipo pedido no matchea ningun equipo de LES en getTeams."""
+    """El nombre de equipo pedido no matchea ningún equipo de LES en getTeams."""
 
 
 def normalize_team_name(name: str) -> str:
@@ -85,7 +85,7 @@ def _fetch_all_teams() -> list[dict]:
     try:
         teams = response.json()["data"]["teams"]
     except (KeyError, ValueError) as exc:
-        raise LoLEsportsError("LoL Esports devolvio una respuesta inesperada.") from exc
+        raise LoLEsportsError("LoL Esports devolvió una respuesta inesperada.") from exc
 
     _teams_cache = (now, teams)
     return teams
@@ -193,7 +193,7 @@ def _fetch_league_events_uncached(league_slug: str) -> list[dict]:
     try:
         return response.json()["data"]["schedule"]["events"]
     except (KeyError, ValueError) as exc:
-        raise LoLEsportsError("LoL Esports devolvio una respuesta inesperada.") from exc
+        raise LoLEsportsError("LoL Esports devolvió una respuesta inesperada.") from exc
 
 
 def fetch_upcoming_matches(league_slugs: list[str], now: datetime | None = None) -> list[MatchInfo]:
@@ -327,7 +327,7 @@ def format_results_tweet(results: list[ResultInfo], league_slugs: list[str]) -> 
     header = choose(
         [
             f"🏁 Resultados {label} ({day:%d/%m})",
-            f"📊 Asi quedo la jornada de {label} ({day:%d/%m})",
+            f"📊 Así quedó la jornada de {label} ({day:%d/%m})",
         ]
     )
     lines = [header, ""]
@@ -436,7 +436,7 @@ def format_schedule_tweet(matches: list[MatchInfo], league_slugs: list[str]) -> 
     label = league_label(league_slugs)
 
     if not matches:
-        return f"No hay partidos programados de {label} en los proximos 7 dias."
+        return f"No hay partidos programados de {label} en los próximos 7 días."
 
     start_dates = [m.start_time.date() for m in matches]
     date_range = f"{min(start_dates):%d/%m} al {max(start_dates):%d/%m}"

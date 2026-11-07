@@ -34,7 +34,7 @@ def generate_results(payload: ResultsGenerateRequest) -> GenerateResult:
     if not results:
         raise HTTPException(
             status_code=404,
-            detail=f"No hay resultados de {league_label(leagues)} en los ultimos 7 dias.",
+            detail=f"No hay resultados de {league_label(leagues)} en los últimos 7 días.",
         )
 
     return _result(f"{format_results_tweet(results, leagues)}\n\n{closing_tags(leagues)}")

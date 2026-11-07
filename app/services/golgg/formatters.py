@@ -25,9 +25,9 @@ def format_h2h_variant_plain(preview: HeadToHeadPreviewData, angle: str, today_c
             headline = f"Primer cruce del año entre {preview.team_a} y {preview.team_b} esta temporada."
 
         if preview.last_meeting:
-            nuance = f"El ultimo cruce ({preview.last_meeting.date}) lo gano {preview.last_meeting.winner}."
+            nuance = f"El último cruce ({preview.last_meeting.date}) lo ganó {preview.last_meeting.winner}."
         else:
-            nuance = "Todavia no hay antecedentes directos esta temporada."
+            nuance = "Todavía no hay antecedentes directos esta temporada."
 
         question = vary_question("¿Se repite la historia hoy?")
     else:
@@ -42,7 +42,7 @@ def format_h2h_variant_plain(preview: HeadToHeadPreviewData, angle: str, today_c
         else:
             nuance = "Sin cruces previos esta temporada para comparar."
 
-        question = vary_question("¿Quien llega mejor hoy?")
+        question = vary_question("¿Quién llega mejor hoy?")
 
     lines.extend([headline, nuance, f"{question} 👀"])
     return "\n".join(lines)
@@ -59,10 +59,10 @@ def format_stat_tweet_plain(candidate: StatCandidate) -> str:
 def format_league_comparison_plain(candidate: LeagueComparisonCandidate, tone: str) -> str:
     if tone == "debate":
         header = "🤔 DEBATE LES-LEC"
-        question = vary_question("¿Se sostendria esa cifra en la LEC?") + " 👀"
+        question = vary_question("¿Se sostendría esa cifra en la LEC?") + " 👀"
     else:
         header = "🔎 DATO LES-LEC"
-        question = vary_question("¿Aguantaria el ritmo LEC?") + " 👀"
+        question = vary_question("¿Aguantaría el ritmo LEC?") + " 👀"
 
     lines = [header, candidate.fact_sentence, candidate.nuance, question]
     return "\n".join(lines)

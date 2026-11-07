@@ -11,7 +11,7 @@ from PIL import Image, ImageDraw, ImageFont
 CANVAS_SIZE = (640, 320)
 LOGO_BOX = 260  # cada escudo entra en un cuadrado de este lado (contain, sin deformar)
 BACKGROUND_COLOR = (17, 24, 39)  # slate-900, oscuro para que resalten escudos claros u oscuros
-VS_CIRCLE_COLOR = (220, 38, 38)  # rojo, convencion visual de "VS"
+VS_CIRCLE_COLOR = (220, 38, 38)  # rojo, convención visual de "VS"
 VS_CIRCLE_RADIUS = 55
 VS_TEXT_COLOR = (255, 255, 255)
 
@@ -24,8 +24,8 @@ BRANDING_LOGO_PATH = BRANDING_DIR / "logo.png"
 BRANDED_LOGO_HEIGHT_RATIO = 0.15  # el logo de marca es chico, abajo a la derecha
 BRANDED_RIGHT_MARGIN_RATIO = 0.05  # margen derecho del logo de marca, relativo al ancho del fondo
 BRANDED_BOTTOM_MARGIN_RATIO = 0.06  # margen inferior del logo de marca, relativo al alto del fondo
-BRANDED_PANEL_COLOR = (8, 8, 8)  # casi negro, detras del logo de marca para que resalte sobre fondos claros
-BRANDED_PANEL_ALPHA = 145  # ~57% de opacidad -- deja intuir el fondo detras, no lo tapa del todo
+BRANDED_PANEL_COLOR = (8, 8, 8)  # casi negro, detrás del logo de marca para que resalte sobre fondos claros
+BRANDED_PANEL_ALPHA = 145  # ~57% de opacidad -- deja intuir el fondo detrás, no lo tapa del todo
 BRANDED_PANEL_PADDING_RATIO = 0.055  # relativo al alto del fondo
 BRANDED_PANEL_RADIUS_RATIO = 0.02  # relativo al alto del fondo
 BRANDED_TEAM_LOGO_BOX_RATIO = 0.42  # el/los escudo(s) de equipo, centrados, entran en un cuadrado de este lado (relativo al alto)
@@ -94,7 +94,7 @@ def fetch_logos_parallel(urls: list[str]) -> list[bytes | Exception]:
         return list(pool.map(_one, urls))
 
 
-IMAGE_RENDER_VERSION = "1"  # subir si cambia el diseno, para no reutilizar PNGs viejos
+IMAGE_RENDER_VERSION = "1"  # subir si cambia el diseño, para no reutilizar PNGs viejos
 
 
 def deterministic_image_name(kind: str, *parts: str) -> str:
@@ -133,7 +133,7 @@ def _load_bold_font(size: int) -> ImageFont.FreeTypeFont:
 def _open_rgba(data: bytes, error_message: str) -> Image.Image:
     try:
         return Image.open(BytesIO(data)).convert("RGBA")
-    except Exception as exc:  # Pillow puede levantar varios tipos segun el formato invalido
+    except Exception as exc:  # Pillow puede levantar varios tipos según el formato inválido
         raise ImageComposeError(error_message) from exc
 
 
@@ -231,7 +231,7 @@ def compose_branded_image(team_logo_bytes_list: list[bytes] | None = None) -> by
     try:
         background = _load_branding(BRANDING_BACKGROUND_PATH)
         brand_logo = _load_branding(BRANDING_LOGO_PATH)
-    except Exception as exc:  # archivo faltante o imagen invalida
+    except Exception as exc:  # archivo faltante o imagen inválida
         raise ImageComposeError("No se pudo generar la imagen de marca (falta el fondo o el logo).") from exc
 
     canvas = background

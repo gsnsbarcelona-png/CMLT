@@ -242,7 +242,7 @@ def generate_stats(payload: StatGenerateRequest) -> GenerateResult:
         try:
             known_players = [p.name for p in fetch_player_stats()]
         except GolGGError:
-            known_players = []  # degradacion elegante: sigue andando, solo sin la capitalizacion "linda"
+            known_players = []  # degradación elegante: sigue andando, solo sin la capitalización "linda"
         roster_a = reconcile_player_casing(roster_a, known_players)
         roster_b = reconcile_player_casing(roster_b, known_players)
 
@@ -260,11 +260,11 @@ def generate_stats(payload: StatGenerateRequest) -> GenerateResult:
         categories = {c.strip().lower() for c in payload.categories if c.strip()}
         if not categories:
             raise HTTPException(
-                status_code=400, detail="Elige al menos una categoria (equipos, jugadores o ranked)."
+                status_code=400, detail="Elige al menos una categoría (equipos, jugadores o ranked)."
             )
         unknown = categories - STAT_CATEGORIES
         if unknown:
-            raise HTTPException(status_code=400, detail=f"Categoria no reconocida: {', '.join(unknown)}.")
+            raise HTTPException(status_code=400, detail=f"Categoría no reconocida: {', '.join(unknown)}.")
 
         scope = payload.scope.strip().lower()
         if scope not in STAT_SCOPES:

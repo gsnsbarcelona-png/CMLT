@@ -105,7 +105,7 @@ async def auth_middleware(request: Request, call_next):
     if is_authenticated(request) or _is_public(request.url.path):
         return await call_next(request)
     if request.url.path.startswith("/api/"):
-        return JSONResponse({"detail": "Sesion no iniciada o expirada."}, status_code=401)
+        return JSONResponse({"detail": "Sesión no iniciada o expirada."}, status_code=401)
     return RedirectResponse("/login", status_code=303)
 
 

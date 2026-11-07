@@ -73,7 +73,7 @@ def compute_duel_candidates(
                 ),
                 emoji="🔥",
                 title=f"DUELO DE {role_label}",
-                question="¿Quien se lleva ese carril?",
+                question="¿Quién se lleva ese carril?",
             )
         )
     return candidates
