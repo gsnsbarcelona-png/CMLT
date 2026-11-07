@@ -251,6 +251,10 @@ class ResultInfo:
     team2_code: str
     score1: int
     score2: int
+    # Series ganadas seguidas por el ganador contando esta (0 = no calculado).
+    # Sale de los eventos ya descargados: si la API solo trae una ventana del
+    # split, es un minimo real (nunca inflado).
+    winner_streak: int = 0
 
     @property
     def winner_code(self) -> str:
@@ -272,6 +276,7 @@ def fetch_latest_results(
     oldest = (now.astimezone(MADRID_TZ) - timedelta(days=lookback_days)).date()
 
     results: list[ResultInfo] = []
+    history: list[tuple[str, datetime, str, str, int, int]] = []  # (liga, hora, cod1, cod2, s1, s2) de TODO lo terminado
     final_pool: list[ResultInfo] = []  # TODAS las "Final" de la liga (cualquier estado/fecha) para el relabel
     for slug in league_slugs:
         for event in _fetch_league_events(slug):
@@ -304,6 +309,7 @@ def fetch_latest_results(
                 continue
             name1, code1 = _parse_team(teams[0])
             name2, code2 = _parse_team(teams[1])
+            history.append((slug, start_time, code1, code2, score1, score2))
             info = final_info or ResultInfo(
                 start_time, slug, event.get("blockName") or "", name1, code1, name2, code2, score1, score2
             )
@@ -318,27 +324,99 @@ def fetch_latest_results(
     latest_day = max(r.start_time.date() for r in results)
     day_results = [r for r in results if r.start_time.date() == latest_day]
     day_results.sort(key=lambda r: r.start_time)
+    for r in day_results:
+        r.winner_streak = _winner_streak(r, history)
     return day_results
 
 
-def format_results_tweet(results: list[ResultInfo], league_slugs: list[str]) -> str:
+def _winner_streak(result: ResultInfo, history: list[tuple[str, datetime, str, str, int, int]]) -> int:
+    """Series consecutivas ganadas por el ganador de `result` hasta ese partido
+    (incluido), segun los partidos terminados de la misma liga."""
+    code = result.winner_code
+    if not code or code == "TBD":
+        return 0
+    games = sorted(
+        (h for h in history if h[0] == result.league_slug and h[1] <= result.start_time and code in (h[2], h[3])),
+        key=lambda h: h[1],
+        reverse=True,
+    )
+    streak = 0
+    for _slug, _start, c1, c2, s1, s2 in games:
+        won = (c1 == code) == (s1 > s2)
+        if not won:
+            break
+        streak += 1
+    return streak
+
+
+STREAK_MIN = 3
+TWEET_LIMIT = 280
+
+
+def _results_header(results: list[ResultInfo], league_slugs: list[str], suffix: str = "") -> str:
     label = league_label(league_slugs)
     day = results[0].start_time
-    header = choose(
+    return choose(
         [
-            f"🏁 Resultados {label} ({day:%d/%m})",
-            f"📊 Así quedó la jornada de {label} ({day:%d/%m})",
+            f"🏁 Resultados {label} ({day:%d/%m}){suffix}",
+            f"📊 Así quedó la jornada de {label} ({day:%d/%m}){suffix}",
         ]
     )
-    lines = [header, ""]
-    for r in results:
-        winner_first = r.score1 > r.score2
-        w_code, l_code = (r.team1_code, r.team2_code) if winner_first else (r.team2_code, r.team1_code)
-        w_score, l_score = max(r.score1, r.score2), min(r.score1, r.score2)
-        block = f" ({r.block_name})" if r.block_name else ""
-        mark = "🏆" if r.block_name == "GRAN FINAL" else "✅"
-        lines.append(f"{mark} {_display_code(w_code)} {w_score}-{l_score} {_display_code(l_code)}{block}")
-    return "\n".join(lines)
+
+
+def _result_line(r: ResultInfo) -> str:
+    winner_first = r.score1 > r.score2
+    w_code, l_code = (r.team1_code, r.team2_code) if winner_first else (r.team2_code, r.team1_code)
+    w_score, l_score = max(r.score1, r.score2), min(r.score1, r.score2)
+    block = f" ({r.block_name})" if r.block_name else ""
+    mark = "🏆" if r.block_name == "GRAN FINAL" else "✅"
+    streak = f" 🔥{r.winner_streak} seguidas" if r.winner_streak >= STREAK_MIN else ""
+    return f"{mark} {_display_code(w_code)} {w_score}-{l_score} {_display_code(l_code)}{block}{streak}"
+
+
+def format_results_tweet(results: list[ResultInfo], league_slugs: list[str], max_chars: int | None = None) -> str:
+    """Tweet de resultados. Con `max_chars`, si no caben todos los partidos se
+    recorta por el final con "…y X partidos más" (los datos mostrados siguen
+    siendo reales; el hilo completo sale de format_results_thread)."""
+    header = _results_header(results, league_slugs)
+    lines = [_result_line(r) for r in results]
+    text = "\n".join([header, "", *lines])
+    if max_chars is None or len(text) <= max_chars:
+        return text
+    for keep in range(len(lines) - 1, 0, -1):
+        missing = len(lines) - keep
+        more = f"…y {missing} partido más" if missing == 1 else f"…y {missing} partidos más"
+        text = "\n".join([header, "", *lines[:keep], more])
+        if len(text) <= max_chars:
+            return text
+    return text
+
+
+def format_results_thread(results: list[ResultInfo], league_slugs: list[str], closing: str = "") -> list[str]:
+    """Todos los resultados repartidos en tweets de <=280 caracteres (cada
+    uno con su "(n/total)"); el cierre de arrobas/hashtags va en el ultimo."""
+    lines = [_result_line(r) for r in results]
+    reserve = len(" (9/9)")
+    chunks: list[list[str]] = [[]]
+    for line in lines:
+        trial = "\n".join([*chunks[-1], line])
+        if chunks[-1] and len(trial) + reserve + 60 > TWEET_LIMIT:
+            chunks.append([line])
+        else:
+            chunks[-1].append(line)
+    total = len(chunks)
+    tweets: list[str] = []
+    for i, chunk in enumerate(chunks, start=1):
+        header = _results_header(results, league_slugs, suffix=f" ({i}/{total})")
+        body = "\n".join([header, "", *chunk])
+        tweets.append(body)
+    if closing:
+        # El cierre va en el ultimo tweet; si no cabe, en un tweet aparte.
+        if len(tweets[-1]) + 2 + len(closing) <= TWEET_LIMIT:
+            tweets[-1] += f"\n\n{closing}"
+        else:
+            tweets.append(closing)
+    return tweets
 
 
 def _relabel_final_four_blocks(matches: list[MatchInfo]) -> None:
