@@ -77,7 +77,7 @@ def test_fetch_latest_results_picks_most_recent_day(mocker):
 
 def test_fetch_latest_results_ignores_too_old_and_incomplete(mocker):
     events = [
-        _event("2026-10-01T18:00:00Z"),  # fuera de la ventana de 7 dias
+        _event("2026-10-01T18:00:00Z"),  # fuera de la ventana de 7 días
         {"startTime": "2026-11-05T18:00:00Z", "state": "completed", "type": "match", "match": {"teams": [{}, {}]}},
     ]
     mocker.patch.object(lolesports_service, "_fetch_league_events", return_value=events)
@@ -120,6 +120,6 @@ def test_results_endpoint_404_when_none_and_400_on_bad_league(client, mocker):
 
 def test_results_endpoint_502_when_source_fails(client, mocker):
     mocker.patch(
-        "app.routers.generate.results.fetch_latest_results", side_effect=lolesports_service.LoLEsportsError("caido")
+        "app.routers.generate.results.fetch_latest_results", side_effect=lolesports_service.LoLEsportsError("caído")
     )
     assert client.post("/api/generate/results", json={"leagues": ["les"]}).status_code == 502

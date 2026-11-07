@@ -112,7 +112,7 @@ def _anniversary(**overrides):
 
 def test_format_anniversary_plain_exact():
     text = format_anniversary_plain(_anniversary(), is_exact=True, today=date(2026, 8, 12))
-    assert "UN DIA COMO HOY, hace 5 años (2021)" in text
+    assert "UN DÍA COMO HOY, hace 5 años (2021)" in text
     assert "Hecho A (Superliga). Detalle A" in text
     assert "Sigue activo." in text
     assert "¿Lo viviste en directo? 👀" in text
@@ -130,10 +130,10 @@ def test_format_anniversary_plain_never_exceeds_char_limit_with_long_detail():
     # 286 caracteres). Ahora se recorta con "…" para garantizar el limite
     # pase lo que pase el largo del dato curado.
     long_anniversary = _anniversary(
-        headline="Un titulo bastante largo para forzar el desborde del limite",
-        detail="Un detalle todavia mas largo, con cifras y contexto de sobra como para "
+        headline="Un título bastante largo para forzar el desborde del límite",
+        detail="Un detalle todavía más largo, con cifras y contexto de sobra como para "
         "que sumado al encabezado y al resto del tweet se pase claramente de 280 caracteres.",
-        today_connection="Y ademas una conexion con la actualidad que tambien suma bastante texto.",
+        today_connection="Y además una conexión con la actualidad que también suma bastante texto.",
     )
     for is_exact in (True, False):
         text = format_anniversary_plain(long_anniversary, is_exact=is_exact, today=date(2026, 8, 20))
@@ -149,7 +149,7 @@ def test_format_anniversary_plain_short_detail_is_not_truncated():
 
 def test_format_anniversary_quick_fact_is_short_and_states_missing_data():
     exact = format_anniversary_quick_fact_plain(_anniversary(), is_exact=True, today=date(2026, 8, 12))
-    assert exact.startswith("📌 Dato rapido: un 12/08 de 2021")
+    assert exact.startswith("📌 Dato rápido: un 12/08 de 2021")
 
     not_exact = format_anniversary_quick_fact_plain(_anniversary(), is_exact=False, today=date(2026, 8, 20))
     assert "no es de hoy" in not_exact
@@ -157,8 +157,8 @@ def test_format_anniversary_quick_fact_is_short_and_states_missing_data():
 
 def test_format_anniversary_quick_fact_never_exceeds_char_limit_with_long_detail():
     long_anniversary = _anniversary(
-        headline="Un titulo bastante largo para forzar el desborde del limite",
-        detail="Un detalle todavia mas largo, con cifras y contexto de sobra como para "
+        headline="Un título bastante largo para forzar el desborde del límite",
+        detail="Un detalle todavía más largo, con cifras y contexto de sobra como para "
         "que sumado al resto del tweet se pase claramente de 280 caracteres en total.",
     )
     for is_exact in (True, False):

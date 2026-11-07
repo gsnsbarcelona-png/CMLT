@@ -151,7 +151,7 @@ def test_fetch_todays_matches_filters_by_madrid_date(mocker):
     events = [
         _match_event("unstarted", NOW),  # hoy
         _match_event("unstarted", NOW + timedelta(days=1)),  # mañana -> excluido
-        _match_event("inProgress", NOW - timedelta(hours=2)),  # hoy, mas temprano, en vivo
+        _match_event("inProgress", NOW - timedelta(hours=2)),  # hoy, más temprano, en vivo
     ]
     mocker.patch("app.services.lolesports_service.httpx.get", return_value=_events_response(events))
 
@@ -203,7 +203,7 @@ def _match_info(start_time, state="unstarted", league_slug="les", block_name="Gr
 
 def test_format_empty_list():
     text = format_schedule_tweet([], ["les"])
-    assert text == "No hay partidos programados de LES en los proximos 7 dias."
+    assert text == "No hay partidos programados de LES en los próximos 7 días."
 
 
 def test_format_single_league_and_day_abbreviation():

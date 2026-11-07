@@ -13,8 +13,8 @@ def test_url_counts_as_23_regardless_of_length():
 
 
 def test_multiple_urls():
-    text = "https://a.com y tambien https://b.com/algo"
-    without_urls = " y tambien "
+    text = "https://a.com y también https://b.com/algo"
+    without_urls = " y también "
     assert count_chars(text) == len(without_urls) + 23 * 2
 
 

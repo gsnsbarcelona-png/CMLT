@@ -198,7 +198,7 @@ def _fake_h2h_candidate():
         fact_sentence="UCAM Esports le gano a Barca eSports en 2 de sus 3 cruces esta temporada (2-1).",
         emoji="🤜🤛",
         title="RIVALIDAD DEL AÑO",
-        question="¿Se repite la historia la proxima vez que se crucen?",
+        question="¿Se repite la historia la próxima vez que se crucen?",
     )
 
 

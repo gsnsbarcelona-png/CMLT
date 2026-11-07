@@ -29,9 +29,9 @@ def _event(start, block, s1=3, s2=1, state="completed", codes=("MKF", "HRTS")):
 
 def test_results_relabel_gran_final_across_all_finals(monkeypatch):
     events = [
-        _event("2026-10-20T15:00:00Z", "Final", codes=("AAA", "BBB")),  # fuera de la ventana de 7 dias
+        _event("2026-10-20T15:00:00Z", "Final", codes=("AAA", "BBB")),  # fuera de la ventana de 7 días
         _event("2026-10-21T15:00:00Z", "Final", codes=("CCC", "DDD")),
-        _event("2026-11-06T15:00:00Z", "Final", codes=("EEE", "FFF")),  # la ultima: GRAN FINAL
+        _event("2026-11-06T15:00:00Z", "Final", codes=("EEE", "FFF")),  # la última: GRAN FINAL
     ]
     monkeypatch.setattr(lolesports_service, "_fetch_league_events", lambda slug: events)
     results = lolesports_service.fetch_latest_results(["les"], now=NOW)

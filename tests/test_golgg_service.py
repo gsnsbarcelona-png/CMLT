@@ -397,7 +397,7 @@ def test_compute_head_to_head_clear_leader(mocker):
     candidate = candidates[0]
     assert candidate.kind == "team_head_to_head"
     assert "UCAM Esports" in candidate.subject and "Barca eSports" in candidate.subject
-    assert "UCAM Esports le gano a Barca eSports en 2 de sus 3 cruces" in candidate.fact_sentence
+    assert "UCAM Esports le ganó a Barca eSports en 2 de sus 3 cruces" in candidate.fact_sentence
     assert "mapas: 4-3" in candidate.fact_sentence
 
 
@@ -431,7 +431,7 @@ def test_compute_head_to_head_combines_multiple_tournaments(mocker):
     candidates = compute_head_to_head_candidates(["LES 2026 Spring", "LES 2026 Summer"])
 
     assert len(candidates) == 1
-    assert "UCAM Esports le gano a Barca eSports en 2 de sus 2 cruces" in candidates[0].fact_sentence
+    assert "UCAM Esports le ganó a Barca eSports en 2 de sus 2 cruces" in candidates[0].fact_sentence
 
 
 def test_compute_head_to_head_tied_record(mocker):
@@ -534,7 +534,7 @@ def _team_candidate(kind, subject):
         subject=subject,
         fact_sentence="algun dato real",
         emoji="🔥",
-        title="TITULO",
+        title="TÍTULO",
         question="¿pregunta?",
     )
 
@@ -660,8 +660,8 @@ def test_build_head_to_head_preview_no_prior_meetings(mocker):
     assert preview.last_meeting is None
     assert preview.last_win_by_a is None
     assert preview.last_win_by_b is None
-    assert preview.recent_form_a.games == 1  # UCAM jugo contra GX
-    assert preview.recent_form_b is None  # Barca no aparece en ningun resultado
+    assert preview.recent_form_a.games == 1  # UCAM jugó contra GX
+    assert preview.recent_form_b is None  # Barca no aparece en ningún resultado
 
 
 
@@ -725,7 +725,7 @@ def test_format_h2h_variant_plain_historial_with_data():
 
     assert "UCAM Esports 🆚 Barca eSports" in text
     assert "UCAM Esports 1-3 Barca eSports (mapas: 5-6)" in text
-    assert "El ultimo cruce (2026-08-20) lo gano Barca eSports." in text
+    assert "El último cruce (2026-08-20) lo ganó Barca eSports." in text
     assert "¿Se repite la historia hoy? 👀" in text
 
 
@@ -735,7 +735,7 @@ def test_format_h2h_variant_plain_forma_reciente_with_data():
     assert "UCAM Esports 2V-3D" in text
     assert "Barca eSports 4V-1D" in text
     assert "manda Barca eSports (1-3)" in text
-    assert "¿Quien llega mejor hoy? 👀" in text
+    assert "¿Quién llega mejor hoy? 👀" in text
 
 
 def test_format_h2h_variant_plain_no_data_never_invents():
@@ -743,7 +743,7 @@ def test_format_h2h_variant_plain_no_data_never_invents():
     forma = format_h2h_variant_plain(_empty_preview(), "forma_reciente")
 
     assert "Primer cruce del año entre UCAM Esports y GX esta temporada." in historial
-    assert "Todavia no hay antecedentes directos esta temporada." in historial
+    assert "Todavía no hay antecedentes directos esta temporada." in historial
     assert "sin datos recientes" in forma
     assert "Sin cruces previos esta temporada para comparar." in forma
 
@@ -925,7 +925,7 @@ def test_compute_top_ranking_candidate_limits_to_top_n():
 
     assert len(candidate.entries) == 3
     assert candidate.total_pool_size == 4  # el pool tenia 4, pero el top se corta en 3
-    assert candidate.entries[0].name == "UCAM Esports"  # 8.9 torres/partida, el maximo
+    assert candidate.entries[0].name == "UCAM Esports"  # 8.9 torres/partida, el máximo
 
 
 def test_compute_top_ranking_candidate_less_than_three_marks_pool_size():

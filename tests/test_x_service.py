@@ -43,7 +43,7 @@ def test_unauthorized_translated(mocker):
     error = tweepy.errors.Unauthorized(_FakeHttpResponse(401, "Unauthorized", {"detail": "invalid token"}))
     mocker.patch("tweepy.Client.create_tweet", side_effect=error)
 
-    with pytest.raises(x_service.XPublishError, match="invalidas"):
+    with pytest.raises(x_service.XPublishError, match="inválidas"):
         x_service.publish_tweet("hola")
 
 
@@ -69,7 +69,7 @@ def test_too_many_requests_translated(mocker):
     error = tweepy.errors.TooManyRequests(_FakeHttpResponse(429, "Too Many Requests", {"detail": "Rate limit exceeded"}))
     mocker.patch("tweepy.Client.create_tweet", side_effect=error)
 
-    with pytest.raises(x_service.XPublishError, match="Limite"):
+    with pytest.raises(x_service.XPublishError, match="Límite"):
         x_service.publish_tweet("hola")
 
 
@@ -137,7 +137,7 @@ def test_publish_image_download_failure_raises(mocker):
 def test_publish_local_image_missing_raises(tmp_path, monkeypatch):
     monkeypatch.setattr(x_service, "_PROJECT_ROOT", tmp_path)
 
-    with pytest.raises(x_service.XPublishError, match="No se encontro"):
+    with pytest.raises(x_service.XPublishError, match="No se encontró"):
         x_service.publish_tweet("hola", "/data/images/cccccccccccccccccccccccccccccccc.png")
 
 
@@ -145,5 +145,5 @@ def test_publish_media_upload_rejected_raises(mocker):
     mocker.patch("httpx.get", return_value=SimpleNamespace(content=b"x", raise_for_status=lambda: None))
     mocker.patch("tweepy.API.media_upload", side_effect=tweepy.errors.TweepyException("nope"))
 
-    with pytest.raises(x_service.XPublishError, match="rechazo la imagen"):
+    with pytest.raises(x_service.XPublishError, match="rechazó la imagen"):
         x_service.publish_tweet("hola", "http://static.lolesports.com/teams/logo.png")

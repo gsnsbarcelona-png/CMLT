@@ -27,7 +27,7 @@ def test_list_top_ranking_categories(client):
     assert res.status_code == 200
     body = res.json()
     assert body["player_kda"] == "KDA"
-    assert body["team_fastest"] == "Equipos que mas rapido cierran sus partidas"
+    assert body["team_fastest"] == "Equipos que más rápido cierran sus partidas"
 
 
 def test_generate_top_ranking_player_category_success(client, mocker):
@@ -56,7 +56,7 @@ def test_generate_top_ranking_team_category_success(client, mocker):
     assert res.status_code == 200
     body = res.json()
     assert all(r["content"] for r in body)
-    assert all(r["suggested_teams"] == ["UCAM Esports"] for r in body)  # el lider (mas torres/partida)
+    assert all(r["suggested_teams"] == ["UCAM Esports"] for r in body)  # el líder (más torres/partida)
 
 
 def test_generate_top_ranking_only_fetches_needed_level(client, mocker):

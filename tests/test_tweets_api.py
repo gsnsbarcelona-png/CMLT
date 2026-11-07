@@ -51,14 +51,14 @@ def test_publish_success(client, mocker):
 
 
 def test_publish_failure_sets_failed_status(client, mocker):
-    mocker.patch("app.routers.tweets.publish_tweet", side_effect=XPublishError("credenciales invalidas"))
+    mocker.patch("app.routers.tweets.publish_tweet", side_effect=XPublishError("credenciales inválidas"))
     tweet = client.post("/api/tweets", json={"content": "va a fallar", "source": "manual"}).json()
 
     res = client.post(f"/api/tweets/{tweet['id']}/publish")
     assert res.status_code == 200
     body = res.json()
     assert body["status"] == "failed"
-    assert body["error_message"] == "credenciales invalidas"
+    assert body["error_message"] == "credenciales inválidas"
 
 
 def test_publish_over_char_limit_rejected(client, mocker):
@@ -84,7 +84,7 @@ def test_retry_after_failure(client, mocker):
 
 def test_cannot_publish_twice(client, mocker):
     mocker.patch("app.routers.tweets.publish_tweet", return_value="111")
-    tweet = client.post("/api/tweets", json={"content": "unico", "source": "manual"}).json()
+    tweet = client.post("/api/tweets", json={"content": "único", "source": "manual"}).json()
     client.post(f"/api/tweets/{tweet['id']}/publish")
 
     res = client.post(f"/api/tweets/{tweet['id']}/publish")

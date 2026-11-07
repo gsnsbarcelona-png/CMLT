@@ -56,7 +56,7 @@ def test_autodiscover_moves_to_next_season_when_it_has_les(autodiscover, mocker)
 
 
 def test_autodiscover_falls_back_to_settings_when_gol_gg_fails(autodiscover, mocker):
-    mocker.patch("app.services.golgg.config.discover_tournaments", side_effect=GolGGError("caido"))
+    mocker.patch("app.services.golgg.config.discover_tournaments", side_effect=GolGGError("caído"))
 
     config = get_active_config()
 
@@ -121,7 +121,7 @@ def test_warm_urls_fetches_in_parallel_and_ignores_errors(mocker):
     def fake_get(url):
         calls.append(url)
         if url.endswith("/b"):
-            raise GolGGError("caido")
+            raise GolGGError("caído")
         return "<html></html>"
 
     mocker.patch("app.services.golgg.client._cached_get", side_effect=fake_get)

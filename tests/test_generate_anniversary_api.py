@@ -6,7 +6,7 @@ def _anniversary():
         month=8,
         day=12,
         year=2021,
-        headline="Vodafone Giants campeon",
+        headline="Vodafone Giants campeón",
         detail="3-1 a UCAM Esports Club.",
         era_name="Superliga",
         teams=["Vodafone Giants", "UCAM Esports Club"],
@@ -41,7 +41,7 @@ def test_anniversary_plain_marks_is_exact(client, mocker):
 
     body = res.json()
     assert all(item["is_exact"] is False for item in body)
-    assert "no es de hoy" in body[1]["content"] or "No hay efemeride" in body[0]["content"]
+    assert "no es de hoy" in body[1]["content"] or "No hay efeméride" in body[0]["content"]
 
 
 
