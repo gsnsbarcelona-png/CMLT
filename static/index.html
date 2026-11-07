@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#1d9bf0" />
+  <meta name="theme-color" content="#0f6cb6" />
+  <meta name="color-scheme" content="light dark" />
   <title>Tweet Automation</title>
   <link rel="manifest" href="/static/manifest.webmanifest" />
   <link rel="icon" href="/static/icons/icon-192.png" />
@@ -14,6 +15,7 @@
   <header class="topbar">
     <h1>Tweet Automation</h1>
     <div id="config-banner" class="config-banner" hidden></div>
+    <button id="theme-btn" class="theme-btn" type="button" aria-label="Cambiar tema (automático)" title="Cambiar tema">🌓</button>
     <button id="logout-btn" class="logout-btn" type="button" hidden>Salir</button>
   </header>
 
@@ -21,25 +23,40 @@
     Esto está tardando... si el servidor estaba dormido puede tardar hasta un minuto en despertar.
   </div>
 
-  <nav class="tabs" role="tablist">
-    <button class="tab-btn active" data-tab="compose" role="tab" aria-selected="true">Compose</button>
-    <button class="tab-btn" data-tab="drafts" role="tab" aria-selected="false">Borradores</button>
-    <button class="tab-btn" data-tab="history" role="tab" aria-selected="false">Historial</button>
+  <nav class="tabs" role="tablist" aria-label="Secciones">
+    <button class="tab-btn active" data-tab="compose" role="tab" aria-selected="true"><span class="tab-ico" aria-hidden="true">✍️</span><span>Compose</span></button>
+    <button class="tab-btn" data-tab="drafts" role="tab" aria-selected="false"><span class="tab-ico" aria-hidden="true">📝</span><span>Borradores</span></button>
+    <button class="tab-btn" data-tab="history" role="tab" aria-selected="false"><span class="tab-ico" aria-hidden="true">🕘</span><span>Historial</span></button>
   </nav>
 
   <main>
     <!-- Compose -->
     <section id="tab-compose" class="tab-panel active">
-      <div class="mode-selector" role="radiogroup" aria-label="Modo">
-        <label><input type="radio" name="mode" value="calendar" checked /> Calendario</label>
-        <label><input type="radio" name="mode" value="match-day" /> Día de partido</label>
-        <label><input type="radio" name="mode" value="results" /> Resultados</label>
-        <label><input type="radio" name="mode" value="stats" /> Stats</label>
-        <label><input type="radio" name="mode" value="h2h" /> H2H Hoy</label>
-        <label><input type="radio" name="mode" value="duel" /> Duelo 1v1</label>
-        <label><input type="radio" name="mode" value="top-ranking" /> Top/Ranking</label>
-        <label><input type="radio" name="mode" value="anniversary" /> Efeméride</label>
-        <label><input type="radio" name="mode" value="lec-compare" /> Cruce LEC</label>
+      <div class="mode-groups" role="radiogroup" aria-label="Modo">
+        <div class="mode-group" role="group" aria-label="Hoy">
+          <span class="mode-group-title">Hoy</span>
+          <div class="mode-chips">
+          <label class="mode-chip"><input type="radio" name="mode" value="calendar" checked /><span class="chip-ico" aria-hidden="true">📅</span><span class="chip-txt">Calendario</span></label>
+          <label class="mode-chip"><input type="radio" name="mode" value="match-day" /><span class="chip-ico" aria-hidden="true">⚔️</span><span class="chip-txt">Día de partido</span></label>
+          <label class="mode-chip"><input type="radio" name="mode" value="results" /><span class="chip-ico" aria-hidden="true">🏁</span><span class="chip-txt">Resultados</span></label>
+          </div>
+        </div>
+        <div class="mode-group" role="group" aria-label="Datos">
+          <span class="mode-group-title">Datos</span>
+          <div class="mode-chips">
+          <label class="mode-chip"><input type="radio" name="mode" value="stats" /><span class="chip-ico" aria-hidden="true">📊</span><span class="chip-txt">Stats</span></label>
+          <label class="mode-chip"><input type="radio" name="mode" value="top-ranking" /><span class="chip-ico" aria-hidden="true">🏆</span><span class="chip-txt">Top/Ranking</span></label>
+          <label class="mode-chip"><input type="radio" name="mode" value="duel" /><span class="chip-ico" aria-hidden="true">🥊</span><span class="chip-txt">Duelo 1v1</span></label>
+          <label class="mode-chip"><input type="radio" name="mode" value="h2h" /><span class="chip-ico" aria-hidden="true">🆚</span><span class="chip-txt">H2H Hoy</span></label>
+          <label class="mode-chip"><input type="radio" name="mode" value="lec-compare" /><span class="chip-ico" aria-hidden="true">🇪🇺</span><span class="chip-txt">Cruce LEC</span></label>
+          </div>
+        </div>
+        <div class="mode-group" role="group" aria-label="Contenido">
+          <span class="mode-group-title">Contenido</span>
+          <div class="mode-chips">
+          <label class="mode-chip"><input type="radio" name="mode" value="anniversary" /><span class="chip-ico" aria-hidden="true">🎂</span><span class="chip-txt">Efeméride</span></label>
+          </div>
+        </div>
       </div>
 
       <div id="mode-calendar" class="mode-panel">
@@ -52,7 +69,8 @@
 
       <div id="mode-match-day" class="mode-panel" hidden>
         <button id="match-day-generate-btn">Generar pack del día</button>
-        <p class="hint">Un clic: calendario de la semana + preview H2H (historial y forma reciente) de cada partido de LES de hoy. Guarda o copia solo lo que quieras.</p>
+        <p class="hint">Calendario de la semana + preview H2H de cada partido de LES de hoy.</p>
+        <details class="hint-more"><summary aria-label="Más información">?</summary><p>Un clic: calendario de la semana + preview H2H (historial y forma reciente) de cada partido de LES de hoy. Guarda o copia solo lo que quieras.</p></details>
         <div id="match-day-results" class="list"></div>
       </div>
 
@@ -61,42 +79,49 @@
         <label class="checkbox-inline"><input type="checkbox" id="results-lec" /> LEC</label>
         <label class="checkbox-inline"><input type="checkbox" id="results-emea-masters" /> EMEA Masters</label>
         <button id="results-generate-btn">Generar resultados</button>
-        <p class="hint">Marcadores reales de la última jornada con partidos terminados (últimos 7 días), de la API oficial de LoL Esports.</p>
+        <p class="hint">Marcadores reales de la última jornada.</p>
+        <details class="hint-more"><summary aria-label="Más información">?</summary><p>Marcadores reales de la última jornada con partidos terminados (últimos 7 días), de la API oficial de LoL Esports.</p></details>
       </div>
 
       <div id="mode-stats" class="mode-panel" hidden>
         <label class="checkbox-inline"><input type="checkbox" id="stats-teams" checked /> Equipos</label>
         <label class="checkbox-inline"><input type="checkbox" id="stats-players" checked /> Jugadores</label>
         <label class="checkbox-inline"><input type="checkbox" id="stats-ranked" /> Ranked (SoloQ)</label>
-        <p class="hint">Ranked (SoloQ) consulta lolpros.gg en vivo para cada jugador de la LES -- puede tardar hasta 20-30 segundos.</p>
+        <p class="hint">Ranked puede tardar hasta 30 s.</p>
+        <details class="hint-more"><summary aria-label="Más información">?</summary><p>Ranked (SoloQ) consulta lolpros.gg en vivo para cada jugador de la LES -- puede tardar hasta 20-30 segundos.</p></details>
         <label>Enfocar en equipo o jugador (opcional)
           <input type="text" id="stats-focus" placeholder="ej: Escik, UCAM..." />
         </label>
-        <label>Rivalidad: elegir los dos equipos (opcional, tiene prioridad sobre lo de arriba)
-          <div class="rivalry-row">
-            <select id="rivalry-team-a"><option value="">-- equipo A --</option></select>
-            <select id="rivalry-team-b"><option value="">-- equipo B --</option></select>
-          </div>
-        </label>
-        <label>Comparar elo: 2 jugadores (opcional, prioridad sobre categorías/enfocar, no sobre rivalidad)
-          <div class="rivalry-row">
-            <input type="text" id="ranked-player-a" placeholder="ej: Escik" />
-            <input type="text" id="ranked-player-b" placeholder="ej: Andariel" />
-          </div>
-        </label>
-        <label>Comparar elo: 2 equipos, mejor jugador de cada plantilla (opcional, prioridad sobre categorías/enfocar, no sobre rivalidad ni jugador vs jugador)
-          <div class="rivalry-row">
-            <select id="ranked-team-a"><option value="">-- equipo A --</option></select>
-            <select id="ranked-team-b"><option value="">-- equipo B --</option></select>
-          </div>
-        </label>
-        <p class="hint">Las comparaciones de elo consultan lolpros.gg en vivo (equipo vs equipo tarda un poco más, son ~10 jugadores).</p>
-        <div class="mode-selector" style="margin-top: 4px;">
-          <label><input type="radio" name="stats-scope" value="split" checked /> Split actual</label>
-          <label><input type="radio" name="stats-scope" value="year" /> Todo el año</label>
+        <details class="advanced">
+          <summary>Opciones avanzadas</summary>
+          <label>Rivalidad: elegir los dos equipos (opcional, tiene prioridad sobre lo de arriba)
+            <div class="rivalry-row">
+              <select id="rivalry-team-a"><option value="">-- equipo A --</option></select>
+              <select id="rivalry-team-b"><option value="">-- equipo B --</option></select>
+            </div>
+          </label>
+          <label>Comparar elo: 2 jugadores (opcional, prioridad sobre categorías/enfocar, no sobre rivalidad)
+            <div class="rivalry-row">
+              <input type="text" id="ranked-player-a" placeholder="ej: Escik" />
+              <input type="text" id="ranked-player-b" placeholder="ej: Andariel" />
+            </div>
+          </label>
+          <label>Comparar elo: 2 equipos, mejor jugador de cada plantilla (opcional, prioridad sobre categorías/enfocar, no sobre rivalidad ni jugador vs jugador)
+            <div class="rivalry-row">
+              <select id="ranked-team-a"><option value="">-- equipo A --</option></select>
+              <select id="ranked-team-b"><option value="">-- equipo B --</option></select>
+            </div>
+          </label>
+          <p class="hint">Las comparaciones de elo consultan lolpros.gg en vivo.</p>
+          <details class="hint-more"><summary aria-label="Más información">?</summary><p>Las comparaciones de elo consultan lolpros.gg en vivo (equipo vs equipo tarda un poco más, son ~10 jugadores).</p></details>
+        </details>
+        <div class="mode-chips scope-chips" role="radiogroup" aria-label="Alcance">
+          <label class="mode-chip"><input type="radio" name="stats-scope" value="split" checked /><span class="chip-txt">Split actual</span></label>
+          <label class="mode-chip"><input type="radio" name="stats-scope" value="year" /><span class="chip-txt">Todo el año</span></label>
         </div>
         <button id="stats-generate-btn">Generar stat</button>
-        <p class="hint">Los números siempre vienen de gol.gg (datos reales). "Todo el año" combina Spring+Summer y suma un ángulo de rivalidad (head-to-head) entre equipos.</p>
+        <p class="hint">Datos reales de gol.gg.</p>
+        <details class="hint-more"><summary aria-label="Más información">?</summary><p>Los números siempre vienen de gol.gg (datos reales). "Todo el año" combina Spring+Summer y suma un ángulo de rivalidad (head-to-head) entre equipos.</p></details>
       </div>
 
       <div id="mode-h2h" class="mode-panel" hidden>
@@ -109,7 +134,8 @@
           <select id="h2h-team-b"><option value="">-- equipo B --</option></select>
         </label>
         <button id="h2h-generate-btn">Generar preview (2 variantes)</button>
-        <p class="hint">Genera 2 tweets head-to-head (historial y forma reciente) con datos reales de gol.gg. Guarda solo el/los que quieras con el botón "Guardar" de cada tarjeta.</p>
+        <p class="hint">Genera 2 tweets head-to-head con datos de gol.gg.</p>
+        <details class="hint-more"><summary aria-label="Más información">?</summary><p>Genera 2 tweets head-to-head (historial y forma reciente) con datos reales de gol.gg. Guarda solo el/los que quieras con el botón "Guardar" de cada tarjeta.</p></details>
         <div id="h2h-results" class="list"></div>
       </div>
 
@@ -123,7 +149,8 @@
           <select id="duel-team-b"><option value="">-- equipo B --</option></select>
         </label>
         <button id="duel-generate-btn">Generar duelos</button>
-        <p class="hint">Compara el KDA de temporada (gol.gg) del jugador con más partidos jugados en cada carril compartido por ambos equipos (según el roster de lolesports.com) -- una tarjeta por carril. No confirma alineaciones oficiales ni cruces directos históricos entre esos jugadores, esos datos no están disponibles hoy. Guarda solo las que quieras con el botón "Guardar" de cada tarjeta.</p>
+        <p class="hint">Compara el KDA de temporada por carril; una tarjeta por carril.</p>
+        <details class="hint-more"><summary aria-label="Más información">?</summary><p>Compara el KDA de temporada (gol.gg) del jugador con más partidos jugados en cada carril compartido por ambos equipos (según el roster de lolesports.com) -- una tarjeta por carril. No confirma alineaciones oficiales ni cruces directos históricos entre esos jugadores, esos datos no están disponibles hoy. Guarda solo las que quieras con el botón "Guardar" de cada tarjeta.</p></details>
         <div id="duel-results" class="list"></div>
       </div>
 
@@ -132,13 +159,15 @@
           <select id="top-ranking-category"></select>
         </label>
         <button id="top-ranking-generate-btn">Generar top</button>
-        <p class="hint">Calcula el top 3 real de gol.gg para el split actual (nunca a mano) -- si hay menos de 3 con datos suficientes, lo dice en vez de inventar posiciones. Las categorías de jugador no muestran equipo (gol.gg no lo expone en esa tabla). Genera 2 variantes: foco en el líder y top 3 resumido. Guarda solo las que quieras con el botón "Guardar" de cada tarjeta.</p>
+        <p class="hint">Top 3 real de gol.gg del split actual, en 2 variantes.</p>
+        <details class="hint-more"><summary aria-label="Más información">?</summary><p>Calcula el top 3 real de gol.gg para el split actual (nunca a mano) -- si hay menos de 3 con datos suficientes, lo dice en vez de inventar posiciones. Las categorías de jugador no muestran equipo (gol.gg no lo expone en esa tabla). Genera 2 variantes: foco en el líder y top 3 resumido. Guarda solo las que quieras con el botón "Guardar" de cada tarjeta.</p></details>
         <div id="top-ranking-results" class="list"></div>
       </div>
 
       <div id="mode-anniversary" class="mode-panel" hidden>
         <button id="anniversary-generate-btn">Generar efeméride de hoy</button>
-        <p class="hint">Busca un hecho verificado de la historia de la LES/Superliga para la fecha de hoy en una base curada (no es scraping en vivo -- si no hay nada para hoy exacto, muestra el hito más cercano y lo aclara). Genera 2 versiones: completa y "dato rápido".</p>
+        <p class="hint">Hecho verificado de la historia de la LES para hoy.</p>
+        <details class="hint-more"><summary aria-label="Más información">?</summary><p>Busca un hecho verificado de la historia de la LES/Superliga para la fecha de hoy en una base curada (no es scraping en vivo -- si no hay nada para hoy exacto, muestra el hito más cercano y lo aclara). Genera 2 versiones: completa y "dato rápido".</p></details>
         <div id="anniversary-results" class="list"></div>
       </div>
 
@@ -147,7 +176,8 @@
           <input type="text" id="lec-compare-focus" placeholder="ej: UCAM, Escik..." />
         </label>
         <button id="lec-compare-generate-btn">Generar cruce LES-LEC</button>
-        <p class="hint">Compara una métrica real de la LES (equipo o jugador destacado) contra el promedio de la LEC en esa misma métrica, con datos reales de gol.gg de ambas ligas. Siempre incluye el matiz de que son ligas de nivel/muestra distintos. Genera 2 tonos: dato sorprendente y pregunta a debate.</p>
+        <p class="hint">Métrica de la LES frente al promedio de la LEC.</p>
+        <details class="hint-more"><summary aria-label="Más información">?</summary><p>Compara una métrica real de la LES (equipo o jugador destacado) contra el promedio de la LEC en esa misma métrica, con datos reales de gol.gg de ambas ligas. Siempre incluye el matiz de que son ligas de nivel/muestra distintos. Genera 2 tonos: dato sorprendente y pregunta a debate.</p></details>
         <div id="lec-compare-results" class="list"></div>
       </div>
 
@@ -156,19 +186,32 @@
       </div>
 
       <div id="single-compose-area">
+        <div class="tweet-preview" aria-label="Vista previa del tweet">
+          <div class="tp-avatar" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><path d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9zm0 2c-4.1 0-7.5 2.2-7.5 5v1.5h15V19c0-2.8-3.4-5-7.5-5z"/></svg>
+          </div>
+          <div class="tp-body">
+            <div class="tp-head"><strong>Tu cuenta</strong> <span class="tp-handle">@usuario · ahora</span></div>
+            <div id="tweet-preview-text" class="tp-text empty">Vista previa: el tweet aparecerá aquí tal y como se vería en X.</div>
+            <img id="tweet-preview-img" class="tp-img" alt="Imagen adjunta" hidden />
+            <div id="tweet-preview-count" class="tp-count" aria-hidden="true">0 / 280</div>
+          </div>
+        </div>
         <label class="compose-content-label">Contenido del tweet
           <textarea id="compose-content" rows="4"></textarea>
         </label>
         <div class="char-counter-row">
           <div class="char-counter" id="compose-char-counter">0 / 280</div>
-          <button id="copy-content-btn" type="button">Copiar</button>
-          <button id="open-x-btn" type="button" title="Abre X con el texto listo (sin imagen)">Abrir en X</button>
-          <button id="share-btn" type="button" hidden>Compartir</button>
         </div>
         <div id="image-picker"></div>
 
-        <div class="actions">
+        <div class="action-bar" role="toolbar" aria-label="Acciones del tweet">
+          <button id="copy-content-btn" type="button">Copiar</button>
+          <button id="open-x-btn" type="button" title="Abre X con el texto listo (sin imagen)">Abrir en X</button>
+          <button id="share-btn" type="button" hidden>Compartir</button>
           <button id="save-draft-btn">Guardar borrador</button>
+        </div>
+        <div class="actions">
           <button id="publish-now-btn" class="primary">Publicar ahora</button>
         </div>
         <div id="compose-feedback" class="feedback" role="status" aria-live="polite"></div>

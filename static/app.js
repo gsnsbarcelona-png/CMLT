@@ -394,7 +394,7 @@ async function generateResultCards({
   const resultsEl = document.getElementById(resultsElId);
   const btn = document.getElementById(btnId);
   btn.disabled = true;
-  resultsEl.innerHTML = loadingText;
+  resultsEl.innerHTML = skeletonHtml(loadingText);
   try {
     const results = fetchResults
       ? await fetchResults()
@@ -915,7 +915,99 @@ async function handleCalendarGenerate() {
   );
 }
 
+// Esqueleto de carga: el texto queda como etiqueta accesible (aria-label).
+function skeletonHtml(label, cards = 2) {
+  const card = '<div class="skeleton-card"><div class="skeleton-line short"></div><div class="skeleton-line"></div><div class="skeleton-line mid"></div></div>';
+  return `<div class="skeleton-wrap" role="status" aria-label="${escapeHtml(label || "Cargando...")}">${card.repeat(cards)}</div>`;
+}
+
+// Vista previa tipo tweet: refleja en vivo el texto, el contador y la imagen.
+function updatePreview() {
+  const textEl = document.getElementById("tweet-preview-text");
+  if (!textEl) return;
+  const text = document.getElementById("compose-content").value;
+  textEl.textContent = text || "Vista previa: el tweet aparecerá aquí tal y como se vería en X.";
+  textEl.classList.toggle("empty", !text);
+  const count = countChars(text);
+  const countEl = document.getElementById("tweet-preview-count");
+  countEl.textContent = `${count} / ${TWEET_CHAR_LIMIT}`;
+  countEl.classList.toggle("over", count > TWEET_CHAR_LIMIT);
+  countEl.classList.toggle("warn", count > 260 && count <= TWEET_CHAR_LIMIT);
+  const imageUrl = document.getElementById("image-picker").dataset.imageUrl || "";
+  const img = document.getElementById("tweet-preview-img");
+  if (imageUrl) img.src = imageUrl;
+  else img.removeAttribute("src");
+  img.hidden = !imageUrl;
+}
+
+function initPreview() {
+  updatePreview();
+  if (typeof MutationObserver === "function") {
+    new MutationObserver(updatePreview).observe(document.getElementById("image-picker"), {
+      attributes: true,
+      attributeFilter: ["data-image-url"],
+    });
+  }
+}
+
+// ---------- Tema (claro / oscuro / automatico) ----------
+const THEME_KEY = "ta-theme";
+const THEME_LABELS = { auto: "automático", light: "claro", dark: "oscuro" };
+const THEME_ICONS = { auto: "🌓", light: "☀️", dark: "🌙" };
+
+function getThemePref() {
+  try {
+    const v = localStorage.getItem(THEME_KEY);
+    return v === "light" || v === "dark" ? v : "auto";
+  } catch (e) {
+    return "auto";
+  }
+}
+
+function applyTheme(pref) {
+  const root = document.documentElement;
+  if (pref === "auto") root.removeAttribute("data-theme");
+  else root.setAttribute("data-theme", pref);
+  const dark =
+    pref === "dark" ||
+    (pref === "auto" && typeof matchMedia === "function" && matchMedia("(prefers-color-scheme: dark)").matches);
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute("content", dark ? "#192028" : "#0f6cb6");
+  const btn = document.getElementById("theme-btn");
+  if (btn) {
+    btn.textContent = THEME_ICONS[pref];
+    btn.setAttribute("aria-label", `Cambiar tema (${THEME_LABELS[pref]})`);
+    btn.title = `Tema: ${THEME_LABELS[pref]}`;
+  }
+}
+
+function initTheme() {
+  applyTheme(getThemePref());
+  const btn = document.getElementById("theme-btn");
+  if (btn) {
+    btn.addEventListener("click", () => {
+      const order = ["auto", "light", "dark"];
+      const next = order[(order.indexOf(getThemePref()) + 1) % order.length];
+      try {
+        if (next === "auto") localStorage.removeItem(THEME_KEY);
+        else localStorage.setItem(THEME_KEY, next);
+      } catch (e) {
+        // sin localStorage: el tema solo dura esta sesion
+      }
+      applyTheme(next);
+    });
+  }
+  if (typeof matchMedia === "function") {
+    const mq = matchMedia("(prefers-color-scheme: dark)");
+    const onChange = () => {
+      if (getThemePref() === "auto") applyTheme("auto");
+    };
+    if (mq.addEventListener) mq.addEventListener("change", onChange);
+  }
+}
+
 function updateCharCounter() {
+  updatePreview();
   const text = document.getElementById("compose-content").value;
   const count = countChars(text);
   const counter = document.getElementById("compose-char-counter");
@@ -1013,7 +1105,7 @@ function resetCompose() {
 // ---------- Drafts ----------
 async function loadDrafts() {
   const container = document.getElementById("drafts-list");
-  container.innerHTML = "Cargando...";
+  container.innerHTML = skeletonHtml("Cargando...", 2);
   try {
     const drafts = await api("/api/tweets?status=draft");
     if (!drafts.length) {
@@ -1120,7 +1212,7 @@ function bindDraftCard(tweet) {
 // ---------- History ----------
 async function loadHistory() {
   const container = document.getElementById("history-list");
-  container.innerHTML = "Cargando...";
+  container.innerHTML = skeletonHtml("Cargando...", 2);
   try {
     const [published, failed] = await Promise.all([
       api("/api/tweets?status=published"),
@@ -1256,8 +1348,10 @@ function initBackup() {
 
 // ---------- Init ----------
 document.addEventListener("DOMContentLoaded", () => {
+  initTheme();
   initTabs();
   initCompose();
+  initPreview();
   checkConfig();
   showVersion();
   initBackup();
