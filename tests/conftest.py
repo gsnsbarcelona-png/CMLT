@@ -74,7 +74,7 @@ def _clear_lolesports_teams_cache():
 
 
 @pytest.fixture()
-def client(tmp_path):
+def client(tmp_path, monkeypatch):
     db_path = tmp_path / "test.db"
     engine = create_engine(f"sqlite:///{db_path}", connect_args={"check_same_thread": False})
     SQLModel.metadata.create_all(engine)
@@ -84,5 +84,8 @@ def client(tmp_path):
             yield session
 
     app.dependency_overrides[get_session] = override_get_session
+    # /api/health abre su propia sesion con el engine global: en CI no existe
+    # la carpeta data/, asi que se apunta al engine temporal del test.
+    monkeypatch.setattr("app.main.engine", engine)
     yield TestClient(app)
     app.dependency_overrides.clear()
