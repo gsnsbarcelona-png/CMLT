@@ -2,7 +2,7 @@ import httpx
 import pytest
 
 from app.config import settings
-from app.services import golgg_service
+from app.services.golgg import client, config
 from app.services.golgg_service import GolGGError, fetch_team_stats, get_active_config
 
 S16 = [
@@ -22,12 +22,12 @@ S17 = [{"trname": "LES 2027 Kick-off Tournament", "region": "ES", "firstgame": "
 @pytest.fixture()
 def autodiscover(monkeypatch):
     monkeypatch.setattr(settings, "golgg_autodiscover", True)
-    golgg_service.reset_active_config_cache()
+    config.reset_active_config_cache()
 
 
 def test_autodiscover_picks_latest_regular_les_and_all_les_of_season(autodiscover, mocker):
     mocker.patch(
-        "app.services.golgg_service.discover_tournaments",
+        "app.services.golgg.config.discover_tournaments",
         side_effect=lambda season, region=None: S16 if season == "S16" else [],
     )
     config = get_active_config()
@@ -44,7 +44,7 @@ def test_autodiscover_picks_latest_regular_les_and_all_les_of_season(autodiscove
 
 def test_autodiscover_moves_to_next_season_when_it_has_les(autodiscover, mocker):
     mocker.patch(
-        "app.services.golgg_service.discover_tournaments",
+        "app.services.golgg.config.discover_tournaments",
         side_effect=lambda season, region=None: {"S16": S16, "S17": S17}.get(season, []),
     )
     config = get_active_config()
@@ -56,7 +56,7 @@ def test_autodiscover_moves_to_next_season_when_it_has_les(autodiscover, mocker)
 
 
 def test_autodiscover_falls_back_to_settings_when_gol_gg_fails(autodiscover, mocker):
-    mocker.patch("app.services.golgg_service.discover_tournaments", side_effect=GolGGError("caido"))
+    mocker.patch("app.services.golgg.config.discover_tournaments", side_effect=GolGGError("caido"))
 
     config = get_active_config()
 
@@ -66,7 +66,7 @@ def test_autodiscover_falls_back_to_settings_when_gol_gg_fails(autodiscover, moc
 
 def test_autodiscover_is_cached(autodiscover, mocker):
     discover = mocker.patch(
-        "app.services.golgg_service.discover_tournaments",
+        "app.services.golgg.config.discover_tournaments",
         side_effect=lambda season, region=None: S16 if season == "S16" else [],
     )
     get_active_config()
@@ -76,32 +76,32 @@ def test_autodiscover_is_cached(autodiscover, mocker):
 
 
 def test_cached_get_retries_on_5xx_then_succeeds(mocker):
-    mocker.patch("app.services.golgg_service._RETRY_BACKOFF_SECONDS", 0)
+    mocker.patch("app.services.golgg.client._RETRY_BACKOFF_SECONDS", 0)
     ok = mocker.Mock(text="<html>ok</html>")
     ok.raise_for_status = lambda: None
     bad = httpx.Response(503, request=httpx.Request("GET", "https://gol.gg/x"))
     get = mocker.patch("httpx.get", side_effect=[bad, ok])
 
-    assert golgg_service._cached_get("https://gol.gg/x") == "<html>ok</html>"
+    assert client._cached_get("https://gol.gg/x") == "<html>ok</html>"
     assert get.call_count == 2
 
 
 def test_cached_get_does_not_retry_on_403_and_explains_rate_limit(mocker):
-    mocker.patch("app.services.golgg_service._RETRY_BACKOFF_SECONDS", 0)
+    mocker.patch("app.services.golgg.client._RETRY_BACKOFF_SECONDS", 0)
     forbidden = httpx.Response(403, request=httpx.Request("GET", "https://gol.gg/x"))
     get = mocker.patch("httpx.get", return_value=forbidden)
 
     with pytest.raises(GolGGError, match="limitando"):
-        golgg_service._cached_get("https://gol.gg/x")
+        client._cached_get("https://gol.gg/x")
     assert get.call_count == 1
 
 
 def test_cached_get_serves_stale_copy_when_source_is_down(mocker):
-    mocker.patch("app.services.golgg_service._RETRY_BACKOFF_SECONDS", 0)
-    golgg_service._http_cache["https://gol.gg/x"] = (-10_000.0, "<html>vieja</html>")
+    mocker.patch("app.services.golgg.client._RETRY_BACKOFF_SECONDS", 0)
+    client._http_cache["https://gol.gg/x"] = (-10_000.0, "<html>vieja</html>")
     mocker.patch("httpx.get", side_effect=httpx.ConnectError("boom"))
 
-    assert golgg_service._cached_get("https://gol.gg/x") == "<html>vieja</html>"
+    assert client._cached_get("https://gol.gg/x") == "<html>vieja</html>"
 
 
 def test_fetch_team_stats_reports_format_change_when_all_rows_dropped(mocker):
@@ -109,7 +109,7 @@ def test_fetch_team_stats_reports_format_change_when_all_rows_dropped(mocker):
         '<table class="playerslist"><tr><th>Name</th><th>Games</th><th>CAMBIADO</th></tr>'
         "<tr><td>UCAM</td><td>10</td><td>x</td></tr></table>"
     )
-    mocker.patch("app.services.golgg_service._cached_get", return_value=html)
+    mocker.patch("app.services.golgg.client._cached_get", return_value=html)
 
     with pytest.raises(GolGGError, match="cambiado el formato"):
         fetch_team_stats("LES 2026 Summer")
@@ -124,17 +124,17 @@ def test_warm_urls_fetches_in_parallel_and_ignores_errors(mocker):
             raise GolGGError("caido")
         return "<html></html>"
 
-    mocker.patch("app.services.golgg_service._cached_get", side_effect=fake_get)
-    golgg_service._real_warm_urls(["https://gol.gg/a", "https://gol.gg/b", "https://gol.gg/c", "https://gol.gg/a"])
+    mocker.patch("app.services.golgg.client._cached_get", side_effect=fake_get)
+    client._real_warm_urls(["https://gol.gg/a", "https://gol.gg/b", "https://gol.gg/c", "https://gol.gg/a"])
 
     assert sorted(calls) == ["https://gol.gg/a", "https://gol.gg/b", "https://gol.gg/c"]  # sin duplicados
 
 
 def test_parse_table_is_cached_for_same_html():
-    golgg_service._parse_table.cache_clear()
+    client._parse_table.cache_clear()
     html = '<table class="playerslist"><tr><th>Name</th></tr></table>'
-    first = golgg_service._parse_table(html, "playerslist")
-    second = golgg_service._parse_table(html, "playerslist")
+    first = client._parse_table(html, "playerslist")
+    second = client._parse_table(html, "playerslist")
     assert first is second
 
 

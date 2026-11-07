@@ -35,23 +35,23 @@ def _disable_golgg_autodiscover(monkeypatch):
     """Los tests usan los torneos del settings; el autodescubrimiento (que
     pega a gol.gg) se prueba aparte, activandolo explicitamente."""
     from app.config import settings
-    from app.services import golgg_service
+    from app.services.golgg import client, config
 
     monkeypatch.setattr(settings, "golgg_autodiscover", False)
     # warm_urls descarga paginas reales en paralelo: en tests, sin red.
-    monkeypatch.setattr(golgg_service, "warm_urls", lambda urls: None)
-    golgg_service.reset_active_config_cache()
+    monkeypatch.setattr(client, "warm_urls", lambda urls: None)
+    config.reset_active_config_cache()
     yield
-    golgg_service.reset_active_config_cache()
+    config.reset_active_config_cache()
 
 
 @pytest.fixture(autouse=True)
 def _clear_golgg_cache():
     """La cache de gol.gg es un dict a nivel de modulo -- sin esto, tests
     distintos que mockean la misma URL con HTML distinto se pisarian entre si."""
-    from app.services import golgg_service
+    from app.services.golgg import client, config
 
-    golgg_service._http_cache.clear()
+    client._http_cache.clear()
     yield
 
 
