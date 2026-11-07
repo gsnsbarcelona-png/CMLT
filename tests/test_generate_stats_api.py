@@ -648,7 +648,7 @@ def test_get_branded_image_includes_team_logos_when_provided(client, mocker, tmp
     )
 
     assert res.status_code == 200
-    compose_mock.assert_called_once_with([b"escudo-bytes", b"escudo-bytes"])
+    compose_mock.assert_called_once_with([b"escudo-bytes", b"escudo-bytes"], ["UCAM Esports", "Barca eSports"])
 
 
 def test_get_branded_image_skips_team_logo_when_not_found(client, mocker, tmp_path, monkeypatch):
@@ -663,7 +663,7 @@ def test_get_branded_image_skips_team_logo_when_not_found(client, mocker, tmp_pa
     res = client.get("/api/generate/branded-image", params={"team_a": "Un Equipo Que No Existe"})
 
     assert res.status_code == 200
-    compose_mock.assert_called_once_with([])
+    compose_mock.assert_called_once_with([], [])
 
 
 def test_get_branded_image_skips_team_logo_on_download_failure(client, mocker, tmp_path, monkeypatch):
@@ -680,7 +680,7 @@ def test_get_branded_image_skips_team_logo_on_download_failure(client, mocker, t
     res = client.get("/api/generate/branded-image", params={"team_a": "UCAM Esports"})
 
     assert res.status_code == 200
-    compose_mock.assert_called_once_with([])
+    compose_mock.assert_called_once_with([], [])
 
 
 def test_get_branded_image_compose_failure_returns_502(client, mocker):

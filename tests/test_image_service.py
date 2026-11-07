@@ -19,7 +19,7 @@ def test_compose_vs_image_returns_valid_png_of_expected_size():
 
     composed = Image.open(BytesIO(result))
     assert composed.format == "PNG"
-    assert composed.size == CANVAS_SIZE
+    assert composed.size == (1280, 720)  # siempre sobre el fondo de marca
 
 
 def test_compose_vs_image_invalid_logo_raises():
@@ -267,3 +267,13 @@ def test_compose_branded_image_invalid_team_logo_raises(monkeypatch, tmp_path):
 
     with pytest.raises(ImageComposeError):
         compose_branded_image([b"no es una imagen"])
+
+
+def test_compose_vs_image_with_names_and_cards_use_brand_background():
+    from app.services import card_service
+
+    result = compose_vs_image(_fake_logo_bytes(), _fake_logo_bytes(), ["Equipo con un nombre larguísimo A", "B"])
+    assert Image.open(BytesIO(result)).size == (1280, 720)
+
+    png = card_service.render_top_card("Top", "Sub", "KDA", [{"name": "Peña", "value": "6.4"}])
+    assert Image.open(BytesIO(png)).size == (1200, 675)

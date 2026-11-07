@@ -119,7 +119,7 @@ def get_team_vs_logo(team_a: str, team_b: str) -> dict:
         raise HTTPException(status_code=404, detail=f"No encontramos el escudo de '{missing}'.")
 
     IMAGES_DIR.mkdir(parents=True, exist_ok=True)
-    filename = deterministic_image_name("vs", logo_a_url, logo_b_url)
+    filename = deterministic_image_name("vs2", logo_a_url, logo_b_url, team_a, team_b)
     target = IMAGES_DIR / filename
     if target.exists():
         return {"image_url": f"/data/images/{filename}"}
@@ -129,7 +129,7 @@ def get_team_vs_logo(team_a: str, team_b: str) -> dict:
         raise HTTPException(status_code=502, detail="No se pudieron descargar los escudos.")
 
     try:
-        composed = compose_vs_image(logo_a, logo_b)
+        composed = compose_vs_image(logo_a, logo_b, [team_a, team_b])
     except ImageComposeError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
@@ -146,29 +146,33 @@ def get_branded_image(team_a: str | None = None, team_b: str | None = None) -> d
     con los escudos: si alguno no se encuentra o no se puede descargar, la
     imagen se arma igual sin el (nunca bloquea el fondo de marca)."""
     logo_urls = []
+    logo_names = []
     for team in (team_a, team_b):
         if not team:
             continue
         logo_url = get_les_team_logo_url(team)
         if logo_url:
             logo_urls.append(logo_url)
+            logo_names.append(team)
 
     used_urls = []
+    used_names = []
     team_logo_bytes_list = []
-    for url, data in zip(logo_urls, fetch_logos_parallel(logo_urls)):
+    for url, name, data in zip(logo_urls, logo_names, fetch_logos_parallel(logo_urls)):
         if isinstance(data, Exception):
             continue
         used_urls.append(url)
+        used_names.append(name)
         team_logo_bytes_list.append(data)
 
     IMAGES_DIR.mkdir(parents=True, exist_ok=True)
-    filename = deterministic_image_name("branded", *used_urls)
+    filename = deterministic_image_name("branded2", *used_urls, *used_names)
     target = IMAGES_DIR / filename
     if target.exists():
         return {"image_url": f"/data/images/{filename}"}
 
     try:
-        composed = compose_branded_image(team_logo_bytes_list)
+        composed = compose_branded_image(team_logo_bytes_list, used_names)
     except ImageComposeError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 

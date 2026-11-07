@@ -8,13 +8,16 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
+from app.services.image_service import BRANDING_BACKGROUND_PATH, BRANDING_LOGO_PATH
+
 WIDTH, HEIGHT = 1200, 675
-BG = (15, 20, 25)
-PANEL = (24, 32, 41)
-PANEL_ALT = (30, 40, 51)
-ACCENT = (29, 155, 240)  # #1d9bf0
-TEXT = (231, 233, 234)
-MUTED = (139, 152, 165)
+BG = (245, 245, 247)  # solo si falta el fondo de marca
+PANEL = (255, 255, 255, 222)  # blanco translucido: deja intuir el fondo de marca
+PANEL_ALT = (255, 255, 255, 238)
+ACCENT = (200, 30, 40)  # rojo de la marca (el fondo es blanco y rojo)
+TEXT = (17, 24, 39)
+MUTED = (100, 110, 125)
+BRAND_BADGE = (8, 8, 8, 200)
 MARGIN = 56
 
 # DejaVu primero (Linux/Render), luego fuentes de Windows; si no hay ninguna,
@@ -64,15 +67,63 @@ def _text_at(draw, xy, text, font, fill, anchor="lm"):
     draw.text(xy, text, font=font, fill=fill, anchor=anchor)
 
 
+def _background() -> Image.Image:
+    """Fondo de marca del programa (siempre la base); liso claro si no existe."""
+    try:
+        bg = Image.open(BRANDING_BACKGROUND_PATH).convert("RGB")
+        scale = max(WIDTH / bg.width, HEIGHT / bg.height)
+        bg = bg.resize((round(bg.width * scale), round(bg.height * scale)), Image.LANCZOS)
+        left, top = (bg.width - WIDTH) // 2, (bg.height - HEIGHT) // 2
+        bg = bg.crop((left, top, left + WIDTH, top + HEIGHT))
+        # velo blanco: el titulo y los paneles se leen bien sin perder el fondo
+        return Image.blend(bg, Image.new("RGB", bg.size, (255, 255, 255)), 0.35)
+    except Exception:
+        return Image.new("RGB", (WIDTH, HEIGHT), BG)
+
+
+def _panel(img: Image.Image, box, radius: int, fill, shadow: bool = True) -> None:
+    """Rectangulo redondeado translucido (con sombra suave) sobre `img`."""
+    overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    d = ImageDraw.Draw(overlay)
+    if shadow:
+        x0, y0, x1, y1 = box
+        d.rounded_rectangle((x0, y0 + 4, x1, y1 + 4), radius=radius, fill=(0, 0, 0, 38))
+    d.rounded_rectangle(box, radius=radius, fill=fill)
+    img.paste(Image.alpha_composite(img.convert("RGBA"), overlay).convert("RGB"))
+
+
+def _brand_badge(img: Image.Image) -> None:
+    """Isotipo de marca (blanco) abajo a la derecha sobre una insignia oscura."""
+    try:
+        logo = Image.open(BRANDING_LOGO_PATH).convert("RGBA")
+        logo = logo.crop(logo.getbbox() or (0, 0, logo.width, logo.height))
+        h = 64
+        logo = logo.resize((max(1, round(logo.width * h / logo.height)), h), Image.LANCZOS)
+    except Exception:
+        return
+    pad = 14
+    x1, y1 = WIDTH - MARGIN, HEIGHT - 22
+    box = (x1 - logo.width - 2 * pad, y1 - h - 2 * pad, x1, y1)
+    _panel(img, box, 16, BRAND_BADGE, shadow=False)
+    layer = img.convert("RGBA")
+    layer.alpha_composite(logo, (box[0] + pad, box[1] + pad))
+    img.paste(layer.convert("RGB"))
+
+
 def _base(title: str, subtitle: str) -> tuple[Image.Image, ImageDraw.ImageDraw]:
-    img = Image.new("RGB", (WIDTH, HEIGHT), BG)
-    draw = ImageDraw.Draw(img)
-    draw.rectangle((0, 0, 10, HEIGHT), fill=ACCENT)
+    img = _background()
     title_font = _font(True, 46)
-    draw.text((MARGIN, 40), _fit(draw, title, title_font, WIDTH - 2 * MARGIN), font=title_font, fill=TEXT)
+    sub_font = _font(False, 26)
+    probe = ImageDraw.Draw(img)
+    title = _fit(probe, title, title_font, WIDTH - 2 * MARGIN - 40)
+    subtitle = _fit(probe, subtitle, sub_font, WIDTH - 2 * MARGIN - 40) if subtitle else ""
+    # cabecera en panel translucido para que el titulo no se pierda en el dibujo del fondo
+    _panel(img, (MARGIN - 20, 26, WIDTH - MARGIN + 20, 138 if subtitle else 98), 18, PANEL)
+    draw = ImageDraw.Draw(img)
+    draw.rounded_rectangle((MARGIN - 20, 26, MARGIN - 14, 138 if subtitle else 98), radius=3, fill=ACCENT)
+    draw.text((MARGIN, 40), title, font=title_font, fill=TEXT)
     if subtitle:
-        sub_font = _font(False, 26)
-        draw.text((MARGIN, 100), _fit(draw, subtitle, sub_font, WIDTH - 2 * MARGIN), font=sub_font, fill=ACCENT)
+        draw.text((MARGIN, 98), subtitle, font=sub_font, fill=ACCENT)
     return img, draw
 
 
@@ -86,7 +137,7 @@ def render_results_card(title: str, subtitle: str, matches: list[dict]) -> bytes
     """matches: dicts con team1, score1, team2, score2 y opcional block.
     El ganador (mayor marcador) se resalta en azul y negrita."""
     img, draw = _base(title, subtitle)
-    top, bottom = 150, HEIGHT - 44
+    top, bottom = 160, HEIGHT - 110
     n = max(len(matches), 1)
     gap = 6
     row_h = min(78, (bottom - top - gap * (n - 1)) // n)
@@ -101,7 +152,8 @@ def render_results_card(title: str, subtitle: str, matches: list[dict]) -> bytes
     for i, m in enumerate(matches):
         y0 = top + i * (row_h + gap)
         y1 = y0 + row_h
-        draw.rounded_rectangle((left, y0, right, y1), radius=10, fill=PANEL if i % 2 == 0 else PANEL_ALT)
+        _panel(img, (left, y0, right, y1), 10, PANEL if i % 2 == 0 else PANEL_ALT)
+        draw = ImageDraw.Draw(img)
         cy = (y0 + y1) // 2
         s1, s2 = int(m["score1"]), int(m["score2"])
         win1, win2 = s1 > s2, s2 > s1
@@ -120,14 +172,14 @@ def render_results_card(title: str, subtitle: str, matches: list[dict]) -> bytes
             block = _fit(draw, m["block"], f_small, 130)
             _text_at(draw, (left + 16, cy), block, f_small, MUTED, "lm")
 
-    draw.text((MARGIN, HEIGHT - 34), "Tweet Automation · LES", font=_font(False, 20), fill=MUTED)
+    _brand_badge(img)
     return _png(img)
 
 
 def render_top_card(title: str, subtitle: str, unit: str, entries: list[dict]) -> bytes:
     """entries: dicts con name y value (texto ya formateado), mejor primero."""
     img, draw = _base(title, subtitle)
-    top, bottom = 160, HEIGHT - 60
+    top, bottom = 170, HEIGHT - 110
     n = max(len(entries), 1)
     gap = 10
     row_h = min(130, (bottom - top - gap * (n - 1)) // n)
@@ -141,7 +193,8 @@ def render_top_card(title: str, subtitle: str, unit: str, entries: list[dict]) -
         y1 = y0 + row_h
         cy = (y0 + y1) // 2
         first = i == 0
-        draw.rounded_rectangle((left, y0, right, y1), radius=12, fill=PANEL_ALT if first else PANEL)
+        _panel(img, (left, y0, right, y1), 12, PANEL_ALT if first else PANEL)
+        draw = ImageDraw.Draw(img)
         if first:
             draw.rounded_rectangle((left, y0, left + 8, y1), radius=4, fill=ACCENT)
         _text_at(draw, (left + 50, cy), f"{i + 1}", f_bold, ACCENT if first else MUTED, "mm")
@@ -154,7 +207,7 @@ def render_top_card(title: str, subtitle: str, unit: str, entries: list[dict]) -
         name = _fit(draw, e["name"], f_bold, right - left - 100 - val_w - unit_w - 60)
         _text_at(draw, (left + 100, cy), name, f_bold, TEXT, "lm")
 
-    draw.text((MARGIN, HEIGHT - 40), "Tweet Automation · LES", font=_font(False, 20), fill=MUTED)
+    _brand_badge(img)
     return _png(img)
 
 

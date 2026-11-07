@@ -25,7 +25,7 @@ BRANDED_LOGO_HEIGHT_RATIO = 0.15  # el logo de marca es chico, abajo a la derech
 BRANDED_RIGHT_MARGIN_RATIO = 0.05  # margen derecho del logo de marca, relativo al ancho del fondo
 BRANDED_BOTTOM_MARGIN_RATIO = 0.06  # margen inferior del logo de marca, relativo al alto del fondo
 BRANDED_PANEL_COLOR = (8, 8, 8)  # casi negro, detrás del logo de marca para que resalte sobre fondos claros
-BRANDED_PANEL_ALPHA = 145  # ~57% de opacidad -- deja intuir el fondo detrás, no lo tapa del todo
+BRANDED_PANEL_ALPHA = 205  # ~57% de opacidad -- deja intuir el fondo detrás, no lo tapa del todo
 BRANDED_PANEL_PADDING_RATIO = 0.055  # relativo al alto del fondo
 BRANDED_PANEL_RADIUS_RATIO = 0.02  # relativo al alto del fondo
 BRANDED_TEAM_LOGO_BOX_RATIO = 0.42  # el/los escudo(s) de equipo, centrados, entran en un cuadrado de este lado (relativo al alto)
@@ -151,36 +151,14 @@ def _fit_logo(logo_bytes: bytes) -> Image.Image:
     return _fit_contain(logo, LOGO_BOX)
 
 
-def compose_vs_image(logo_a_bytes: bytes, logo_b_bytes: bytes) -> bytes:
-    """Arma un composite "EquipoA VS EquipoB": los dos escudos lado a lado
-    sobre un fondo oscuro, con un circulo rojo "VS" superpuesto en el medio.
-    Devuelve bytes PNG listos para guardar/subir."""
-    logo_a = _fit_logo(logo_a_bytes)
-    logo_b = _fit_logo(logo_b_bytes)
-
-    canvas = Image.new("RGBA", CANVAS_SIZE, (*BACKGROUND_COLOR, 255))
-
-    quarter = CANVAS_SIZE[0] // 4
-    center_y = CANVAS_SIZE[1] // 2
-    for logo, center_x in ((logo_a, quarter), (logo_b, quarter * 3)):
-        pos = (center_x - logo.width // 2, center_y - logo.height // 2)
-        canvas.alpha_composite(logo, pos)
-
-    draw = ImageDraw.Draw(canvas)
-    cx, cy = CANVAS_SIZE[0] // 2, CANVAS_SIZE[1] // 2
-    draw.ellipse(
-        (cx - VS_CIRCLE_RADIUS, cy - VS_CIRCLE_RADIUS, cx + VS_CIRCLE_RADIUS, cy + VS_CIRCLE_RADIUS),
-        fill=VS_CIRCLE_COLOR,
-    )
-    font = _load_bold_font(44)
-    text = "VS"
-    bbox = draw.textbbox((0, 0), text, font=font)
-    text_w, text_h = bbox[2] - bbox[0], bbox[3] - bbox[1]
-    draw.text((cx - text_w / 2 - bbox[0], cy - text_h / 2 - bbox[1]), text, fill=VS_TEXT_COLOR, font=font)
-
-    buffer = BytesIO()
-    canvas.convert("RGB").save(buffer, format="PNG")
-    return buffer.getvalue()
+def compose_vs_image(logo_a_bytes: bytes, logo_b_bytes: bytes, names: list[str] | None = None) -> bytes:
+    """Composite "EquipoA VS EquipoB": siempre sobre el fondo de marca del
+    programa (ver compose_branded_image), con los dos escudos, el circulo
+    rojo "VS" y, si se pasan, los nombres. Devuelve bytes PNG."""
+    # Validamos aqui para dar el mismo error que antes si un escudo no se lee.
+    _fit_logo(logo_a_bytes)
+    _fit_logo(logo_b_bytes)
+    return compose_branded_image([logo_a_bytes, logo_b_bytes], names)
 
 
 def _crop_to_content(img: Image.Image) -> Image.Image:
@@ -219,7 +197,7 @@ def _draw_panel(canvas: Image.Image, box: tuple[int, int, int, int], padding: in
     canvas.alpha_composite(overlay)
 
 
-def compose_branded_image(team_logo_bytes_list: list[bytes] | None = None) -> bytes:
+def compose_branded_image(team_logo_bytes_list: list[bytes] | None = None, names: list[str] | None = None) -> bytes:
     """Fondo de marca del programa (background.png) con el isotipo (logo.png,
     PNG con fondo transparente) chico, pegado abajo a la derecha, sobre un
     panel semitransparente oscuro (el logo es blanco y el fondo tiene zonas
@@ -227,7 +205,8 @@ def compose_branded_image(team_logo_bytes_list: list[bytes] | None = None) -> by
     centrado en el medio del fondo, con el mismo panel detras; si se pasan
     dos (H2H/Duelo), van centrados a los lados sobre un unico panel
     rectangular compartido, con un circulo "VS" en el medio (igual que
-    compose_vs_image pero sobre el fondo de marca). Devuelve bytes PNG."""
+    compose_vs_image pero sobre el fondo de marca). Si se pasan `names`, el
+    nombre de cada equipo va bajo su escudo. Devuelve bytes PNG."""
     try:
         background = _load_branding(BRANDING_BACKGROUND_PATH)
         brand_logo = _load_branding(BRANDING_LOGO_PATH)
@@ -254,6 +233,20 @@ def compose_branded_image(team_logo_bytes_list: list[bytes] | None = None) -> by
         for data in (team_logo_bytes_list or [])
     ]
 
+    label_font = _load_bold_font(int(canvas_h * 0.052))
+    label_gap = int(canvas_h * 0.035)
+    label_h = int(canvas_h * 0.07)
+    names = [n.strip() for n in (names or []) if n and n.strip()]
+    if len(team_logos) >= 2 and len(names) >= 2:
+        center_y -= label_h // 2  # sube los escudos para dejar sitio al nombre
+
+    def _label(text: str, cx: int, top: int) -> None:
+        draw = ImageDraw.Draw(canvas)
+        max_w = canvas_w // 2 - padding * 2
+        while len(text) > 1 and draw.textlength(text, font=label_font) > max_w:
+            text = text[:-1]
+        draw.text((cx, top), text, font=label_font, fill=VS_TEXT_COLOR, anchor="mt")
+
     if len(team_logos) == 1:
         _place_with_panel(team_logos[0], canvas_w // 2, center_y)
     elif len(team_logos) >= 2:
@@ -270,9 +263,16 @@ def compose_branded_image(team_logo_bytes_list: list[bytes] | None = None) -> by
             max(pos[0] + logo.width for logo, pos in placements),
             max(pos[1] + logo.height for logo, pos in placements),
         )
-        _draw_panel(canvas, combined_box, padding)
+        with_names = len(names) >= 2
+        panel_box = (
+            combined_box[0], combined_box[1], combined_box[2], combined_box[3] + (label_gap + label_h if with_names else 0)
+        )
+        _draw_panel(canvas, panel_box, padding)
         for logo, pos in placements:
             canvas.alpha_composite(logo, pos)
+        if with_names:
+            for (logo, pos), name in zip(placements, names):
+                _label(name, pos[0] + logo.width // 2, combined_box[3] + label_gap)
 
         draw = ImageDraw.Draw(canvas)
         cx = canvas_w // 2
