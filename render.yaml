@@ -9,15 +9,10 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.7
+      # Las claves de X (X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET)
+      # son opcionales: solo hacen falta para 'Publicar ahora'. Con 'Abrir en X' no.
+      # Se pueden anadir luego en Render -> Environment.
       - key: APP_PASSWORD
         sync: false
       - key: SESSION_SECRET
         generateValue: true
-      - key: X_API_KEY
-        sync: false
-      - key: X_API_SECRET
-        sync: false
-      - key: X_ACCESS_TOKEN
-        sync: false
-      - key: X_ACCESS_TOKEN_SECRET
-        sync: false
