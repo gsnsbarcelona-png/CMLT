@@ -78,6 +78,17 @@ function bindCopyButton(button, getText) {
   });
 }
 
+// Boton "Abrir en X": abre el compositor de X (web intent) con el texto ya
+// escrito, en la cuenta que este activa en ese navegador/app -- no usa la API
+// ni las credenciales del servidor. Limitacion: el intent no admite imagenes.
+function bindOpenXButton(button, getText) {
+  button.addEventListener("click", () => {
+    const text = getText();
+    if (!text || !text.trim()) return;
+    window.open(`https://x.com/intent/post?text=${encodeURIComponent(text)}`, "_blank", "noopener");
+  });
+}
+
 // Boton "Guardar" de las tarjetas de resultado (H2H, Efemeride, Cruce LEC,
 // Lote): ninguno de esos modos auto-guarda -- el usuario elige que
 // variante(s) quedan como borrador, con el mismo endpoint que usa el
@@ -232,6 +243,7 @@ function variantResultCardHtml(result, source, metaFn) {
       <div class="card-actions">
         <button class="save-${source}-btn">Guardar</button>
         <button class="copy-${source}-btn">Copiar</button>
+        <button class="open-x-${source}-btn" title="Abre X con el texto listo (sin imagen)">Abrir en X</button>
       </div>
     </div>
   `;
@@ -254,6 +266,7 @@ async function generateResultCards({ endpoint, payload, resultsElId, btnId, sour
         const card = resultsEl.children[idx];
         bindImagePicker(card, { suggestedTeams: r.suggested_teams || [] });
         bindCopyButton(card.querySelector(`.copy-${source}-btn`), () => r.content);
+        bindOpenXButton(card.querySelector(`.open-x-${source}-btn`), () => r.content);
         bindSaveButton(card.querySelector(`.save-${source}-btn`), () => r.content, source, () => card.dataset.imageUrl);
       }
     });
@@ -322,6 +335,7 @@ function initCompose() {
   document.getElementById("anniversary-generate-btn").addEventListener("click", handleAnniversaryGenerate);
   document.getElementById("lec-compare-generate-btn").addEventListener("click", handleLecCompareGenerate);
   bindCopyButton(document.getElementById("copy-content-btn"), () => document.getElementById("compose-content").value);
+  bindOpenXButton(document.getElementById("open-x-btn"), () => document.getElementById("compose-content").value);
 
   loadTemplateSelect();
   loadTopRankingCategories();
@@ -780,6 +794,7 @@ function draftCardHtml(tweet) {
       <div class="card-actions">
         <button class="save-edit-btn">Guardar cambios</button>
         <button class="copy-draft-btn">Copiar</button>
+        <button class="open-x-draft-btn" title="Abre X con el texto listo (sin imagen)">Abrir en X</button>
         <button class="publish-btn primary">Publicar ahora</button>
         <button class="delete-btn">Eliminar</button>
       </div>
@@ -806,6 +821,7 @@ function bindDraftCard(tweet) {
 
   bindImagePicker(card, { initialUrl: tweet.image_url || null });
   bindCopyButton(card.querySelector(".copy-draft-btn"), () => textarea.value);
+  bindOpenXButton(card.querySelector(".open-x-draft-btn"), () => textarea.value);
 
   card.querySelector(".save-edit-btn").addEventListener("click", async () => {
     try {
