@@ -749,7 +749,6 @@ function updateComposeMode() {
   document.getElementById("mode-top-ranking").hidden = mode !== "top-ranking";
   document.getElementById("mode-anniversary").hidden = mode !== "anniversary";
   document.getElementById("mode-lec-compare").hidden = mode !== "lec-compare";
-  document.getElementById("mode-manual").hidden = mode !== "manual";
   document.getElementById("single-compose-area").hidden =
     mode === "match-day" ||
     mode === "h2h" ||
