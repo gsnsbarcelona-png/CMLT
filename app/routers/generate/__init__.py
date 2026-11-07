@@ -13,6 +13,7 @@ from app.routers.generate import (
     results,
     stats,
     top_ranking,
+    weekly_pack,
 )
 
 router = APIRouter(prefix="/api/generate", tags=["generate"])
@@ -23,3 +24,4 @@ router.include_router(duel.router)
 router.include_router(anniversary.router)
 router.include_router(league_comparison.router)
 router.include_router(top_ranking.router)
+router.include_router(weekly_pack.router)
