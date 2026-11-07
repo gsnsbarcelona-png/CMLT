@@ -113,17 +113,21 @@ def _truncate(text: str, budget: int) -> str:
     return cut.rstrip(" .,;:-") + "…"
 
 
+def _years(count: int) -> str:
+    return "1 año" if count == 1 else f"{count} años"
+
+
 def format_anniversary_plain(anniversary: Anniversary, is_exact: bool, today: date | None = None) -> str:
     if today is None:
         today = date.today()
     years_ago = today.year - anniversary.year
 
     if is_exact:
-        header = f"🗓️ UN DÍA COMO HOY, hace {years_ago} años ({anniversary.year})"
+        header = f"🗓️ UN DÍA COMO HOY, hace {_years(years_ago)} ({anniversary.year})"
     else:
         header = (
             f"🗓️ No es de hoy exacto -- lo más cercano: {anniversary.day:02d}/{anniversary.month:02d}/"
-            f"{anniversary.year} (hace {years_ago} años)"
+            f"{anniversary.year} (hace {_years(years_ago)})"
         )
     question = vary_question("¿Lo viviste en directo?") + " 👀"
 
@@ -163,7 +167,7 @@ def format_anniversary_quick_fact_plain(anniversary: Anniversary, is_exact: bool
     else:
         prefix = (
             f"📌 Dato rápido (no es de hoy, del {anniversary.day:02d}/{anniversary.month:02d}/"
-            f"{anniversary.year}, hace {years_ago} años)"
+            f"{anniversary.year}, hace {_years(years_ago)})"
         )
 
     # Mismo presupuesto defensivo que format_anniversary_plain: el prefijo es

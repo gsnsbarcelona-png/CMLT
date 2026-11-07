@@ -123,3 +123,18 @@ def test_results_endpoint_502_when_source_fails(client, mocker):
         "app.routers.generate.results.fetch_latest_results", side_effect=lolesports_service.LoLEsportsError("caído")
     )
     assert client.post("/api/generate/results", json={"leagues": ["les"]}).status_code == 502
+
+
+def test_anniversary_uses_singular_year():
+    from datetime import date
+
+    from app.services.history_service import Anniversary, format_anniversary_plain, format_anniversary_quick_fact_plain
+
+    a = Anniversary(
+        month=11, day=27, year=2025, headline="Titular", era_name="Era", detail="Detalle", today_connection=None, teams=[], source="test"
+    )
+    today = date(2026, 11, 27)
+    assert "hace 1 año " in format_anniversary_plain(a, True, today) + " "
+    assert "hace 1 años" not in format_anniversary_plain(a, False, today)
+    assert "hace 1 años" not in format_anniversary_quick_fact_plain(a, False, today)
+    assert "hace 3 años" in format_anniversary_plain(a, True, date(2028, 11, 27))
