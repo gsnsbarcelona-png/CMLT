@@ -18,7 +18,7 @@
   </header>
 
   <div id="slow-notice" class="slow-notice" role="status" hidden>
-    Esto esta tardando... si el servidor estaba dormido puede tardar hasta un minuto en despertar.
+    Esto está tardando... si el servidor estaba dormido puede tardar hasta un minuto en despertar.
   </div>
 
   <nav class="tabs" role="tablist">
@@ -32,13 +32,13 @@
     <section id="tab-compose" class="tab-panel active">
       <div class="mode-selector" role="radiogroup" aria-label="Modo">
         <label><input type="radio" name="mode" value="calendar" checked /> Calendario</label>
-        <label><input type="radio" name="mode" value="match-day" /> Dia de partido</label>
+        <label><input type="radio" name="mode" value="match-day" /> Día de partido</label>
         <label><input type="radio" name="mode" value="results" /> Resultados</label>
         <label><input type="radio" name="mode" value="stats" /> Stats</label>
         <label><input type="radio" name="mode" value="h2h" /> H2H Hoy</label>
         <label><input type="radio" name="mode" value="duel" /> Duelo 1v1</label>
         <label><input type="radio" name="mode" value="top-ranking" /> Top/Ranking</label>
-        <label><input type="radio" name="mode" value="anniversary" /> Efemeride</label>
+        <label><input type="radio" name="mode" value="anniversary" /> Efeméride</label>
         <label><input type="radio" name="mode" value="lec-compare" /> Cruce LEC</label>
       </div>
 
@@ -51,7 +51,7 @@
       </div>
 
       <div id="mode-match-day" class="mode-panel" hidden>
-        <button id="match-day-generate-btn">Generar pack del dia</button>
+        <button id="match-day-generate-btn">Generar pack del día</button>
         <p class="hint">Un clic: calendario de la semana + preview H2H (historial y forma reciente) de cada partido de LES de hoy. Guarda o copia solo lo que quieras.</p>
         <div id="match-day-results" class="list"></div>
       </div>
@@ -61,7 +61,7 @@
         <label class="checkbox-inline"><input type="checkbox" id="results-lec" /> LEC</label>
         <label class="checkbox-inline"><input type="checkbox" id="results-emea-masters" /> EMEA Masters</label>
         <button id="results-generate-btn">Generar resultados</button>
-        <p class="hint">Marcadores reales de la ultima jornada con partidos terminados (ultimos 7 dias), de la API oficial de LoL Esports.</p>
+        <p class="hint">Marcadores reales de la última jornada con partidos terminados (últimos 7 días), de la API oficial de LoL Esports.</p>
       </div>
 
       <div id="mode-stats" class="mode-panel" hidden>
@@ -78,25 +78,25 @@
             <select id="rivalry-team-b"><option value="">-- equipo B --</option></select>
           </div>
         </label>
-        <label>Comparar elo: 2 jugadores (opcional, prioridad sobre categorias/enfocar, no sobre rivalidad)
+        <label>Comparar elo: 2 jugadores (opcional, prioridad sobre categorías/enfocar, no sobre rivalidad)
           <div class="rivalry-row">
             <input type="text" id="ranked-player-a" placeholder="ej: Escik" />
             <input type="text" id="ranked-player-b" placeholder="ej: Andariel" />
           </div>
         </label>
-        <label>Comparar elo: 2 equipos, mejor jugador de cada plantilla (opcional, prioridad sobre categorias/enfocar, no sobre rivalidad ni jugador vs jugador)
+        <label>Comparar elo: 2 equipos, mejor jugador de cada plantilla (opcional, prioridad sobre categorías/enfocar, no sobre rivalidad ni jugador vs jugador)
           <div class="rivalry-row">
             <select id="ranked-team-a"><option value="">-- equipo A --</option></select>
             <select id="ranked-team-b"><option value="">-- equipo B --</option></select>
           </div>
         </label>
-        <p class="hint">Las comparaciones de elo consultan lolpros.gg en vivo (equipo vs equipo tarda un poco mas, son ~10 jugadores).</p>
+        <p class="hint">Las comparaciones de elo consultan lolpros.gg en vivo (equipo vs equipo tarda un poco más, son ~10 jugadores).</p>
         <div class="mode-selector" style="margin-top: 4px;">
           <label><input type="radio" name="stats-scope" value="split" checked /> Split actual</label>
           <label><input type="radio" name="stats-scope" value="year" /> Todo el año</label>
         </div>
         <button id="stats-generate-btn">Generar stat</button>
-        <p class="hint">Los numeros siempre vienen de gol.gg (datos reales). "Todo el año" combina Spring+Summer y suma un angulo de rivalidad (head-to-head) entre equipos.</p>
+        <p class="hint">Los números siempre vienen de gol.gg (datos reales). "Todo el año" combina Spring+Summer y suma un ángulo de rivalidad (head-to-head) entre equipos.</p>
       </div>
 
       <div id="mode-h2h" class="mode-panel" hidden>
@@ -109,7 +109,7 @@
           <select id="h2h-team-b"><option value="">-- equipo B --</option></select>
         </label>
         <button id="h2h-generate-btn">Generar preview (2 variantes)</button>
-        <p class="hint">Genera 2 tweets head-to-head (historial y forma reciente) con datos reales de gol.gg. Guarda solo el/los que quieras con el boton "Guardar" de cada tarjeta.</p>
+        <p class="hint">Genera 2 tweets head-to-head (historial y forma reciente) con datos reales de gol.gg. Guarda solo el/los que quieras con el botón "Guardar" de cada tarjeta.</p>
         <div id="h2h-results" class="list"></div>
       </div>
 
@@ -123,22 +123,22 @@
           <select id="duel-team-b"><option value="">-- equipo B --</option></select>
         </label>
         <button id="duel-generate-btn">Generar duelos</button>
-        <p class="hint">Compara el KDA de temporada (gol.gg) del jugador con mas partidos jugados en cada carril compartido por ambos equipos (segun el roster de lolesports.com) -- una tarjeta por carril. No confirma alineaciones oficiales ni cruces directos historicos entre esos jugadores, esos datos no estan disponibles hoy. Guarda solo las que quieras con el boton "Guardar" de cada tarjeta.</p>
+        <p class="hint">Compara el KDA de temporada (gol.gg) del jugador con más partidos jugados en cada carril compartido por ambos equipos (según el roster de lolesports.com) -- una tarjeta por carril. No confirma alineaciones oficiales ni cruces directos históricos entre esos jugadores, esos datos no están disponibles hoy. Guarda solo las que quieras con el botón "Guardar" de cada tarjeta.</p>
         <div id="duel-results" class="list"></div>
       </div>
 
       <div id="mode-top-ranking" class="mode-panel" hidden>
-        <label>Categoria
+        <label>Categoría
           <select id="top-ranking-category"></select>
         </label>
         <button id="top-ranking-generate-btn">Generar top</button>
-        <p class="hint">Calcula el top 3 real de gol.gg para el split actual (nunca a mano) -- si hay menos de 3 con datos suficientes, lo dice en vez de inventar posiciones. Las categorias de jugador no muestran equipo (gol.gg no lo expone en esa tabla). Genera 2 variantes: foco en el lider y top 3 resumido. Guarda solo las que quieras con el boton "Guardar" de cada tarjeta.</p>
+        <p class="hint">Calcula el top 3 real de gol.gg para el split actual (nunca a mano) -- si hay menos de 3 con datos suficientes, lo dice en vez de inventar posiciones. Las categorías de jugador no muestran equipo (gol.gg no lo expone en esa tabla). Genera 2 variantes: foco en el líder y top 3 resumido. Guarda solo las que quieras con el botón "Guardar" de cada tarjeta.</p>
         <div id="top-ranking-results" class="list"></div>
       </div>
 
       <div id="mode-anniversary" class="mode-panel" hidden>
-        <button id="anniversary-generate-btn">Generar efemeride de hoy</button>
-        <p class="hint">Busca un hecho verificado de la historia de la LES/Superliga para la fecha de hoy en una base curada (no es scraping en vivo -- si no hay nada para hoy exacto, muestra el hito mas cercano y lo aclara). Genera 2 versiones: completa y "dato rapido".</p>
+        <button id="anniversary-generate-btn">Generar efeméride de hoy</button>
+        <p class="hint">Busca un hecho verificado de la historia de la LES/Superliga para la fecha de hoy en una base curada (no es scraping en vivo -- si no hay nada para hoy exacto, muestra el hito más cercano y lo aclara). Genera 2 versiones: completa y "dato rápido".</p>
         <div id="anniversary-results" class="list"></div>
       </div>
 
@@ -147,7 +147,7 @@
           <input type="text" id="lec-compare-focus" placeholder="ej: UCAM, Escik..." />
         </label>
         <button id="lec-compare-generate-btn">Generar cruce LES-LEC</button>
-        <p class="hint">Compara una metrica real de la LES (equipo o jugador destacado) contra el promedio de la LEC en esa misma metrica, con datos reales de gol.gg de ambas ligas. Siempre incluye el matiz de que son ligas de nivel/muestra distintos. Genera 2 tonos: dato sorprendente y pregunta a debate.</p>
+        <p class="hint">Compara una métrica real de la LES (equipo o jugador destacado) contra el promedio de la LEC en esa misma métrica, con datos reales de gol.gg de ambas ligas. Siempre incluye el matiz de que son ligas de nivel/muestra distintos. Genera 2 tonos: dato sorprendente y pregunta a debate.</p>
         <div id="lec-compare-results" class="list"></div>
       </div>
 

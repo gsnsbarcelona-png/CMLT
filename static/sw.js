@@ -13,7 +13,7 @@ self.addEventListener("install", (event) => {
     caches
       .open(CACHE)
       .then((cache) => cache.addAll(SHELL))
-      .catch(() => {}) // sin sesion "/" redirige a /login: no bloquea la instalacion
+      .catch(() => {}) // sin sesión "/" redirige a /login: no bloquea la instalación
       .then(() => self.skipWaiting())
   );
 });

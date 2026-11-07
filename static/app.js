@@ -53,7 +53,7 @@ async function apiRequest(path, options) {
   if (res.status === 401) {
     // Sesion expirada (solo pasa con APP_PASSWORD configurada).
     window.location.replace("/login");
-    throw new Error("Sesion expirada.");
+    throw new Error("Sesión expirada.");
   }
   if (!res.ok) {
     const message = body?.detail || `Error ${res.status}`;
@@ -457,7 +457,7 @@ async function checkConfig() {
     const cfg = await api("/api/config/check");
     const banner = document.getElementById("config-banner");
     const missing = [];
-    if (!cfg.x_configured) missing.push("X (publicacion)");
+    if (!cfg.x_configured) missing.push("X (publicación)");
     if (missing.length) {
       banner.textContent = `Sin configurar: ${missing.join(", ")}. Puedes usar "Abrir en X" o "Copiar".`;
       banner.hidden = false;
@@ -571,7 +571,7 @@ async function loadTeamOptions(selectIds, endpoint = "/api/generate/stats/teams"
     selectIds.forEach((id) => {
       const select = document.getElementById(id);
       select.insertAdjacentHTML("beforeend", options);
-      applyPref(select, prefs); // recuperar el equipo elegido la ultima vez
+      applyPref(select, prefs); // recuperar el equipo elegido la última vez
     });
   } catch (e) {
     // silencioso: si gol.gg no responde, el usuario todavia puede usar el resto de la app
@@ -657,8 +657,8 @@ async function handleMatchDayPack() {
     btnId: "match-day-generate-btn",
     source: "match-day",
     metaFn: (r) => r._meta,
-    loadingText: "Preparando el pack del dia...",
-    emptyMessage: "Hoy no hay partidos de LES. Prueba Resultados, Efemeride o Top/Ranking.",
+    loadingText: "Preparando el pack del día...",
+    emptyMessage: "Hoy no hay partidos de LES. Prueba Resultados, Efeméride o Top/Ranking.",
     fetchResults: async () => {
       const matches = await api("/api/generate/stats/today-match");
       if (!matches.length) return [];
@@ -729,11 +729,11 @@ async function handleAnniversaryGenerate() {
     btnId: "anniversary-generate-btn",
     source: "anniversary",
     metaFn: (r) => {
-      const formatLabel = r.format === "completo" ? "Version completa" : "Dato rapido";
+      const formatLabel = r.format === "completo" ? "Versión completa" : "Dato rápido";
       const exactNote = r.is_exact ? "" : " (no es de hoy exacto, ver texto)";
       return `${formatLabel}${exactNote}`;
     },
-    loadingText: "Buscando efemeride...",
+    loadingText: "Buscando efeméride...",
   });
 }
 
@@ -825,14 +825,14 @@ async function handleDuelGenerate() {
     source: "duel",
     metaFn: (r) => `${r.role} · ${r.subject}`,
     loadingText: "Generando...",
-    emptyMessage: "No hay ningun carril con datos suficientes en ambos equipos para armar un duelo.",
+    emptyMessage: "No hay ningún carril con datos suficientes en ambos equipos para armar un duelo.",
   });
 }
 
 async function handleTopRankingGenerate() {
   const category = document.getElementById("top-ranking-category").value;
   if (!category) {
-    document.getElementById("top-ranking-results").innerHTML = '<div class="empty-state">Elige una categoria.</div>';
+    document.getElementById("top-ranking-results").innerHTML = '<div class="empty-state">Elige una categoría.</div>';
     return;
   }
 
@@ -842,7 +842,7 @@ async function handleTopRankingGenerate() {
     resultsElId: "top-ranking-results",
     btnId: "top-ranking-generate-btn",
     source: "top-ranking",
-    metaFn: (r) => (r.variant === "top1" ? "Foco en el lider" : "Top 3 resumido"),
+    metaFn: (r) => (r.variant === "top1" ? "Foco en el líder" : "Top 3 resumido"),
     loadingText: "Consultando gol.gg...",
   });
 }
@@ -867,7 +867,7 @@ async function handleStatsGenerate() {
 
   if (!usingRivalry && !usingRankedPlayers && !usingRankedTeams && !categories.length) {
     setComposeFeedback(
-      "Marca al menos una categoria (equipos, jugadores o ranked), elige los dos equipos de rivalidad, o elige un par a comparar en elo.",
+      "Marca al menos una categoría (equipos, jugadores o ranked), elige los dos equipos de rivalidad, o elige un par a comparar en elo.",
       true
     );
     return;
@@ -962,17 +962,17 @@ async function fillComposeFromGenerate(endpoint, payload, successMessage) {
 async function handleSave(publishNow) {
   const content = document.getElementById("compose-content").value.trim();
   if (!content) {
-    setComposeFeedback("El contenido no puede estar vacio.", true);
+    setComposeFeedback("El contenido no puede estar vacío.", true);
     return;
   }
   if (countChars(content) > TWEET_CHAR_LIMIT) {
-    setComposeFeedback(`El tweet supera el limite de ${TWEET_CHAR_LIMIT} caracteres.`, true);
+    setComposeFeedback(`El tweet supera el límite de ${TWEET_CHAR_LIMIT} caracteres.`, true);
     return;
   }
   const mode = document.querySelector('input[name="mode"]:checked').value;
 
   if (publishNow) {
-    const confirmed = await confirmDialog("¿Publicar este tweet ahora en X? Esta accion es publica e irreversible.");
+    const confirmed = await confirmDialog("¿Publicar este tweet ahora en X? Esta acción es pública e irreversible.");
     if (!confirmed) return;
   }
 
@@ -1086,7 +1086,7 @@ function bindDraftCard(tweet) {
   });
 
   card.querySelector(".publish-btn").addEventListener("click", async () => {
-    if (!(await confirmDialog("¿Publicar este tweet ahora en X? Esta accion es publica e irreversible."))) return;
+    if (!(await confirmDialog("¿Publicar este tweet ahora en X? Esta acción es pública e irreversible."))) return;
     try {
       await api(`/api/tweets/${tweet.id}`, {
         method: "PUT",
@@ -1128,7 +1128,7 @@ async function loadHistory() {
     ]);
     const items = [...published, ...failed].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     if (!items.length) {
-      container.innerHTML = '<div class="empty-state">Todavia no hay tweets publicados ni fallidos.</div>';
+      container.innerHTML = '<div class="empty-state">Todavía no hay tweets publicados ni fallidos.</div>';
       return;
     }
     container.innerHTML = items.map(historyCardHtml).join("");
@@ -1205,11 +1205,11 @@ async function showVersion() {
     const v = await api("/api/version");
     const when = new Date(v.started_at).toLocaleString();
     let status = "";
-    if (v.up_to_date === true) status = ' · <span class="version-ok">✓ ultima version</span>';
+    if (v.up_to_date === true) status = ' · <span class="version-ok">✓ última versión</span>';
     else if (v.up_to_date === false) {
       status = ` · <span class="version-old">hay una nueva (${escapeHtml(v.latest)}), recarga en unos minutos</span>`;
     }
-    el.innerHTML = `Version ${escapeHtml(v.commit)} · iniciada ${escapeHtml(when)}${status}`;
+    el.innerHTML = `Versión ${escapeHtml(v.commit)} · iniciada ${escapeHtml(when)}${status}`;
   } catch (e) {
     // silencioso: la version es informativa, no bloquea la app
   }
