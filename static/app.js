@@ -383,7 +383,6 @@ function switchTab(name) {
   document.querySelectorAll(".tab-panel").forEach((p) => p.classList.toggle("active", p.id === `tab-${name}`));
   if (name === "drafts") loadDrafts();
   if (name === "history") loadHistory();
-  if (name === "templates") loadTemplatesTab();
 }
 
 // ---------- Config banner ----------
@@ -469,8 +468,7 @@ function initCompose() {
 
   document.getElementById("image-picker").innerHTML = imagePickerHtml();
   bindImagePicker(document.getElementById("image-picker"));
-  document.getElementById("template-render-btn").addEventListener("click", handleTemplateRender);
-  document.getElementById("save-draft-btn").addEventListener("click", () => handleSave(false));
+  document.getElementById("save-draft-btn").addEventListener("click", () => handleSave(false));
   document.getElementById("publish-now-btn").addEventListener("click", () => handleSave(true));
   document.getElementById("calendar-generate-btn").addEventListener("click", handleCalendarGenerate);
   document.getElementById("results-generate-btn").addEventListener("click", handleResultsGenerate);
@@ -491,7 +489,6 @@ function initCompose() {
     () => document.getElementById("image-picker").dataset.imageUrl || ""
   );
 
-  loadTemplateSelect();
   loadTopRankingCategories();
   loadTeamOptions(["rivalry-team-a", "rivalry-team-b", "ranked-team-a", "ranked-team-b", "duel-team-a", "duel-team-b"]);
   // H2H usa una lista mas amplia que el resto de los modos: ademas de LES,
@@ -556,7 +553,6 @@ function updateComposeMode() {
   document.getElementById("mode-top-ranking").hidden = mode !== "top-ranking";
   document.getElementById("mode-anniversary").hidden = mode !== "anniversary";
   document.getElementById("mode-lec-compare").hidden = mode !== "lec-compare";
-  document.getElementById("mode-template").hidden = mode !== "template";
   document.getElementById("mode-manual").hidden = mode !== "manual";
   document.getElementById("single-compose-area").hidden =
     mode === "match-day" ||
@@ -872,7 +868,7 @@ function setComposeFeedback(message, isError) {
 }
 
 // Patron compartido por los modos de Compose que generan texto y lo vuelcan
-// en el editor (Calendario, Stats, Plantilla): pegarle al endpoint,
+// en el editor (Calendario, Stats): pegarle al endpoint,
 // llenar compose-content, y mostrar feedback de exito/error.
 async function fillComposeFromGenerate(endpoint, payload, successMessage) {
   const generateButtons = document.querySelectorAll("#tab-compose button[id$='-generate-btn']");
@@ -895,54 +891,6 @@ async function fillComposeFromGenerate(endpoint, payload, successMessage) {
   } finally {
     generateButtons.forEach((b) => (b.disabled = false));
   }
-}
-
-async function loadTemplateSelect() {
-  const select = document.getElementById("template-select");
-  try {
-    const templates = await api("/api/templates");
-    select.innerHTML = templates.map((t) => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join("");
-    select.dataset.templates = JSON.stringify(templates);
-    select.onchange = renderTemplateVariableInputs;
-    renderTemplateVariableInputs();
-  } catch (e) {
-    select.innerHTML = "<option>No se pudieron cargar las plantillas</option>";
-  }
-}
-
-function renderTemplateVariableInputs() {
-  const select = document.getElementById("template-select");
-  const templates = JSON.parse(select.dataset.templates || "[]");
-  const template = templates.find((t) => String(t.id) === select.value);
-  const container = document.getElementById("template-variables");
-  if (!template) {
-    container.innerHTML = "";
-    return;
-  }
-  const varNames = Array.from(new Set(Array.from(template.template_text.matchAll(/\{(\w+)\}/g)).map((m) => m[1])));
-  container.innerHTML = varNames
-    .map(
-      (name) =>
-        `<label class="var-input">${escapeHtml(name)}<input type="text" data-var="${escapeHtml(name)}" /></label>`
-    )
-    .join("");
-}
-
-async function handleTemplateRender() {
-  const select = document.getElementById("template-select");
-  if (!select.value) {
-    setComposeFeedback("No hay plantillas disponibles. Crea una en la pestana Plantillas.", true);
-    return;
-  }
-  const variables = {};
-  document.querySelectorAll("#template-variables [data-var]").forEach((input) => {
-    variables[input.dataset.var] = input.value;
-  });
-  await fillComposeFromGenerate(
-    "/api/generate/template",
-    { template_id: Number(select.value), variables },
-    "Plantilla renderizada. Podes editarla antes de guardar o publicar."
-  );
 }
 
 async function handleSave(publishNow) {
@@ -1169,93 +1117,6 @@ function bindHistoryCopyButtons(items) {
   });
 }
 
-// ---------- Templates tab ----------
-function initTemplateForm() {
-  document.getElementById("template-save-btn").addEventListener("click", handleTemplateFormSave);
-  document.getElementById("template-cancel-edit-btn").addEventListener("click", resetTemplateForm);
-}
-
-function resetTemplateForm() {
-  document.getElementById("template-form-id").value = "";
-  document.getElementById("template-form-name").value = "";
-  document.getElementById("template-form-text").value = "";
-  document.getElementById("template-cancel-edit-btn").hidden = true;
-}
-
-async function handleTemplateFormSave() {
-  const id = document.getElementById("template-form-id").value;
-  const name = document.getElementById("template-form-name").value.trim();
-  const template_text = document.getElementById("template-form-text").value.trim();
-  if (!name || !template_text) {
-    alert("Nombre y texto de la plantilla son obligatorios.");
-    return;
-  }
-  try {
-    if (id) {
-      await api(`/api/templates/${id}`, { method: "PUT", body: JSON.stringify({ name, template_text }) });
-    } else {
-      await api("/api/templates", { method: "POST", body: JSON.stringify({ name, template_text }) });
-    }
-    resetTemplateForm();
-    loadTemplatesTab();
-    loadTemplateSelect();
-  } catch (e) {
-    alert(e.message);
-  }
-}
-
-async function loadTemplatesTab() {
-  const container = document.getElementById("templates-list");
-  container.innerHTML = "Cargando...";
-  try {
-    const templates = await api("/api/templates");
-    if (!templates.length) {
-      container.innerHTML = '<div class="empty-state">No hay plantillas todavia.</div>';
-      return;
-    }
-    container.innerHTML = templates.map(templateCardHtml).join("");
-    templates.forEach((t) => bindTemplateCard(t));
-  } catch (e) {
-    container.innerHTML = `<div class="empty-state">Error cargando plantillas: ${escapeHtml(e.message)}</div>`;
-  }
-}
-
-function templateCardHtml(template) {
-  return `
-    <div class="card" data-id="${template.id}">
-      <div class="card-header">
-        <strong>${escapeHtml(template.name)}</strong>
-        <span class="card-meta">${formatDate(template.created_at)}</span>
-      </div>
-      <div class="card-content">${escapeHtml(template.template_text)}</div>
-      <div class="card-actions">
-        <button class="edit-template-btn">Editar</button>
-        <button class="delete-template-btn">Eliminar</button>
-      </div>
-    </div>
-  `;
-}
-
-function bindTemplateCard(template) {
-  const card = document.querySelector(`#templates-list .card[data-id="${template.id}"]`);
-  card.querySelector(".edit-template-btn").addEventListener("click", () => {
-    document.getElementById("template-form-id").value = template.id;
-    document.getElementById("template-form-name").value = template.name;
-    document.getElementById("template-form-text").value = template.template_text;
-    document.getElementById("template-cancel-edit-btn").hidden = false;
-  });
-  card.querySelector(".delete-template-btn").addEventListener("click", async () => {
-    if (!confirm("¿Eliminar esta plantilla?")) return;
-    try {
-      await api(`/api/templates/${template.id}`, { method: "DELETE" });
-      loadTemplatesTab();
-      loadTemplateSelect();
-    } catch (e) {
-      alert(e.message);
-    }
-  });
-}
-
 // ---------- Sesion ----------
 async function initLogout() {
   try {
@@ -1304,7 +1165,7 @@ function initBackup() {
       link.download = `tweet-automation-backup-${new Date().toISOString().slice(0, 10)}.json`;
       link.click();
       URL.revokeObjectURL(link.href);
-      say(`Descargados ${data.tweets.length} tweets y ${data.templates.length} plantillas.`);
+      say(`Descargados ${data.tweets.length} tweets.`);
     } catch (e) {
       say(`Error: ${e.message}`);
     }
@@ -1317,7 +1178,7 @@ function initBackup() {
     try {
       const body = JSON.parse(await file.text());
       const res = await api("/api/restore", { method: "POST", body: JSON.stringify(body) });
-      say(`Restaurado: ${res.tweets_added} tweets y ${res.templates_added} plantillas nuevas.`);
+      say(`Restaurado: ${res.tweets_added} tweets nuevos.`);
       loadDrafts();
     } catch (e) {
       say(`Error: ${e.message}`);
@@ -1331,7 +1192,6 @@ function initBackup() {
 document.addEventListener("DOMContentLoaded", () => {
   initTabs();
   initCompose();
-  initTemplateForm();
   checkConfig();
   showVersion();
   initBackup();

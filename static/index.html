@@ -25,7 +25,6 @@
     <button class="tab-btn active" data-tab="compose" role="tab" aria-selected="true">Compose</button>
     <button class="tab-btn" data-tab="drafts" role="tab" aria-selected="false">Borradores</button>
     <button class="tab-btn" data-tab="history" role="tab" aria-selected="false">Historial</button>
-    <button class="tab-btn" data-tab="templates" role="tab" aria-selected="false">Plantillas</button>
   </nav>
 
   <main>
@@ -152,14 +151,6 @@
         <div id="lec-compare-results" class="list"></div>
       </div>
 
-      <div id="mode-template" class="mode-panel" hidden>
-        <label>Plantilla
-          <select id="template-select"></select>
-        </label>
-        <div id="template-variables"></div>
-        <button id="template-render-btn">Renderizar</button>
-      </div>
-
       <div id="mode-manual" class="mode-panel" hidden>
         <p class="hint">Escribi el tweet directamente abajo.</p>
       </div>
@@ -194,23 +185,6 @@
       <div id="history-list" class="list"></div>
     </section>
 
-    <!-- Plantillas -->
-    <section id="tab-templates" class="tab-panel">
-      <div class="template-form">
-        <input type="hidden" id="template-form-id" />
-        <label>Nombre
-          <input type="text" id="template-form-name" placeholder="ej: Anuncio de producto" />
-        </label>
-        <label>Texto de la plantilla (usa {variable} para placeholders)
-          <textarea id="template-form-text" rows="3" placeholder="Lanzamos {producto}! Disponible desde {fecha}."></textarea>
-        </label>
-        <div class="actions">
-          <button id="template-save-btn">Guardar plantilla</button>
-          <button id="template-cancel-edit-btn" hidden>Cancelar edicion</button>
-        </div>
-      </div>
-      <div id="templates-list" class="list"></div>
-    </section>
   </main>
 
   <footer class="app-version">

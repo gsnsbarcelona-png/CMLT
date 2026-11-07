@@ -234,7 +234,6 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
-.template-form { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 20px; }
 
 .image-picker { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
 .image-suggestions, .image-branding { display: flex; flex-wrap: wrap; gap: 6px; }

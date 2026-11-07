@@ -12,7 +12,6 @@ from app.routers.generate import (
     league_comparison,
     results,
     stats,
-    template,
     top_ranking,
 )
 
@@ -24,4 +23,3 @@ router.include_router(duel.router)
 router.include_router(anniversary.router)
 router.include_router(league_comparison.router)
 router.include_router(top_ranking.router)
-router.include_router(template.router)

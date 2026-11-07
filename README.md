@@ -1,6 +1,6 @@
 # Tweet Automation
 
-Aplicación web local para generar tweets a partir de datos reales de la LES/LEC (o por plantilla, o manualmente), revisarlos, copiarlos y opcionalmente publicarlos en X (Twitter) con un click.
+Aplicación web local para generar tweets a partir de datos reales de la LES/LEC (o manualmente), revisarlos, copiarlos y opcionalmente publicarlos en X (Twitter) con un click.
 
 En Compose hay nueve modos visibles por defecto — **Calendario**, **Dia de partido** (pack en un clic: calendario + H2H de cada partido de hoy), **Resultados** (marcadores de la ultima jornada), **Stats**, **H2H Hoy**, **Duelo 1v1**, **Top/Ranking**, **Efeméride** y **Cruce LEC** — más **Plantilla** y **Manual** disponibles en el código pero ocultos del selector (reactivarlos es agregar su `<label>` en `static/index.html`). Los modos de datos reales arman el texto con frases fijas a partir de los datos reales; la app no usa IA. Las preguntas de cierre tienen varias redacciones alternativas (`app/services/phrasing.py`) y se evita repetir las usadas hace poco, asi regenerar da un texto distinto.
 
@@ -138,9 +138,9 @@ Con `APP_PASSWORD` vacía (el valor por defecto) no se pide login, y la app func
 app/
   main.py, config.py, db.py, models.py, auth.py (login opcional)
   data/         # les_anniversaries.json, les_lec_players.json (bases curadas)
-  routers/      # tweets, templates, images (subida de imagenes)
+  routers/      # tweets, images (subida de imagenes)
                 # generate/ (paquete, un sub-router por dominio: calendar, stats, duel,
-                #            anniversary, league_comparison, top_ranking, template)
+                #            anniversary, league_comparison, top_ranking, results)
   services/     # x_service, char_count,
                 # lolesports_service (Calendario), golgg_service (Stats/H2H/Cruce LEC),
                 # history_service (Efemeride), crossover_service (Cruce LEC: jugadores),

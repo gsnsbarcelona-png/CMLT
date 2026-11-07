@@ -14,7 +14,7 @@ from app.auth import auth_middleware
 from app.auth import router as auth_router
 from app.config import settings
 from app.db import engine, init_db
-from app.routers import backup, generate, images, templates, tweets
+from app.routers import backup, generate, images, tweets
 from app.routers.images import IMAGES_DIR
 from app.version import router as version_router
 
@@ -74,7 +74,6 @@ app.include_router(auth_router)
 app.include_router(version_router)
 app.include_router(tweets.router)
 app.include_router(generate.router)
-app.include_router(templates.router)
 app.include_router(images.router)
 app.include_router(backup.router)
 
