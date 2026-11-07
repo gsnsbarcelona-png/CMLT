@@ -59,8 +59,17 @@ def test_compute_duel_candidates_matches_common_roles():
     assert candidates[0].kind == "individual_duel"
     assert candidates[0].subject == "Escik vs Fulano"
     assert candidates[0].title == "DUELO DE MID"
-    assert "9.4" in candidates[0].fact_sentence
-    assert "4.0" in candidates[0].fact_sentence
+    assert candidates[0].hook == "MID: Escik (9.4 de KDA) vs Fulano (4): Escik le saca 5.4 a Fulano"
+    assert "partidos" in candidates[0].fact_sentence
+
+
+def test_duel_hook_tie_and_second_player_ahead():
+    roster_a = [RosterPlayer(name="A", role="top")]
+    roster_b = [RosterPlayer(name="B", role="top")]
+    tie = compute_duel_candidates(roster_a, roster_b, [_player_stat("A", kda=3.0), _player_stat("B", kda=3.0)])
+    assert tie[0].hook.endswith("igualados") and "saca" not in tie[0].hook
+    behind = compute_duel_candidates(roster_a, roster_b, [_player_stat("A", kda=2.0), _player_stat("B", kda=3.5)])
+    assert behind[0].hook.endswith("B le saca 1.5 a A")
 
 
 def test_compute_duel_candidates_skips_role_without_stats_on_one_side():

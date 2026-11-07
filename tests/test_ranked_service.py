@@ -274,9 +274,15 @@ def test_compute_player_vs_player_candidate_identifies_higher():
 
     assert candidate.kind == "player_rank_vs_player"
     assert candidate.subject == "Escik vs Andariel"
-    assert "Escik" in candidate.fact_sentence
-    assert "Andariel" in candidate.fact_sentence
-    assert "va arriba Escik" in candidate.fact_sentence
+    assert candidate.hook == "Escik (Challenger, 2698 LP) vs Andariel (Grandmaster, 900 LP) en SoloQ"
+    assert "Va arriba Escik" in candidate.fact_sentence
+
+
+def test_player_vs_player_same_tier_gives_lp_gap_and_tie():
+    gap = compute_player_vs_player_candidate(_rank("A", "Diamond 2", 80), _rank("B", "Diamond 2", 30))
+    assert gap.fact_sentence == "Va arriba A, por 50 LP."
+    tie = compute_player_vs_player_candidate(_rank("A", "Gold 1", 30), _rank("B", "Gold 1", 30))
+    assert "igualados" in tie.fact_sentence and "por" not in tie.fact_sentence
 
 
 def test_compute_team_vs_team_candidate_picks_best_of_each_side():
@@ -287,9 +293,9 @@ def test_compute_team_vs_team_candidate_picks_best_of_each_side():
 
     assert candidate.kind == "team_rank_vs_team"
     assert candidate.subject == "UCAM Esports vs Barca eSports"
-    assert "Escik" in candidate.fact_sentence
-    assert "Kozi" not in candidate.fact_sentence
-    assert "Andariel" in candidate.fact_sentence
+    assert "Escik" in candidate.hook and "Andariel" in candidate.hook
+    assert "Kozi" not in candidate.hook + candidate.fact_sentence
+    assert "UCAM Esports" in candidate.hook and "2698 LP" in candidate.hook
 
 
 def test_compute_team_vs_team_candidate_grand_master_beats_low_lp_master():

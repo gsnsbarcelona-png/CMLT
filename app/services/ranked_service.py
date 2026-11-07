@@ -310,20 +310,37 @@ def compute_rank_candidates(ranks: list[PlayerRank]) -> list[StatCandidate]:
     return candidates
 
 
+def _rank_key(rank: PlayerRank) -> tuple[tuple[int, int], int]:
+    return (_tier_rank(rank.tier), rank.lp)
+
+
+def _rank_gap_sentence(rank_a: PlayerRank, rank_b: PlayerRank) -> str:
+    """Quien va arriba y por cuanto. Solo hay diferencia numerica real (LP)
+    si ambos estan en el mismo tier+division; si no, se dice quien va por
+    delante sin inventar una cifra."""
+    key_a, key_b = _rank_key(rank_a), _rank_key(rank_b)
+    if key_a == key_b:
+        return "Están igualados en SoloQ."
+    higher, lower = (rank_a, rank_b) if key_a > key_b else (rank_b, rank_a)
+    if _tier_rank(higher.tier) == _tier_rank(lower.tier):
+        gap = higher.lp - lower.lp
+        return f"Va arriba {higher.player}, por {gap} LP."
+    return f"Va arriba {higher.player}: {higher.tier} contra {lower.tier}."
+
+
 def compute_player_vs_player_candidate(rank_a: PlayerRank, rank_b: PlayerRank) -> StatCandidate:
     """Compara el elo actual de dos jugadores puntuales, uno contra el otro."""
-    higher = rank_a if (_tier_rank(rank_a.tier), rank_a.lp) >= (_tier_rank(rank_b.tier), rank_b.lp) else rank_b
     return StatCandidate(
         kind="player_rank_vs_player",
         subject=f"{rank_a.player} vs {rank_b.player}",
-        fact_sentence=(
-            f"{rank_a.player} está en {rank_a.tier} ({rank_a.lp} LP) en SoloQ, "
-            f"{rank_b.player} está en {rank_b.tier} ({rank_b.lp} LP). "
-            f"Ahora mismo va arriba {higher.player}."
-        ),
+        fact_sentence=_rank_gap_sentence(rank_a, rank_b),
         emoji="⚔️",
         title="DUELO DE ELO",
         question="¿A cuál te gustaría tener en tu equipo?",
+        hook=(
+            f"{rank_a.player} ({rank_a.tier}, {rank_a.lp} LP) vs "
+            f"{rank_b.player} ({rank_b.tier}, {rank_b.lp} LP) en SoloQ"
+        ),
     )
 
 
@@ -344,11 +361,12 @@ def compute_team_vs_team_candidate(
     return StatCandidate(
         kind="team_rank_vs_team",
         subject=f"{team_a} vs {team_b}",
-        fact_sentence=(
-            f"El mejor elo de {team_a} es {best_a.player} ({best_a.tier}, {best_a.lp} LP); "
-            f"el de {team_b} es {best_b.player} ({best_b.tier}, {best_b.lp} LP)."
-        ),
+        fact_sentence=_rank_gap_sentence(best_a, best_b),
         emoji="🛡️",
         title="MEJOR ELO DE CADA PLANTILLA",
         question="¿A cuál prefieres tener en tu equipo?",
+        hook=(
+            f"Mejor elo de {team_a}: {best_a.player} ({best_a.tier}, {best_a.lp} LP). "
+            f"De {team_b}: {best_b.player} ({best_b.tier}, {best_b.lp} LP)"
+        ),
     )

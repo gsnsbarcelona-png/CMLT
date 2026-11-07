@@ -42,6 +42,24 @@ def _pick_starter(
     return max(candidates, key=lambda pair: pair[1].games)
 
 
+def _fmt(value: float) -> str:
+    return f"{round(value, 2):g}"
+
+
+def _duel_hook(role_label: str, name_a: str, stat_a: PlayerStat, name_b: str, stat_b: PlayerStat) -> str:
+    """Los dos KDA y quien lleva ventaja por cuanto (solo cifras reales)."""
+    head = f"{role_label}: {name_a} ({_fmt(stat_a.kda)} de KDA) vs {name_b} ({_fmt(stat_b.kda)})"
+    diff = round(stat_a.kda - stat_b.kda, 2)
+    if diff == 0:
+        return f"{head}, igualados"
+    leader, trailer = (name_a, name_b) if diff > 0 else (name_b, name_a)
+    return f"{head}: {leader} le saca {_fmt(abs(diff))} a {trailer}"
+
+
+def _duel_fact(name_a: str, stat_a: PlayerStat, name_b: str, stat_b: PlayerStat) -> str:
+    return f"{name_a} suma {stat_a.games} partidos esta temporada; {name_b}, {stat_b.games}."
+
+
 def compute_duel_candidates(
     roster_a: list[RosterPlayer], roster_b: list[RosterPlayer], player_stats: list[PlayerStat]
 ) -> list[StatCandidate]:
@@ -67,13 +85,11 @@ def compute_duel_candidates(
             StatCandidate(
                 kind="individual_duel",
                 subject=f"{player_a.name} vs {player_b.name}",
-                fact_sentence=(
-                    f"{player_a.name} cierra el split con {stat_a.kda} de KDA ({stat_a.games} partidos); "
-                    f"{player_b.name} tiene {stat_b.kda} de KDA ({stat_b.games} partidos)."
-                ),
+                fact_sentence=_duel_fact(player_a.name, stat_a, player_b.name, stat_b),
                 emoji="🔥",
                 title=f"DUELO DE {role_label}",
                 question="¿Quién se lleva ese carril?",
+                hook=_duel_hook(role_label, player_a.name, stat_a, player_b.name, stat_b),
             )
         )
     return candidates
