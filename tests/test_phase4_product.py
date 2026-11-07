@@ -1,6 +1,5 @@
 from datetime import datetime, timezone
 
-import pytest
 
 from app.services import lolesports_service, phrasing
 from app.services.golgg_service import StatCandidate, format_stat_tweet_plain

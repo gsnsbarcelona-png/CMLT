@@ -1,5 +1,5 @@
 from app.services.crossover_service import CrossoverDataError
-from app.services.golgg_service import GolGGError, PlayerStat, StatFocusNotFoundError, TeamStat
+from app.services.golgg_service import GolGGError, PlayerStat, TeamStat
 
 
 def _les_team():

@@ -49,7 +49,7 @@ def _disable_golgg_autodiscover(monkeypatch):
 def _clear_golgg_cache():
     """La cache de gol.gg es un dict a nivel de modulo -- sin esto, tests
     distintos que mockean la misma URL con HTML distinto se pisarian entre si."""
-    from app.services.golgg import client, config
+    from app.services.golgg import client
 
     client._http_cache.clear()
     yield

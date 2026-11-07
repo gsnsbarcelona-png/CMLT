@@ -1,5 +1,5 @@
 import httpx
-from app.services.golgg_service import GolGGError, PlayerStat, StatFocusNotFoundError, TeamStat
+from app.services.golgg_service import GolGGError, PlayerStat, TeamStat
 from app.services.lolesports_service import TeamRosterNotFoundError
 from app.services.ranked_service import PlayerRank, RankedError
 
