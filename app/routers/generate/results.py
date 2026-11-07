@@ -61,18 +61,14 @@ def generate_results(payload: ResultsGenerateRequest) -> ResultsGenerateResult:
         ],
     }
     closing = closing_tags(leagues)
-    full = f"{format_results_tweet(results, leagues)}
-
-{closing}"
+    full = f"{format_results_tweet(results, leagues)}\n\n{closing}"
     if char_count.count_chars(full) <= char_count.TWEET_CHAR_LIMIT:
         return ResultsGenerateResult(**_result(full).model_dump(exclude={"card"}), card=card)
 
     # No caben todos los partidos: el contenido se recorta con "...y X partidos
     # mas" (cabe en 280, con el cierre) y `thread` trae todos, uno a uno.
     budget = char_count.TWEET_CHAR_LIMIT - len(closing) - 2
-    trimmed = f"{format_results_tweet(results, leagues, max_chars=budget)}
-
-{closing}"
+    trimmed = f"{format_results_tweet(results, leagues, max_chars=budget)}\n\n{closing}"
     return ResultsGenerateResult(
         **_result(trimmed).model_dump(exclude={"card"}),
         card=card,
