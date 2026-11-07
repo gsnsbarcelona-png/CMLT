@@ -122,12 +122,15 @@ def format_anniversary_plain(anniversary: Anniversary, is_exact: bool, today: da
         today = date.today()
     years_ago = today.year - anniversary.year
 
+    # Gancho: el hecho y los años transcurridos en la primera linea.
     if is_exact:
-        header = f"🗓️ UN DÍA COMO HOY, hace {_years(years_ago)} ({anniversary.year})"
+        when = f"hace {_years(years_ago)}, un día como hoy" if years_ago > 0 else "un día como hoy"
+        header = f"🗓️ {when[0].upper()}{when[1:]} ({anniversary.year}): {anniversary.headline}"
     else:
+        ago = f", hace {_years(years_ago)}" if years_ago > 0 else ""
         header = (
-            f"🗓️ No es de hoy exacto -- lo más cercano: {anniversary.day:02d}/{anniversary.month:02d}/"
-            f"{anniversary.year} (hace {_years(years_ago)})"
+            f"🗓️ Lo más cercano a hoy ({anniversary.day:02d}/{anniversary.month:02d}/"
+            f"{anniversary.year}{ago}): {anniversary.headline}"
         )
     question = vary_question("¿Lo viviste en directo?") + " 👀"
 
@@ -139,14 +142,14 @@ def format_anniversary_plain(anniversary: Anniversary, is_exact: bool, today: da
     # del limite, sea cual sea el largo del dato cargado.
     reserved = (
         char_count.count_chars(header)
-        + 2  # saltos de línea: encabezado->cuerpo y cuerpo->pregunta
+        + 2  # saltos de línea: gancho->cuerpo y cuerpo->pregunta
         + char_count.count_chars(question)
         + 2  # "\n\n" antes del cierre que agrega el router
         + char_count.count_chars(closing_tags())
     )
     budget = char_count.TWEET_CHAR_LIMIT - reserved
 
-    body = f"{anniversary.headline} ({anniversary.era_name}). {anniversary.detail}"
+    body = f"{anniversary.era_name}. {anniversary.detail}"
     if anniversary.today_connection:
         with_connection = f"{body}\n{anniversary.today_connection}"
         if char_count.count_chars(with_connection) <= budget:

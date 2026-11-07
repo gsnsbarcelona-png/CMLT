@@ -134,7 +134,10 @@ def test_anniversary_uses_singular_year():
         month=11, day=27, year=2025, headline="Titular", era_name="Era", detail="Detalle", today_connection=None, teams=[], source="test"
     )
     today = date(2026, 11, 27)
-    assert "hace 1 año " in format_anniversary_plain(a, True, today) + " "
+    assert format_anniversary_plain(a, True, today).splitlines()[0].startswith("🗓️ Hace 1 año, un día como hoy")
+    assert "hace 1 año" in format_anniversary_plain(a, False, today)
+    assert "hace 0" not in format_anniversary_plain(a, True, date(2025, 11, 27))
+    assert format_anniversary_plain(a, True, date(2025, 11, 27)).startswith("🗓️ Un día como hoy (2025)")
     assert "hace 1 años" not in format_anniversary_plain(a, False, today)
     assert "hace 1 años" not in format_anniversary_quick_fact_plain(a, False, today)
-    assert "hace 3 años" in format_anniversary_plain(a, True, date(2028, 11, 27))
+    assert "Hace 3 años" in format_anniversary_plain(a, True, date(2028, 11, 27))

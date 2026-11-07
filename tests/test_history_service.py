@@ -112,16 +112,15 @@ def _anniversary(**overrides):
 
 def test_format_anniversary_plain_exact():
     text = format_anniversary_plain(_anniversary(), is_exact=True, today=date(2026, 8, 12))
-    assert "UN DÍA COMO HOY, hace 5 años (2021)" in text
-    assert "Hecho A (Superliga). Detalle A" in text
+    assert text.splitlines()[0] == "🗓️ Hace 5 años, un día como hoy (2021): Hecho A"
+    assert "Superliga. Detalle A" in text
     assert "Sigue activo." in text
     assert "¿Lo viviste en directo? 👀" in text
 
 
 def test_format_anniversary_plain_not_exact_says_so():
     text = format_anniversary_plain(_anniversary(), is_exact=False, today=date(2026, 8, 20))
-    assert "No es de hoy exacto" in text
-    assert "12/08/2021" in text
+    assert text.splitlines()[0] == "🗓️ Lo más cercano a hoy (12/08/2021, hace 5 años): Hecho A"
 
 
 def test_format_anniversary_plain_never_exceeds_char_limit_with_long_detail():
