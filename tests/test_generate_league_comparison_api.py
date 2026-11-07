@@ -4,11 +4,17 @@ from app.services.golgg_service import GolGGError, PlayerStat, StatFocusNotFound
 
 
 def _les_team():
-    return TeamStat(name="UCAM Esports", games=15, win_rate=86.7, kda=2.13, gpm=2157, fb_pct=66.7, towers_killed=8.9)
+    return TeamStat(
+        name="UCAM Esports", games=15, win_rate=86.7, kda=2.13, gpm=2157, fb_pct=66.7, towers_killed=8.9,
+        dragons_per_game=2.5, avg_game_duration_seconds=1750,
+    )
 
 
 def _lec_team():
-    return TeamStat(name="Fnatic", games=20, win_rate=50.0, kda=1.5, gpm=2100, fb_pct=55.0, towers_killed=8.0)
+    return TeamStat(
+        name="Fnatic", games=20, win_rate=50.0, kda=1.5, gpm=2100, fb_pct=55.0, towers_killed=8.0,
+        dragons_per_game=2.2, avg_game_duration_seconds=1800,
+    )
 
 
 def _les_player():
@@ -20,15 +26,15 @@ def _lec_player():
 
 
 def _mock_fetches(mocker):
-    mocker.patch("app.routers.generate.fetch_team_stats", side_effect=[[_les_team()], [_lec_team()]])
-    mocker.patch("app.routers.generate.fetch_player_stats", side_effect=[[_les_player()], [_lec_player()]])
+    mocker.patch("app.routers.generate.league_comparison.fetch_team_stats", side_effect=[[_les_team()], [_lec_team()]])
+    mocker.patch("app.routers.generate.league_comparison.fetch_player_stats", side_effect=[[_les_player()], [_lec_player()]])
 
 
 def test_league_comparison_default_style_is_plain_and_does_not_save_drafts(client, mocker):
     # La comparativa LES-LEC ya no auto-guarda -- el usuario elige que tono
     # guardar con el boton "Guardar" de su tarjeta (POST /api/tweets).
     _mock_fetches(mocker)
-    ai_mock = mocker.patch("app.routers.generate.generate_league_comparison_variant")
+    ai_mock = mocker.patch("app.routers.generate.league_comparison.generate_league_comparison_variant")
 
     res = client.post("/api/generate/league-comparison", json={})
 
@@ -48,7 +54,7 @@ def test_league_comparison_default_style_is_plain_and_does_not_save_drafts(clien
 def test_league_comparison_ai_style_returns_two_variants(client, mocker):
     _mock_fetches(mocker)
     ai_mock = mocker.patch(
-        "app.routers.generate.generate_league_comparison_variant",
+        "app.routers.generate.league_comparison.generate_league_comparison_variant",
         side_effect=["Dato sorprendente!", "Pregunta a debate!"],
     )
 
@@ -64,7 +70,7 @@ def test_league_comparison_ai_style_returns_two_variants(client, mocker):
 def test_league_comparison_partial_ai_failure_still_returns_the_other(client, mocker):
     _mock_fetches(mocker)
     mocker.patch(
-        "app.routers.generate.generate_league_comparison_variant",
+        "app.routers.generate.league_comparison.generate_league_comparison_variant",
         side_effect=[AIGenerationError("Falta configurar ANTHROPIC_API_KEY"), "Pregunta a debate!"],
     )
 
@@ -94,6 +100,22 @@ def test_league_comparison_focus_with_match(client, mocker):
     assert "UCAM Esports" in res.json()[0]["content"]
 
 
+def test_league_comparison_suggests_team_for_team_candidate(client, mocker):
+    _mock_fetches(mocker)
+
+    res = client.post("/api/generate/league-comparison", json={"focus": "UCAM"})
+
+    assert res.json()[0]["suggested_teams"] == ["UCAM Esports"]
+
+
+def test_league_comparison_no_suggestion_for_player_candidate(client, mocker):
+    mocker.patch("app.routers.generate.league_comparison.fetch_team_stats", side_effect=GolGGError("no se pudo obtener"))
+
+    res = client.post("/api/generate/league-comparison", json={"focus": "Flakked"})
+
+    assert res.json()[0]["suggested_teams"] == []
+
+
 def test_league_comparison_focus_not_found_returns_400(client, mocker):
     _mock_fetches(mocker)
 
@@ -105,7 +127,7 @@ def test_league_comparison_focus_not_found_returns_400(client, mocker):
 def test_league_comparison_golgg_failure_falls_back_to_crossover_candidates(client, mocker):
     # gol.gg caido no tumba el endpoint entero -- la base de cruces de
     # jugadores (dato curado, no depende de gol.gg) sigue disponible.
-    mocker.patch("app.routers.generate.fetch_team_stats", side_effect=GolGGError("no se pudo obtener"))
+    mocker.patch("app.routers.generate.league_comparison.fetch_team_stats", side_effect=GolGGError("no se pudo obtener"))
 
     res = client.post("/api/generate/league-comparison", json={"focus": "Flakked"})
 
@@ -114,9 +136,9 @@ def test_league_comparison_golgg_failure_falls_back_to_crossover_candidates(clie
 
 
 def test_league_comparison_both_sources_failing_returns_502(client, mocker):
-    mocker.patch("app.routers.generate.fetch_team_stats", side_effect=GolGGError("no se pudo obtener"))
+    mocker.patch("app.routers.generate.league_comparison.fetch_team_stats", side_effect=GolGGError("no se pudo obtener"))
     mocker.patch(
-        "app.routers.generate.compute_player_crossover_candidates",
+        "app.routers.generate.league_comparison.compute_player_crossover_candidates",
         side_effect=CrossoverDataError("no se pudo leer la base de cruces"),
     )
 

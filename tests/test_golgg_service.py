@@ -2,6 +2,8 @@ import httpx
 import pytest
 
 from app.services.golgg_service import (
+    TOP_RANKING_CATEGORIES,
+    TOP_RANKING_CATEGORY_LABELS,
     GolGGError,
     MatchResult,
     PlayerStat,
@@ -13,6 +15,7 @@ from app.services.golgg_service import (
     build_head_to_head_preview,
     compute_candidates,
     compute_head_to_head_candidates,
+    compute_top_ranking_candidate,
     fetch_all_match_results,
     fetch_match_results,
     fetch_player_stats,
@@ -21,10 +24,13 @@ from app.services.golgg_service import (
     format_h2h_context,
     format_h2h_variant_plain,
     format_stat_tweet_plain,
+    format_top_ranking_context,
+    format_top_ranking_plain,
     compute_league_comparison_candidates,
     discover_tournaments,
     format_league_comparison_context,
     format_league_comparison_plain,
+    get_emea_masters_tournaments,
     get_lec_tournament,
     get_team_handles,
     get_year_tournaments,
@@ -36,7 +42,7 @@ from app.services.golgg_service import _recent_form
 
 TEAM_HEADERS = [
     "Name", "Season", "Region", "Games", "Win rate", "K:D", "GPM", "GDM", "Game duration",
-    "FP%", "Blue%", "Kills / game", "Deaths / game", "Towers killed", "Towers lost", "FB%",
+    "FP%", "Blue%", "Kills / game", "Deaths / game", "Towers killed", "Towers lost", "FB%", "DRAPG",
 ]
 PLAYER_HEADERS = [
     "Player", "Country", "Games", "Win rate", "KDA", "Avg kills", "Avg deaths", "Avg assists",
@@ -89,9 +95,9 @@ def _matchlist_html(matches, winner_in_position_3: bool = False) -> str:
 
 
 TEAM_ROWS = [
-    ["UCAM Esports", "S16", "ES", "15", "86.7%", "2.13", "2157", "361", "29:10", "20%", "50%", "23.3", "10.9", "8.9", "5.0", "66.7"],
-    ["Barca eSports", "S16", "ES", "16", "56.3%", "1.22", "2012", "78", "32:37", "25%", "50%", "20.5", "16.8", "7.5", "5.4", "62.5"],
-    ["UB Alma Mater", "S16", "ES", "16", "18.8%", "0.60", "1850", "-200", "33:00", "10%", "40%", "12.0", "20.0", "4.0", "8.0", "37.5"],
+    ["UCAM Esports", "S16", "ES", "15", "86.7%", "2.13", "2157", "361", "29:10", "20%", "50%", "23.3", "10.9", "8.9", "5.0", "66.7", "2.50"],
+    ["Barca eSports", "S16", "ES", "16", "56.3%", "1.22", "2012", "78", "32:37", "25%", "50%", "20.5", "16.8", "7.5", "5.4", "62.5", "2.63"],
+    ["UB Alma Mater", "S16", "ES", "16", "18.8%", "0.60", "1850", "-200", "33:00", "10%", "40%", "12.0", "20.0", "4.0", "8.0", "37.5", "1.40"],
 ]
 
 PLAYER_ROWS = [
@@ -117,6 +123,8 @@ def test_fetch_team_stats_parses_by_header_name(mocker):
     assert ucam.kda == 2.13
     assert ucam.fb_pct == 66.7
     assert ucam.towers_killed == 8.9
+    assert ucam.dragons_per_game == 2.50
+    assert ucam.avg_game_duration_seconds == 29 * 60 + 10
 
 
 def test_fetch_player_stats_parses_by_header_name(mocker):
@@ -243,9 +251,18 @@ def test_missing_table_raises(mocker):
 
 def _teams():
     return [
-        TeamStat(name="UCAM Esports", games=15, win_rate=86.7, kda=2.13, gpm=2157, fb_pct=66.7, towers_killed=8.9),
-        TeamStat(name="Barca eSports", games=16, win_rate=56.3, kda=1.22, gpm=2012, fb_pct=62.5, towers_killed=7.5),
-        TeamStat(name="UB Alma Mater", games=16, win_rate=18.8, kda=0.60, gpm=1850, fb_pct=37.5, towers_killed=4.0),
+        TeamStat(
+            name="UCAM Esports", games=15, win_rate=86.7, kda=2.13, gpm=2157, fb_pct=66.7, towers_killed=8.9,
+            dragons_per_game=2.5, avg_game_duration_seconds=1750,
+        ),
+        TeamStat(
+            name="Barca eSports", games=16, win_rate=56.3, kda=1.22, gpm=2012, fb_pct=62.5, towers_killed=7.5,
+            dragons_per_game=2.63, avg_game_duration_seconds=1957,
+        ),
+        TeamStat(
+            name="UB Alma Mater", games=16, win_rate=18.8, kda=0.60, gpm=1850, fb_pct=37.5, towers_killed=4.0,
+            dragons_per_game=1.4, avg_game_duration_seconds=1980,
+        ),
     ]
 
 
@@ -439,9 +456,9 @@ def test_aggregate_team_stats_weighted_average(mocker):
     # Mismo equipo, 10 partidos al 100% en un torneo y 10 partidos al 0% en otro -> 50%.
     def fake_get(url, headers, timeout):
         if "Spring" in url:
-            rows = [["UCAM Esports", "S16", "ES", "10", "100%", "2.0", "2000", "0", "30:00", "20%", "50%", "20", "10", "8", "5", "70"]]
+            rows = [["UCAM Esports", "S16", "ES", "10", "100%", "2.0", "2000", "0", "30:00", "20%", "50%", "20", "10", "8", "5", "70", "2.0"]]
         else:
-            rows = [["UCAM Esports", "S16", "ES", "10", "0%", "1.0", "1800", "0", "30:00", "20%", "50%", "10", "20", "4", "8", "40"]]
+            rows = [["UCAM Esports", "S16", "ES", "10", "0%", "1.0", "1800", "0", "30:00", "20%", "50%", "10", "20", "4", "8", "40", "1.0"]]
         return _fake_response(_teams_html(rows))
 
     mocker.patch("app.services.golgg_service.httpx.get", side_effect=fake_get)
@@ -791,17 +808,38 @@ def test_get_lec_tournament_reads_setting(monkeypatch):
     assert get_lec_tournament() == "LEC 2026 Summer Season"
 
 
+def test_get_emea_masters_tournaments_parses_comma_separated(monkeypatch):
+    import app.services.golgg_service as golgg_service
+
+    monkeypatch.setattr(
+        golgg_service.settings, "emea_masters_tournaments", "EMEA Masters 2026 Winter, EMEA Masters 2026 Spring"
+    )
+    assert get_emea_masters_tournaments() == ["EMEA Masters 2026 Winter", "EMEA Masters 2026 Spring"]
+
+
 def _les_teams():
     return [
-        TeamStat(name="UCAM Esports", games=15, win_rate=86.7, kda=2.13, gpm=2157, fb_pct=66.7, towers_killed=8.9),
-        TeamStat(name="Barca eSports", games=16, win_rate=56.3, kda=1.22, gpm=2012, fb_pct=62.5, towers_killed=7.5),
+        TeamStat(
+            name="UCAM Esports", games=15, win_rate=86.7, kda=2.13, gpm=2157, fb_pct=66.7, towers_killed=8.9,
+            dragons_per_game=2.5, avg_game_duration_seconds=1750,
+        ),
+        TeamStat(
+            name="Barca eSports", games=16, win_rate=56.3, kda=1.22, gpm=2012, fb_pct=62.5, towers_killed=7.5,
+            dragons_per_game=2.63, avg_game_duration_seconds=1957,
+        ),
     ]
 
 
 def _lec_teams():
     return [
-        TeamStat(name="Fnatic", games=20, win_rate=50.0, kda=1.5, gpm=2100, fb_pct=55.0, towers_killed=8.0),
-        TeamStat(name="G2 Esports", games=20, win_rate=60.0, kda=1.7, gpm=2200, fb_pct=60.0, towers_killed=8.5),
+        TeamStat(
+            name="Fnatic", games=20, win_rate=50.0, kda=1.5, gpm=2100, fb_pct=55.0, towers_killed=8.0,
+            dragons_per_game=2.2, avg_game_duration_seconds=1800,
+        ),
+        TeamStat(
+            name="G2 Esports", games=20, win_rate=60.0, kda=1.7, gpm=2200, fb_pct=60.0, towers_killed=8.5,
+            dragons_per_game=2.4, avg_game_duration_seconds=1820,
+        ),
     ]
 
 
@@ -888,3 +926,123 @@ def test_format_league_comparison_context_includes_tone_and_nuance():
     assert "Tono pedido: debate" in context
     assert candidate.fact_sentence in context
     assert candidate.nuance in context
+
+
+def _top_ranking_teams():
+    return [
+        TeamStat(
+            name="UCAM Esports", games=15, win_rate=86.7, kda=2.13, gpm=2157, fb_pct=66.7, towers_killed=8.9,
+            dragons_per_game=2.5, avg_game_duration_seconds=29 * 60 + 10,
+        ),
+        TeamStat(
+            name="Barca eSports", games=16, win_rate=56.3, kda=1.22, gpm=2012, fb_pct=62.5, towers_killed=7.5,
+            dragons_per_game=2.63, avg_game_duration_seconds=32 * 60 + 37,
+        ),
+        TeamStat(
+            name="UB Alma Mater", games=16, win_rate=18.8, kda=0.60, gpm=1850, fb_pct=37.5, towers_killed=4.0,
+            dragons_per_game=1.4, avg_game_duration_seconds=33 * 60,
+        ),
+        TeamStat(
+            name="Falke Esports", games=15, win_rate=6.7, kda=0.55, gpm=1772, fb_pct=46.7, towers_killed=2.9,
+            dragons_per_game=1.53, avg_game_duration_seconds=31 * 60 + 6,
+        ),
+    ]
+
+
+def _top_ranking_players():
+    return [
+        PlayerStat(name="Escik", games=15, win_rate=86.7, kda=9.4, csm=9.2, avg_kills=6.7, penta_kills=0, solo_kills=8),
+        PlayerStat(name="Andariel", games=15, win_rate=86.7, kda=7.7, csm=9.3, avg_kills=6.1, penta_kills=0, solo_kills=8),
+        PlayerStat(name="Hydra", games=16, win_rate=31.3, kda=2.5, csm=8.6, avg_kills=3.0, penta_kills=0, solo_kills=0),
+    ]
+
+
+def test_compute_top_ranking_candidate_player_kda_sorted_descending():
+    candidate = compute_top_ranking_candidate("player_kda", [], _top_ranking_players())
+
+    assert candidate.kind == "top_player_kda"
+    assert candidate.level == "player"
+    assert [e.name for e in candidate.entries] == ["Escik", "Andariel", "Hydra"]
+    assert candidate.entries[0].value_display == "9.4"
+    assert all(e.team is None for e in candidate.entries)  # gol.gg no da equipo por jugador -- nunca se inventa
+    assert candidate.total_pool_size == 3
+    assert candidate.league_average_display is not None
+
+
+def test_compute_top_ranking_candidate_team_fastest_sorted_ascending():
+    # "menos es mejor" -- UCAM (29:10) tiene que quedar primero, UB Alma Mater (33:00) ultimo.
+    candidate = compute_top_ranking_candidate("team_fastest", _top_ranking_teams(), [])
+
+    assert [e.name for e in candidate.entries] == ["UCAM Esports", "Falke Esports", "Barca eSports"]
+    assert candidate.entries[0].value_display == "29:10"
+
+
+def test_compute_top_ranking_candidate_limits_to_top_n():
+    candidate = compute_top_ranking_candidate("team_towers", _top_ranking_teams(), [])
+
+    assert len(candidate.entries) == 3
+    assert candidate.total_pool_size == 4  # el pool tenia 4, pero el top se corta en 3
+    assert candidate.entries[0].name == "UCAM Esports"  # 8.9 torres/partida, el maximo
+
+
+def test_compute_top_ranking_candidate_less_than_three_marks_pool_size():
+    only_two = _top_ranking_teams()[:2]
+    candidate = compute_top_ranking_candidate("team_dragons", only_two, [])
+
+    assert len(candidate.entries) == 2
+    assert candidate.total_pool_size == 2
+
+
+def test_compute_top_ranking_candidate_empty_pool_raises():
+    with pytest.raises(GolGGError):
+        compute_top_ranking_candidate("player_csm", [], [])
+
+
+def test_compute_top_ranking_candidate_unknown_category_raises():
+    with pytest.raises(GolGGError):
+        compute_top_ranking_candidate("no_existe", _top_ranking_teams(), _top_ranking_players())
+
+
+def test_top_ranking_category_labels_match_categories():
+    assert set(TOP_RANKING_CATEGORY_LABELS.keys()) == set(TOP_RANKING_CATEGORIES.keys())
+    assert TOP_RANKING_CATEGORY_LABELS["player_kda"] == "KDA"
+
+
+def test_format_top_ranking_context_warns_when_incomplete():
+    candidate = compute_top_ranking_candidate("team_fb", _top_ranking_teams()[:2], [])
+
+    context = format_top_ranking_context(candidate)
+
+    assert "Aviso: solo hay 2" in context
+    assert "1. UCAM Esports" in context
+    assert "Dato de contraste" in context
+
+
+def test_format_top_ranking_context_no_warning_with_full_top():
+    candidate = compute_top_ranking_candidate("team_fb", _top_ranking_teams(), [])
+
+    context = format_top_ranking_context(candidate)
+
+    assert "Aviso" not in context
+    assert "1. UCAM Esports" in context
+    assert "2. Falke Esports" in context or "2. Barca eSports" in context
+
+
+def test_format_top_ranking_plain_top1_focuses_on_leader():
+    candidate = compute_top_ranking_candidate("player_kda", [], _top_ranking_players())
+
+    content = format_top_ranking_plain(candidate, "top1")
+
+    assert "Escik" in content
+    assert "Andariel" not in content
+    assert "9.4" in content
+
+
+def test_format_top_ranking_plain_top3_lists_all_entries():
+    candidate = compute_top_ranking_candidate("player_kda", [], _top_ranking_players())
+
+    content = format_top_ranking_plain(candidate, "top3")
+
+    assert "1. Escik" in content
+    assert "2. Andariel" in content
+    assert "3. Hydra" in content

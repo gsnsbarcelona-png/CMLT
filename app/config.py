@@ -33,10 +33,20 @@ class Settings(BaseSettings):
     # Para comparativas LES-LEC (Stats -> "Cruce LEC"). Ojo: en gol.gg el
     # nombre completo de la LEC lleva "Season" al final, a diferencia de LES.
     lec_tournament: str = "LEC 2026 Summer Season"
+    # Torneos de EMEA Masters en gol.gg (separados por coma) -- un equipo de
+    # LES que juega ahi se cruza con rivales que nunca jugaron en LES, asi
+    # que H2H necesita esta lista aparte para tener forma reciente/historial
+    # de esos cruces. Igual que GOLGG_YEAR_TOURNAMENTS, hay que actualizarla
+    # a mano en cada split nuevo de EMEA Masters (buscar el nombre exacto con
+    # GET /api/generate/stats/available-tournaments?region=WR).
+    emea_masters_tournaments: str = (
+        "EMEA Masters 2026 Winter,EMEA Masters 2026 Spring Play-In,EMEA Masters 2026 Spring Main Event"
+    )
 
     # Arrobas/hashtags que se agregan al final de los tweets generados.
     league_handle_les: str = "@LESESPORTS"
     league_handle_lec: str = "@LEC"
+    league_handle_emea_masters: str = "@EMEAmasters"
     custom_hashtags: str = "#LT"
     # "Nombre de equipo:@handle" separados por coma -- solo se usan en Stats
     # (en Calendario arrobar a todos los equipos de todos los partidos saturaria
@@ -53,6 +63,10 @@ class Settings(BaseSettings):
         "Team Heretics Academy:@HereticsLES,"
         "UCAM Esports:@UCAM_esports"
     )
+
+    # Si se define, toda la app (menos /api/health) pide HTTP Basic auth con
+    # esta contrasena (usuario: cualquiera). Obligatorio al exponerla en internet.
+    app_password: str = ""
 
     app_host: str = "127.0.0.1"
     app_port: int = 8000

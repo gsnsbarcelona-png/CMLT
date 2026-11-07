@@ -8,7 +8,7 @@ def test_batch_generates_without_saving_drafts(client, mocker):
     def fake_generate(topic, tone=None, instructions=None):
         return f"Tweet sobre {topic}"
 
-    mocker.patch("app.routers.generate.generate_tweet", side_effect=fake_generate)
+    mocker.patch("app.routers.generate.ai.generate_tweet", side_effect=fake_generate)
 
     res = client.post("/api/generate/ai/batch", json={"topics": ["gatos", "perros"]})
     assert res.status_code == 200
@@ -28,7 +28,7 @@ def test_batch_continues_after_one_failure(client, mocker):
             raise AIGenerationError("fallo la generacion")
         return f"Tweet sobre {topic}"
 
-    mocker.patch("app.routers.generate.generate_tweet", side_effect=fake_generate)
+    mocker.patch("app.routers.generate.ai.generate_tweet", side_effect=fake_generate)
 
     res = client.post("/api/generate/ai/batch", json={"topics": ["bueno", "malo", "otro bueno"]})
     assert res.status_code == 200
@@ -41,7 +41,7 @@ def test_batch_continues_after_one_failure(client, mocker):
 
 
 def test_batch_ignores_blank_lines(client, mocker):
-    mocker.patch("app.routers.generate.generate_tweet", return_value="contenido")
+    mocker.patch("app.routers.generate.ai.generate_tweet", return_value="contenido")
 
     res = client.post("/api/generate/ai/batch", json={"topics": ["tema uno", "  ", "", "tema dos"]})
     assert res.status_code == 200

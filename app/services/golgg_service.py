@@ -1,6 +1,7 @@
 import random
 import time
 from dataclasses import dataclass
+from typing import Callable
 
 import httpx
 from bs4 import BeautifulSoup
@@ -83,6 +84,8 @@ class TeamStat:
     gpm: float
     fb_pct: float
     towers_killed: float
+    dragons_per_game: float
+    avg_game_duration_seconds: float
 
 
 @dataclass
@@ -113,6 +116,10 @@ def get_year_tournaments() -> list[str]:
 
 def get_lec_tournament() -> str:
     return settings.lec_tournament
+
+
+def get_emea_masters_tournaments() -> list[str]:
+    return [t.strip() for t in settings.emea_masters_tournaments.split(",") if t.strip()]
 
 
 def _tournament_path(prefix: str, tournament: str | None = None) -> str:
@@ -161,6 +168,19 @@ def _to_int(text: str) -> int:
     return int(float(text.replace("%", "").strip()))
 
 
+def _duration_to_seconds(text: str) -> float:
+    """gol.gg da la duracion de partida como 'MM:SS' (ej. '32:37'). Se
+    convierte a segundos totales para poder ordenar/promediar numericamente."""
+    minutes, seconds = text.strip().split(":")
+    return int(minutes) * 60 + int(seconds)
+
+
+def _seconds_to_duration(total_seconds: float) -> str:
+    total = round(total_seconds)
+    minutes, seconds = divmod(total, 60)
+    return f"{minutes}:{seconds:02d}"
+
+
 def fetch_team_stats(tournament: str | None = None) -> list[TeamStat]:
     table = _fetch_table(_tournament_path("teams", tournament), "playerslist")
     index_map, rows = _header_index(table)
@@ -180,6 +200,8 @@ def fetch_team_stats(tournament: str | None = None) -> list[TeamStat]:
                     gpm=_to_float(_cell(cells, index_map, "GPM")),
                     fb_pct=_to_float(_cell(cells, index_map, "FB%")),
                     towers_killed=_to_float(_cell(cells, index_map, "Towers killed")),
+                    dragons_per_game=_to_float(_cell(cells, index_map, "DRAPG")),
+                    avg_game_duration_seconds=_duration_to_seconds(_cell(cells, index_map, "Game duration")),
                 )
             )
         except (KeyError, ValueError):
@@ -246,6 +268,8 @@ def aggregate_team_stats(tournaments: list[str]) -> list[TeamStat]:
                 gpm=_weighted_avg(entries, "gpm"),
                 fb_pct=_weighted_avg(entries, "fb_pct"),
                 towers_killed=_weighted_avg(entries, "towers_killed"),
+                dragons_per_game=_weighted_avg(entries, "dragons_per_game"),
+                avg_game_duration_seconds=_weighted_avg(entries, "avg_game_duration_seconds"),
             )
         )
     return merged
@@ -692,6 +716,13 @@ TEAM_LEVEL_KINDS = {
     "individual_duel",  # el candidato real tiene subject "JugadorA vs JugadorB";
     # las arrobas de equipo salen de un StatCandidate sintetico con subject
     # "EquipoA vs EquipoB" armado aparte solo para el cierre (igual que H2H).
+    "top_team_towers",
+    "top_team_dragons",
+    "top_team_fb",
+    "top_team_fastest",
+    # top_player_kda y top_player_csm NO estan aca a proposito: son
+    # categorias de jugador, no arroban equipo (gol.gg no expone el equipo
+    # de cada jugador en la tabla de stats, no se inventa).
 }
 
 
@@ -849,3 +880,165 @@ def format_league_comparison_plain(candidate: LeagueComparisonCandidate, tone: s
 
 def format_league_comparison_context(candidate: LeagueComparisonCandidate, tone: str) -> str:
     return f"Tono pedido: {tone}\nProtagonista: {candidate.subject}\nDato real: {candidate.fact_sentence}\nMatiz obligatorio: {candidate.nuance}"
+
+
+# ---------------------------------------------------------------------------
+# Top / ranking (top N de una categoria, no solo el lider)
+# ---------------------------------------------------------------------------
+
+
+def _fmt_ratio(value: float) -> str:
+    return f"{round(value, 2):g}"
+
+
+def _fmt_pct(value: float) -> str:
+    return f"{round(value, 1):g}%"
+
+
+@dataclass
+class TopRankingCategorySpec:
+    label: str
+    level: str  # "player" | "team"
+    attr: str  # atributo de PlayerStat/TeamStat a ordenar
+    ascending: bool  # True = menor valor es mejor (solo la de duracion)
+    unit_label: str  # texto que acompaña la cifra en el tweet
+    plano_emoji: str
+    value_formatter: Callable[[float], str]
+
+
+TOP_RANKING_CATEGORIES: dict[str, TopRankingCategorySpec] = {
+    "player_kda": TopRankingCategorySpec(
+        label="KDA", level="player", attr="kda", ascending=False,
+        unit_label="de KDA", plano_emoji="🔥", value_formatter=_fmt_ratio,
+    ),
+    "player_csm": TopRankingCategorySpec(
+        label="Farmeo (CS por minuto)", level="player", attr="csm", ascending=False,
+        unit_label="de CSM", plano_emoji="🌾", value_formatter=_fmt_ratio,
+    ),
+    "team_dragons": TopRankingCategorySpec(
+        label="Dragones por partida", level="team", attr="dragons_per_game", ascending=False,
+        unit_label="dragones/partida", plano_emoji="🐉", value_formatter=_fmt_ratio,
+    ),
+    "team_towers": TopRankingCategorySpec(
+        label="Torres por partida", level="team", attr="towers_killed", ascending=False,
+        unit_label="torres/partida", plano_emoji="🏰", value_formatter=_fmt_ratio,
+    ),
+    "team_fb": TopRankingCategorySpec(
+        label="Primeras sangres (%)", level="team", attr="fb_pct", ascending=False,
+        unit_label="de primera sangre", plano_emoji="🩸", value_formatter=_fmt_pct,
+    ),
+    "team_fastest": TopRankingCategorySpec(
+        label="Equipos que mas rapido cierran sus partidas", level="team",
+        attr="avg_game_duration_seconds", ascending=True,
+        unit_label="de duracion media", plano_emoji="⏱️", value_formatter=_seconds_to_duration,
+    ),
+}
+
+TOP_RANKING_CATEGORY_LABELS: dict[str, str] = {key: spec.label for key, spec in TOP_RANKING_CATEGORIES.items()}
+
+TOP_RANKING_TOP_N = 3
+
+
+@dataclass
+class TopRankingEntry:
+    name: str
+    team: str | None  # gol.gg no da el equipo de cada jugador -- siempre None en categorias de jugador, nunca inventado
+    value: float  # crudo, para ordenar/testear
+    value_display: str  # ya formateado segun la categoria (ej. "9.4", "62.5%", "29:10")
+    games: int
+
+
+@dataclass
+class TopRankingCandidate:
+    kind: str  # "top_player_kda", "top_team_towers", ...
+    category_label: str
+    level: str  # "player" | "team"
+    entries: list[TopRankingEntry]  # 1 a TOP_RANKING_TOP_N, ya ordenadas (mejor primero)
+    total_pool_size: int  # cuantos jugadores/equipos tenian datos en total esta consulta
+    unit_label: str
+    league_average_display: str | None
+    plano_emoji: str
+
+
+def compute_top_ranking_candidate(
+    category: str, team_stats: list[TeamStat], player_stats: list[PlayerStat], top_n: int = TOP_RANKING_TOP_N
+) -> TopRankingCandidate:
+    spec = TOP_RANKING_CATEGORIES.get(category)
+    if spec is None:
+        raise GolGGError(f"Categoria de top no reconocida: {category}.")
+
+    pool = player_stats if spec.level == "player" else team_stats
+    if not pool:
+        raise GolGGError(f"No hay datos de gol.gg para calcular el top de {spec.label}.")
+
+    # ascending=True (menos es mejor, solo "duracion media") -> orden normal;
+    # ascending=False (mas es mejor, el resto) -> orden invertido. Nunca se usa
+    # max()/solo-el-lider como en compute_candidates: aca siempre hace falta
+    # la lista completa ordenada para poder armar el top 3.
+    ranked = sorted(pool, key=lambda e: getattr(e, spec.attr), reverse=not spec.ascending)
+
+    entries = [
+        TopRankingEntry(
+            name=e.name,
+            team=None,
+            value=round(getattr(e, spec.attr), 2),
+            value_display=spec.value_formatter(getattr(e, spec.attr)),
+            games=e.games,
+        )
+        for e in ranked[:top_n]
+    ]
+
+    league_average_display = None
+    if pool:
+        avg = sum(getattr(e, spec.attr) for e in pool) / len(pool)
+        league_average_display = spec.value_formatter(avg)
+
+    return TopRankingCandidate(
+        kind=f"top_{category}",
+        category_label=spec.label,
+        level=spec.level,
+        entries=entries,
+        total_pool_size=len(pool),
+        unit_label=spec.unit_label,
+        league_average_display=league_average_display,
+        plano_emoji=spec.plano_emoji,
+    )
+
+
+def format_top_ranking_context(candidate: TopRankingCandidate) -> str:
+    """Bloque de hechos en texto plano para pasarle a la IA -- misma logica que
+    el resto de la app: si algo no esta disponible (menos de un top 3 completo,
+    sin dato de contraste) lo dice explicitamente, nunca lo omite en silencio."""
+    lines = [f"Categoria: {candidate.category_label} ({settings.golgg_tournament})."]
+    if candidate.total_pool_size < TOP_RANKING_TOP_N:
+        lines.append(
+            f"Aviso: solo hay {candidate.total_pool_size} con datos suficientes este split "
+            "(no hay un top 3 completo, no inventes posiciones que faltan)."
+        )
+    for i, entry in enumerate(candidate.entries, start=1):
+        lines.append(f"{i}. {entry.name} - {entry.value_display} {candidate.unit_label} ({entry.games} partidos).")
+    if candidate.league_average_display:
+        lines.append(f"Dato de contraste (media de la liga en esta categoria): {candidate.league_average_display} {candidate.unit_label}.")
+    else:
+        lines.append("Dato de contraste (media de la liga): no disponible.")
+    return "\n".join(lines)
+
+
+def format_top_ranking_plain(candidate: TopRankingCandidate, variant: str) -> str:
+    header = f"{candidate.plano_emoji} TOP {candidate.category_label.upper()} — {settings.golgg_tournament}"
+    lines = [header]
+
+    if variant == "top1":
+        leader = candidate.entries[0]
+        lines.append(f"{leader.name} manda con {leader.value_display} {candidate.unit_label} ({leader.games} partidos).")
+        if candidate.league_average_display:
+            lines.append(f"Media de la liga: {candidate.league_average_display} {candidate.unit_label}.")
+        lines.append(f"¿Se mantiene arriba? {candidate.plano_emoji}")
+    else:
+        if candidate.total_pool_size < TOP_RANKING_TOP_N:
+            lines.append(f"Solo hay {candidate.total_pool_size} con datos suficientes este split:")
+        for i, entry in enumerate(candidate.entries, start=1):
+            lines.append(f"{i}. {entry.name} — {entry.value_display} {candidate.unit_label}")
+        lines.append(f"¿Se mantiene el top 1? {candidate.plano_emoji}")
+
+    return "\n".join(lines)

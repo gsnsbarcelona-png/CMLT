@@ -77,15 +77,186 @@ function bindCopyButton(button, getText) {
 // Lote): ninguno de esos modos auto-guarda -- el usuario elige que
 // variante(s) quedan como borrador, con el mismo endpoint que usa el
 // "Guardar borrador" del compose compartido.
-function bindSaveButton(button, getText, source) {
+function bindSaveButton(button, getText, source, getImageUrl) {
   button.addEventListener("click", async () => {
     try {
-      await api("/api/tweets", { method: "POST", body: JSON.stringify({ content: getText(), source }) });
+      const payload = { content: getText(), source, image_url: getImageUrl ? getImageUrl() || null : null };
+      await api("/api/tweets", { method: "POST", body: JSON.stringify(payload) });
       flashButtonLabel(button, "Guardado!");
     } catch (e) {
       alert(e.message);
     }
   });
+}
+
+// Imagen opcional adjunta a un tweet: mismo bloque HTML e igual logica de
+// binding en el editor compartido de Compose, en cada tarjeta de resultado
+// (H2H, Duelo, Top/Ranking, Efemeride, Cruce LEC, Lote) y en cada borrador de
+// la pestana Borradores. El estado (image_url actual, o "" si no hay) vive en
+// `root.dataset.imageUrl` -- quien maneje Guardar/Publicar para ese `root` lo
+// lee de ahi en el momento de guardar, no hace falta pasarlo por argumentos.
+function imagePickerHtml() {
+  return `
+    <div class="image-picker">
+      <div class="image-suggestions"></div>
+      <div class="image-branding"><button type="button" class="use-branded-bg-btn">🎨 Fondo del programa</button></div>
+      <label class="image-upload-label">🖼️ Imagen<input type="file" accept="image/*" class="image-upload-input" /></label>
+      <img class="image-preview" hidden />
+      <button type="button" class="remove-image-btn" hidden>Quitar imagen</button>
+    </div>
+  `;
+}
+
+function bindImagePicker(root, { suggestedTeams = [], initialUrl = null } = {}) {
+  const suggestionsEl = root.querySelector(".image-suggestions");
+  const fileInput = root.querySelector(".image-upload-input");
+  const preview = root.querySelector(".image-preview");
+  const removeBtn = root.querySelector(".remove-image-btn");
+  if (!fileInput) return; // este root no tiene selector de imagen (ej. tarjeta de error)
+
+  function setImage(url) {
+    root.dataset.imageUrl = url || "";
+    preview.src = url || "";
+    preview.hidden = !url;
+    removeBtn.hidden = !url;
+  }
+
+  if (suggestedTeams.length) {
+    const vsButton =
+      suggestedTeams.length === 2 ? `<button type="button" class="use-vs-logo-btn">⚔️ Fusionar escudos</button>` : "";
+    suggestionsEl.innerHTML =
+      suggestedTeams.map((t) => `<button type="button" class="use-logo-btn">🛡️ ${escapeHtml(t)}</button>`).join("") +
+      vsButton;
+    suggestionsEl.querySelectorAll(".use-logo-btn").forEach((btn, idx) => {
+      const team = suggestedTeams[idx];
+      btn.addEventListener("click", async () => {
+        btn.disabled = true;
+        try {
+          const res = await api(`/api/generate/team-logo?team=${encodeURIComponent(team)}`);
+          if (res.image_url) {
+            setImage(res.image_url);
+          } else {
+            alert(`No encontramos el escudo de ${team}.`);
+          }
+        } catch (e) {
+          alert(e.message);
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    });
+    const vsBtn = suggestionsEl.querySelector(".use-vs-logo-btn");
+    if (vsBtn) {
+      vsBtn.addEventListener("click", async () => {
+        vsBtn.disabled = true;
+        try {
+          const params = new URLSearchParams({ team_a: suggestedTeams[0], team_b: suggestedTeams[1] });
+          const res = await api(`/api/generate/team-vs-logo?${params}`);
+          setImage(res.image_url);
+        } catch (e) {
+          alert(e.message);
+        } finally {
+          vsBtn.disabled = false;
+        }
+      });
+    }
+  }
+
+  const brandedBtn = root.querySelector(".use-branded-bg-btn");
+  brandedBtn.addEventListener("click", async () => {
+    brandedBtn.disabled = true;
+    try {
+      const params = new URLSearchParams();
+      if (suggestedTeams[0]) params.set("team_a", suggestedTeams[0]);
+      if (suggestedTeams[1]) params.set("team_b", suggestedTeams[1]);
+      const query = params.toString();
+      const res = await api(`/api/generate/branded-image${query ? `?${query}` : ""}`);
+      setImage(res.image_url);
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      brandedBtn.disabled = false;
+    }
+  });
+
+  fileInput.addEventListener("change", async () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      const res = await fetch("/api/images", { method: "POST", body: formData });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body?.detail || `Error ${res.status}`);
+      setImage(body.image_url);
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      fileInput.value = "";
+    }
+  });
+
+  removeBtn.addEventListener("click", () => setImage(null));
+
+  setImage(initialUrl);
+}
+
+// Patron compartido por los modos de Compose que generan varias tarjetas de
+// resultado a partir de UN pedido (H2H, Duelo 1v1, Top/Ranking, Efemeride,
+// Cruce LEC, Lote): mismo esqueleto de tarjeta (meta + contenido + Guardar/
+// Copiar), mismo manejo de boton/carga/error -- solo cambian el endpoint, el
+// payload, el texto de "meta" de cada tarjeta (distinto dato por modo: angulo,
+// rol, variante, tono, tema...) y el `source` usado para Guardar (que tambien
+// nombra las clases CSS `save-${source}-btn`/`copy-${source}-btn` de cada
+// modo, ya consistentes en el HTML). metaFn(result) da ese texto de meta.
+function variantResultCardHtml(result, source, metaFn) {
+  const meta = metaFn(result);
+  if (result.error) {
+    return `
+      <div class="card">
+        <div class="card-meta">${escapeHtml(meta)}</div>
+        <div class="card-error">${escapeHtml(result.error)}</div>
+      </div>
+    `;
+  }
+  return `
+    <div class="card">
+      <div class="card-meta">${escapeHtml(meta)} · ${result.char_count} / ${TWEET_CHAR_LIMIT}</div>
+      <div class="card-content">${escapeHtml(result.content)}</div>
+      ${imagePickerHtml()}
+      <div class="card-actions">
+        <button class="save-${source}-btn">Guardar</button>
+        <button class="copy-${source}-btn">Copiar</button>
+      </div>
+    </div>
+  `;
+}
+
+async function generateResultCards({ endpoint, payload, resultsElId, btnId, source, metaFn, loadingText, emptyMessage }) {
+  const resultsEl = document.getElementById(resultsElId);
+  const btn = document.getElementById(btnId);
+  btn.disabled = true;
+  resultsEl.innerHTML = loadingText;
+  try {
+    const results = await api(endpoint, { method: "POST", body: JSON.stringify(payload) });
+    if (!results.length && emptyMessage) {
+      resultsEl.innerHTML = `<div class="empty-state">${emptyMessage}</div>`;
+      return;
+    }
+    resultsEl.innerHTML = results.map((r) => variantResultCardHtml(r, source, metaFn)).join("");
+    results.forEach((r, idx) => {
+      if (r.content) {
+        const card = resultsEl.children[idx];
+        bindImagePicker(card, { suggestedTeams: r.suggested_teams || [] });
+        bindCopyButton(card.querySelector(`.copy-${source}-btn`), () => r.content);
+        bindSaveButton(card.querySelector(`.save-${source}-btn`), () => r.content, source, () => card.dataset.imageUrl);
+      }
+    });
+  } catch (e) {
+    resultsEl.innerHTML = `<div class="empty-state">Error: ${escapeHtml(e.message)}</div>`;
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 // ---------- Tabs ----------
@@ -132,6 +303,9 @@ function initCompose() {
   contentEl.addEventListener("input", updateCharCounter);
   updateCharCounter();
 
+  document.getElementById("image-picker").innerHTML = imagePickerHtml();
+  bindImagePicker(document.getElementById("image-picker"));
+
   document.getElementById("ai-generate-btn").addEventListener("click", handleAiGenerate);
   document.getElementById("template-render-btn").addEventListener("click", handleTemplateRender);
   document.getElementById("save-draft-btn").addEventListener("click", () => handleSave(false));
@@ -143,31 +317,58 @@ function initCompose() {
   document.getElementById("h2h-generate-btn").addEventListener("click", handleH2hGenerate);
   document.getElementById("duel-autofill-btn").addEventListener("click", handleDuelAutofill);
   document.getElementById("duel-generate-btn").addEventListener("click", handleDuelGenerate);
+  document.getElementById("top-ranking-generate-btn").addEventListener("click", handleTopRankingGenerate);
   document.getElementById("anniversary-generate-btn").addEventListener("click", handleAnniversaryGenerate);
   document.getElementById("lec-compare-generate-btn").addEventListener("click", handleLecCompareGenerate);
   bindCopyButton(document.getElementById("copy-content-btn"), () => document.getElementById("compose-content").value);
 
   loadTemplateSelect();
-  loadTeamOptions([
-    "rivalry-team-a",
-    "rivalry-team-b",
-    "h2h-team-a",
-    "h2h-team-b",
-    "ranked-team-a",
-    "ranked-team-b",
-    "duel-team-a",
-    "duel-team-b",
-  ]);
+  loadTopRankingCategories();
+  loadTeamOptions(["rivalry-team-a", "rivalry-team-b", "ranked-team-a", "ranked-team-b", "duel-team-a", "duel-team-b"]);
+  // H2H usa una lista mas amplia que el resto de los modos: ademas de LES,
+  // incluye los rivales de EMEA Masters (para poder armar H2H cuando un
+  // equipo de LES juega ahi contra alguien que nunca jugo en LES).
+  loadTeamOptions(["h2h-team-a", "h2h-team-b"], "/api/generate/stats/h2h-teams");
 }
 
-async function loadTeamOptions(selectIds) {
+async function loadTeamOptions(selectIds, endpoint = "/api/generate/stats/teams") {
   try {
-    const teams = await api("/api/generate/stats/teams");
+    const teams = await api(endpoint);
     const options = teams.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join("");
     selectIds.forEach((id) => document.getElementById(id).insertAdjacentHTML("beforeend", options));
   } catch (e) {
     // silencioso: si gol.gg no responde, el usuario todavia puede usar el resto de la app
   }
+}
+
+// lolesports.com y gol.gg no siempre usan el mismo nombre de equipo (ej.
+// "UCAM Esports Club" vs "UCAM Esports", "Barça Esports" vs "Barca eSports"
+// con tilde) -- mismo criterio que ya usa el backend (normalize_team_name):
+// sacar acentos, pasar a minuscula, y matchear por substring en vez de
+// igualdad exacta.
+// Rango Unicode de marcas diacriticas combinantes (U+0300-U+036F) construido
+// por codigo (String.fromCharCode) en vez de caracteres literales en el
+// fuente -- evita cualquier ambiguedad de codificacion/visualizacion del
+// archivo con caracteres combinantes sueltos (que no tienen una letra base
+// antes en la clase de regex, se renderizan raro en editores/terminales).
+const COMBINING_DIACRITICS_PATTERN = new RegExp(
+  "[" + String.fromCharCode(0x300) + "-" + String.fromCharCode(0x36f) + "]",
+  "g"
+);
+
+function normalizeTeamName(name) {
+  return name.normalize("NFKD").replace(COMBINING_DIACRITICS_PATTERN, "").toLowerCase();
+}
+
+function selectTeamOption(selectEl, rawName) {
+  const wanted = normalizeTeamName(rawName);
+  const match = Array.from(selectEl.options).find((o) => {
+    if (!o.value) return false;
+    const norm = normalizeTeamName(o.value);
+    return norm === wanted || norm.includes(wanted) || wanted.includes(norm);
+  });
+  if (match) selectEl.value = match.value;
+  return !!match;
 }
 
 function updateComposeMode() {
@@ -176,6 +377,7 @@ function updateComposeMode() {
   document.getElementById("mode-stats").hidden = mode !== "stats";
   document.getElementById("mode-h2h").hidden = mode !== "h2h";
   document.getElementById("mode-duel").hidden = mode !== "duel";
+  document.getElementById("mode-top-ranking").hidden = mode !== "top-ranking";
   document.getElementById("mode-anniversary").hidden = mode !== "anniversary";
   document.getElementById("mode-lec-compare").hidden = mode !== "lec-compare";
   document.getElementById("mode-ai").hidden = mode !== "ai";
@@ -183,264 +385,173 @@ function updateComposeMode() {
   document.getElementById("mode-template").hidden = mode !== "template";
   document.getElementById("mode-manual").hidden = mode !== "manual";
   document.getElementById("single-compose-area").hidden =
-    mode === "batch" || mode === "h2h" || mode === "duel" || mode === "anniversary" || mode === "lec-compare";
+    mode === "batch" ||
+    mode === "h2h" ||
+    mode === "duel" ||
+    mode === "top-ranking" ||
+    mode === "anniversary" ||
+    mode === "lec-compare";
+}
+
+async function loadTopRankingCategories() {
+  const select = document.getElementById("top-ranking-category");
+  try {
+    const categories = await api("/api/generate/top-ranking/categories");
+    select.innerHTML = Object.entries(categories)
+      .map(([key, label]) => `<option value="${escapeHtml(key)}">${escapeHtml(label)}</option>`)
+      .join("");
+  } catch (e) {
+    // silencioso: si falla, el select queda vacio pero el resto de la app sigue andando
+  }
 }
 
 async function handleLecCompareGenerate() {
   const style = document.querySelector('input[name="lec-compare-style"]:checked').value;
   const focus = document.getElementById("lec-compare-focus").value.trim();
-  const resultsEl = document.getElementById("lec-compare-results");
 
-  const btn = document.getElementById("lec-compare-generate-btn");
-  btn.disabled = true;
-  resultsEl.innerHTML = "Consultando gol.gg (LES y LEC)...";
-  try {
-    const results = await api("/api/generate/league-comparison", {
-      method: "POST",
-      body: JSON.stringify({ style, focus: focus || null }),
-    });
-    resultsEl.innerHTML = results.map(lecCompareResultCardHtml).join("");
-    results.forEach((r, idx) => {
-      if (r.content) {
-        const card = resultsEl.children[idx];
-        bindCopyButton(card.querySelector(".copy-lec-compare-btn"), () => r.content);
-        bindSaveButton(card.querySelector(".save-lec-compare-btn"), () => r.content, "lec-compare");
-      }
-    });
-  } catch (e) {
-    resultsEl.innerHTML = `<div class="empty-state">Error: ${escapeHtml(e.message)}</div>`;
-  } finally {
-    btn.disabled = false;
-  }
-}
-
-function lecCompareResultCardHtml(result) {
-  const toneLabel = result.tone === "debate" ? "Tono: pregunta a debate" : "Tono: dato sorprendente";
-  if (result.error) {
-    return `
-      <div class="card">
-        <div class="card-meta">${toneLabel}</div>
-        <div class="card-error">${escapeHtml(result.error)}</div>
-      </div>
-    `;
-  }
-  return `
-    <div class="card">
-      <div class="card-meta">${toneLabel} · ${result.char_count} / ${TWEET_CHAR_LIMIT}</div>
-      <div class="card-content">${escapeHtml(result.content)}</div>
-      <div class="card-actions">
-        <button class="save-lec-compare-btn">Guardar</button>
-        <button class="copy-lec-compare-btn">Copiar</button>
-      </div>
-    </div>
-  `;
+  await generateResultCards({
+    endpoint: "/api/generate/league-comparison",
+    payload: { style, focus: focus || null },
+    resultsElId: "lec-compare-results",
+    btnId: "lec-compare-generate-btn",
+    source: "lec-compare",
+    metaFn: (r) => (r.tone === "debate" ? "Tono: pregunta a debate" : "Tono: dato sorprendente"),
+    loadingText: "Consultando gol.gg (LES y LEC)...",
+  });
 }
 
 async function handleAnniversaryGenerate() {
   const style = document.querySelector('input[name="anniversary-style"]:checked').value;
-  const resultsEl = document.getElementById("anniversary-results");
 
-  const btn = document.getElementById("anniversary-generate-btn");
-  btn.disabled = true;
-  resultsEl.innerHTML = "Buscando efemeride...";
-  try {
-    const results = await api("/api/generate/anniversary", {
-      method: "POST",
-      body: JSON.stringify({ style }),
-    });
-    resultsEl.innerHTML = results.map(anniversaryResultCardHtml).join("");
-    results.forEach((r, idx) => {
-      if (r.content) {
-        const card = resultsEl.children[idx];
-        bindCopyButton(card.querySelector(".copy-anniversary-btn"), () => r.content);
-        bindSaveButton(card.querySelector(".save-anniversary-btn"), () => r.content, "anniversary");
-      }
-    });
-  } catch (e) {
-    resultsEl.innerHTML = `<div class="empty-state">Error: ${escapeHtml(e.message)}</div>`;
-  } finally {
-    btn.disabled = false;
-  }
+  await generateResultCards({
+    endpoint: "/api/generate/anniversary",
+    payload: { style },
+    resultsElId: "anniversary-results",
+    btnId: "anniversary-generate-btn",
+    source: "anniversary",
+    metaFn: (r) => {
+      const formatLabel = r.format === "completo" ? "Version completa" : "Dato rapido";
+      const exactNote = r.is_exact ? "" : " (no es de hoy exacto, ver texto)";
+      return `${formatLabel}${exactNote}`;
+    },
+    loadingText: "Buscando efemeride...",
+  });
 }
 
-function anniversaryResultCardHtml(result) {
-  const formatLabel = result.format === "completo" ? "Version completa" : "Dato rapido";
-  const exactNote = result.is_exact ? "" : " (no es de hoy exacto, ver texto)";
-  if (result.error) {
-    return `
-      <div class="card">
-        <div class="card-meta">${formatLabel}${exactNote}</div>
-        <div class="card-error">${escapeHtml(result.error)}</div>
-      </div>
-    `;
-  }
-  return `
-    <div class="card">
-      <div class="card-meta">${formatLabel}${exactNote} · ${result.char_count} / ${TWEET_CHAR_LIMIT}</div>
-      <div class="card-content">${escapeHtml(result.content)}</div>
-      <div class="card-actions">
-        <button class="save-anniversary-btn">Guardar</button>
-        <button class="copy-anniversary-btn">Copiar</button>
-      </div>
-    </div>
-  `;
-}
-
-async function handleH2hAutofill() {
-  const feedback = document.getElementById("h2h-autofill-feedback");
-  feedback.textContent = "Consultando calendario de hoy...";
+// Patron compartido por los botones "Autocompletar" de H2H y Duelo: pedir
+// el partido de hoy/manana al endpoint indicado, completar los dos <select>
+// de equipos (via selectTeamOption, porque lolesports.com y gol.gg no
+// siempre usan el mismo nombre) y mostrar feedback de que paso. Solo cambian
+// los IDs de los elementos, el endpoint y los mensajes cuando no hay partido
+// o hay varios.
+async function runTeamAutofill({ feedbackId, teamAId, teamBId, endpoint, loadingMessage, noMatchMessage, multiMessagePrefix }) {
+  const feedback = document.getElementById(feedbackId);
+  feedback.textContent = loadingMessage;
   try {
-    const matches = await api("/api/generate/stats/today-match");
+    const matches = await api(endpoint);
     if (matches.length === 0) {
-      feedback.textContent = "No hay partido de LES programado para hoy.";
+      feedback.textContent = noMatchMessage;
     } else if (matches.length === 1) {
-      document.getElementById("h2h-team-a").value = matches[0].team_a;
-      document.getElementById("h2h-team-b").value = matches[0].team_b;
-      feedback.textContent = `Completado: ${matches[0].team_a} vs ${matches[0].team_b} (${matches[0].block_name}).`;
+      const okA = selectTeamOption(document.getElementById(teamAId), matches[0].team_a);
+      const okB = selectTeamOption(document.getElementById(teamBId), matches[0].team_b);
+      feedback.textContent =
+        okA && okB
+          ? `Completado: ${matches[0].team_a} vs ${matches[0].team_b} (${matches[0].block_name}).`
+          : `No encontramos "${matches[0].team_a} vs ${matches[0].team_b}" en la lista de gol.gg -- elegi los equipos a mano.`;
     } else {
       const list = matches.map((m) => `${m.team_a} vs ${m.team_b}`).join(", ");
-      feedback.textContent = `Hay varios partidos hoy, elegi los equipos a mano: ${list}.`;
+      feedback.textContent = `${multiMessagePrefix}, elegi los equipos a mano: ${list}.`;
     }
   } catch (e) {
     feedback.textContent = e.message;
   }
+}
+
+async function handleH2hAutofill() {
+  await runTeamAutofill({
+    feedbackId: "h2h-autofill-feedback",
+    teamAId: "h2h-team-a",
+    teamBId: "h2h-team-b",
+    endpoint: "/api/generate/stats/today-match",
+    loadingMessage: "Consultando calendario de hoy...",
+    noMatchMessage: "No hay partido de LES programado para hoy.",
+    multiMessagePrefix: "Hay varios partidos hoy",
+  });
 }
 
 async function handleH2hGenerate() {
   const teamA = document.getElementById("h2h-team-a").value;
   const teamB = document.getElementById("h2h-team-b").value;
-  const resultsEl = document.getElementById("h2h-results");
   if (!teamA || !teamB) {
-    resultsEl.innerHTML = '<div class="empty-state">Elegi los dos equipos.</div>';
+    document.getElementById("h2h-results").innerHTML = '<div class="empty-state">Elegi los dos equipos.</div>';
     return;
   }
 
   const style = document.querySelector('input[name="h2h-style"]:checked').value;
 
-  const btn = document.getElementById("h2h-generate-btn");
-  btn.disabled = true;
-  resultsEl.innerHTML = "Generando...";
-  try {
-    const results = await api("/api/generate/stats/head-to-head-preview", {
-      method: "POST",
-      body: JSON.stringify({ team_a: teamA, team_b: teamB, style }),
-    });
-    resultsEl.innerHTML = results.map(h2hResultCardHtml).join("");
-    results.forEach((r, idx) => {
-      if (r.content) {
-        const card = resultsEl.children[idx];
-        bindCopyButton(card.querySelector(".copy-h2h-btn"), () => r.content);
-        bindSaveButton(card.querySelector(".save-h2h-btn"), () => r.content, "h2h");
-      }
-    });
-  } catch (e) {
-    resultsEl.innerHTML = `<div class="empty-state">Error: ${escapeHtml(e.message)}</div>`;
-  } finally {
-    btn.disabled = false;
-  }
-}
-
-function h2hResultCardHtml(result) {
-  const angleLabel = result.angle === "historial" ? "Enfoque: historial" : "Enfoque: forma reciente";
-  if (result.error) {
-    return `
-      <div class="card">
-        <div class="card-meta">${angleLabel}</div>
-        <div class="card-error">${escapeHtml(result.error)}</div>
-      </div>
-    `;
-  }
-  return `
-    <div class="card">
-      <div class="card-meta">${angleLabel} · ${result.char_count} / ${TWEET_CHAR_LIMIT}</div>
-      <div class="card-content">${escapeHtml(result.content)}</div>
-      <div class="card-actions">
-        <button class="save-h2h-btn">Guardar</button>
-        <button class="copy-h2h-btn">Copiar</button>
-      </div>
-    </div>
-  `;
+  await generateResultCards({
+    endpoint: "/api/generate/stats/head-to-head-preview",
+    payload: { team_a: teamA, team_b: teamB, style },
+    resultsElId: "h2h-results",
+    btnId: "h2h-generate-btn",
+    source: "h2h",
+    metaFn: (r) => (r.angle === "historial" ? "Enfoque: historial" : "Enfoque: forma reciente"),
+    loadingText: "Generando...",
+  });
 }
 
 async function handleDuelAutofill() {
-  const feedback = document.getElementById("duel-autofill-feedback");
-  feedback.textContent = "Consultando calendario de hoy/mañana...";
-  try {
-    const matches = await api("/api/generate/duel/today-match");
-    if (matches.length === 0) {
-      feedback.textContent = "No hay partido de LES programado para hoy ni mañana.";
-    } else if (matches.length === 1) {
-      document.getElementById("duel-team-a").value = matches[0].team_a;
-      document.getElementById("duel-team-b").value = matches[0].team_b;
-      feedback.textContent = `Completado: ${matches[0].team_a} vs ${matches[0].team_b} (${matches[0].block_name}).`;
-    } else {
-      const list = matches.map((m) => `${m.team_a} vs ${m.team_b}`).join(", ");
-      feedback.textContent = `Hay varios partidos, elegi los equipos a mano: ${list}.`;
-    }
-  } catch (e) {
-    feedback.textContent = e.message;
-  }
+  await runTeamAutofill({
+    feedbackId: "duel-autofill-feedback",
+    teamAId: "duel-team-a",
+    teamBId: "duel-team-b",
+    endpoint: "/api/generate/duel/today-match",
+    loadingMessage: "Consultando calendario de hoy/mañana...",
+    noMatchMessage: "No hay partido de LES programado para hoy ni mañana.",
+    multiMessagePrefix: "Hay varios partidos",
+  });
 }
 
 async function handleDuelGenerate() {
   const teamA = document.getElementById("duel-team-a").value;
   const teamB = document.getElementById("duel-team-b").value;
-  const resultsEl = document.getElementById("duel-results");
   if (!teamA || !teamB) {
-    resultsEl.innerHTML = '<div class="empty-state">Elegi los dos equipos.</div>';
+    document.getElementById("duel-results").innerHTML = '<div class="empty-state">Elegi los dos equipos.</div>';
     return;
   }
 
   const style = document.querySelector('input[name="duel-style"]:checked').value;
 
-  const btn = document.getElementById("duel-generate-btn");
-  btn.disabled = true;
-  resultsEl.innerHTML = "Generando...";
-  try {
-    const results = await api("/api/generate/duel", {
-      method: "POST",
-      body: JSON.stringify({ team_a: teamA, team_b: teamB, style }),
-    });
-    if (!results.length) {
-      resultsEl.innerHTML =
-        '<div class="empty-state">No hay ningun carril con datos suficientes en ambos equipos para armar un duelo.</div>';
-      return;
-    }
-    resultsEl.innerHTML = results.map(duelResultCardHtml).join("");
-    results.forEach((r, idx) => {
-      if (r.content) {
-        const card = resultsEl.children[idx];
-        bindCopyButton(card.querySelector(".copy-duel-btn"), () => r.content);
-        bindSaveButton(card.querySelector(".save-duel-btn"), () => r.content, "duel");
-      }
-    });
-  } catch (e) {
-    resultsEl.innerHTML = `<div class="empty-state">Error: ${escapeHtml(e.message)}</div>`;
-  } finally {
-    btn.disabled = false;
-  }
+  await generateResultCards({
+    endpoint: "/api/generate/duel",
+    payload: { team_a: teamA, team_b: teamB, style },
+    resultsElId: "duel-results",
+    btnId: "duel-generate-btn",
+    source: "duel",
+    metaFn: (r) => `${r.role} · ${r.subject}`,
+    loadingText: "Generando...",
+    emptyMessage: "No hay ningun carril con datos suficientes en ambos equipos para armar un duelo.",
+  });
 }
 
-function duelResultCardHtml(result) {
-  const meta = `${result.role} · ${result.subject}`;
-  if (result.error) {
-    return `
-      <div class="card">
-        <div class="card-meta">${escapeHtml(meta)}</div>
-        <div class="card-error">${escapeHtml(result.error)}</div>
-      </div>
-    `;
+async function handleTopRankingGenerate() {
+  const category = document.getElementById("top-ranking-category").value;
+  if (!category) {
+    document.getElementById("top-ranking-results").innerHTML = '<div class="empty-state">Elegi una categoria.</div>';
+    return;
   }
-  return `
-    <div class="card">
-      <div class="card-meta">${escapeHtml(meta)} · ${result.char_count} / ${TWEET_CHAR_LIMIT}</div>
-      <div class="card-content">${escapeHtml(result.content)}</div>
-      <div class="card-actions">
-        <button class="save-duel-btn">Guardar</button>
-        <button class="copy-duel-btn">Copiar</button>
-      </div>
-    </div>
-  `;
+
+  const style = document.querySelector('input[name="top-ranking-style"]:checked').value;
+
+  await generateResultCards({
+    endpoint: "/api/generate/top-ranking",
+    payload: { category, style },
+    resultsElId: "top-ranking-results",
+    btnId: "top-ranking-generate-btn",
+    source: "top-ranking",
+    metaFn: (r) => (r.variant === "top1" ? "Foco en el lider" : "Top 3 resumido"),
+    loadingText: "Consultando gol.gg...",
+  });
 }
 
 async function handleStatsGenerate() {
@@ -499,6 +610,7 @@ async function handleCalendarGenerate() {
   const leagues = [];
   if (document.getElementById("calendar-les").checked) leagues.push("les");
   if (document.getElementById("calendar-lec").checked) leagues.push("lec");
+  if (document.getElementById("calendar-emea-masters").checked) leagues.push("emea_masters");
 
   if (!leagues.length) {
     setComposeFeedback("Marca al menos una liga (LES o LEC).", true);
@@ -520,56 +632,23 @@ async function handleBatchGenerate() {
     .value.split("\n")
     .map((t) => t.trim())
     .filter(Boolean);
-  const resultsEl = document.getElementById("batch-results");
   if (!topics.length) {
-    resultsEl.innerHTML = '<div class="empty-state">Ingresa al menos un tema, uno por linea.</div>';
+    document.getElementById("batch-results").innerHTML =
+      '<div class="empty-state">Ingresa al menos un tema, uno por linea.</div>';
     return;
   }
   const tone = document.getElementById("batch-tone").value.trim();
   const instructions = document.getElementById("batch-instructions").value.trim();
 
-  const btn = document.getElementById("batch-generate-btn");
-  btn.disabled = true;
-  resultsEl.innerHTML = "Generando...";
-  try {
-    const results = await api("/api/generate/ai/batch", {
-      method: "POST",
-      body: JSON.stringify({ topics, tone: tone || null, instructions: instructions || null }),
-    });
-    resultsEl.innerHTML = results.map(batchResultCardHtml).join("");
-    results.forEach((r, idx) => {
-      if (r.content) {
-        const card = resultsEl.children[idx];
-        bindCopyButton(card.querySelector(".copy-batch-btn"), () => r.content);
-        bindSaveButton(card.querySelector(".save-batch-btn"), () => r.content, "batch");
-      }
-    });
-  } catch (e) {
-    resultsEl.innerHTML = `<div class="empty-state">Error: ${escapeHtml(e.message)}</div>`;
-  } finally {
-    btn.disabled = false;
-  }
-}
-
-function batchResultCardHtml(result) {
-  if (result.error) {
-    return `
-      <div class="card">
-        <div class="card-meta">Tema: ${escapeHtml(result.topic)}</div>
-        <div class="card-error">${escapeHtml(result.error)}</div>
-      </div>
-    `;
-  }
-  return `
-    <div class="card">
-      <div class="card-meta">Tema: ${escapeHtml(result.topic)} · ${result.char_count} / ${TWEET_CHAR_LIMIT}</div>
-      <div class="card-content">${escapeHtml(result.content)}</div>
-      <div class="card-actions">
-        <button class="save-batch-btn">Guardar</button>
-        <button class="copy-batch-btn">Copiar</button>
-      </div>
-    </div>
-  `;
+  await generateResultCards({
+    endpoint: "/api/generate/ai/batch",
+    payload: { topics, tone: tone || null, instructions: instructions || null },
+    resultsElId: "batch-results",
+    btnId: "batch-generate-btn",
+    source: "batch",
+    metaFn: (r) => `Tema: ${r.topic}`,
+    loadingText: "Generando...",
+  });
 }
 
 function updateCharCounter() {
@@ -598,6 +677,14 @@ async function fillComposeFromGenerate(endpoint, payload, successMessage) {
     const result = await api(endpoint, { method: "POST", body: JSON.stringify(payload) });
     document.getElementById("compose-content").value = result.content;
     updateCharCounter();
+    // Re-arma el selector de imagen con las sugerencias de esta generacion
+    // (ej. el escudo del equipo, si el resultado es de un equipo puntual) --
+    // no se pisa una imagen ya elegida a mano si esta generacion no sugiere nada.
+    const imagePicker = document.getElementById("image-picker");
+    if (result.suggested_teams && result.suggested_teams.length) {
+      imagePicker.innerHTML = imagePickerHtml();
+      bindImagePicker(imagePicker, { suggestedTeams: result.suggested_teams });
+    }
     setComposeFeedback(successMessage, false);
   } catch (e) {
     setComposeFeedback(e.message, true);
@@ -685,10 +772,12 @@ async function handleSave(publishNow) {
     if (!confirmed) return;
   }
 
+  const imageUrl = document.getElementById("image-picker").dataset.imageUrl || null;
+
   try {
     const tweet = await api("/api/tweets", {
       method: "POST",
-      body: JSON.stringify({ content, source: mode }),
+      body: JSON.stringify({ content, source: mode, image_url: imageUrl }),
     });
 
     if (!publishNow) {
@@ -714,6 +803,9 @@ function resetCompose() {
   document.getElementById("ai-topic").value = "";
   document.getElementById("ai-tone").value = "";
   document.getElementById("ai-instructions").value = "";
+  const imagePicker = document.getElementById("image-picker");
+  imagePicker.innerHTML = imagePickerHtml();
+  bindImagePicker(imagePicker);
   updateCharCounter();
 }
 
@@ -743,6 +835,7 @@ function draftCardHtml(tweet) {
       </div>
       <textarea class="card-edit" rows="3">${escapeHtml(tweet.content)}</textarea>
       <div class="char-counter draft-char-counter">0 / 280</div>
+      ${imagePickerHtml()}
       <div class="card-actions">
         <button class="save-edit-btn">Guardar cambios</button>
         <button class="copy-draft-btn">Copiar</button>
@@ -770,13 +863,14 @@ function bindDraftCard(tweet) {
   textarea.addEventListener("input", updateCounter);
   updateCounter();
 
+  bindImagePicker(card, { initialUrl: tweet.image_url || null });
   bindCopyButton(card.querySelector(".copy-draft-btn"), () => textarea.value);
 
   card.querySelector(".save-edit-btn").addEventListener("click", async () => {
     try {
       await api(`/api/tweets/${tweet.id}`, {
         method: "PUT",
-        body: JSON.stringify({ content: textarea.value }),
+        body: JSON.stringify({ content: textarea.value, image_url: card.dataset.imageUrl || null }),
       });
       feedback.textContent = "Guardado.";
       feedback.classList.add("success");
@@ -791,7 +885,7 @@ function bindDraftCard(tweet) {
     try {
       await api(`/api/tweets/${tweet.id}`, {
         method: "PUT",
-        body: JSON.stringify({ content: textarea.value }),
+        body: JSON.stringify({ content: textarea.value, image_url: card.dataset.imageUrl || null }),
       });
       const published = await api(`/api/tweets/${tweet.id}/publish`, { method: "POST" });
       if (published.status === "published") {
@@ -849,6 +943,7 @@ function historyCardHtml(tweet) {
       : "";
   const error = tweet.error_message ? `<div class="card-error">${escapeHtml(tweet.error_message)}</div>` : "";
   const retryBtn = tweet.status === "failed" ? `<button class="retry-btn" data-id="${tweet.id}">Reintentar</button>` : "";
+  const image = tweet.image_url ? `<img class="image-preview" src="${escapeHtml(tweet.image_url)}" />` : "";
   return `
     <div class="card" data-id="${tweet.id}">
       <div class="card-header">
@@ -856,6 +951,7 @@ function historyCardHtml(tweet) {
         <span class="card-meta">${formatDate(tweet.published_at || tweet.created_at)}</span>
       </div>
       <div class="card-content">${escapeHtml(tweet.content)}</div>
+      ${image}
       ${error}
       <div class="card-actions">${link}<button class="copy-history-btn" data-id="${tweet.id}">Copiar</button>${retryBtn}</div>
     </div>

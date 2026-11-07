@@ -64,5 +64,82 @@
     "teams": [],
     "today_connection": "Esa fecha marco el nacimiento oficial de la LES.",
     "source": "Sheep Esports, Movistar eSports (enero 2026)"
+  },
+  {
+    "month": 2,
+    "day": 15,
+    "year": 2026,
+    "headline": "Movistar KOI Fenix, primer campeon de la historia de la LES",
+    "detail": "2-0 a Barca eSports en la gran final del LES Kickoff (Alcobendas, Madrid), tras un playoff perfecto (2-0 a Heretics Academy en semis).",
+    "era_name": "LES",
+    "teams": ["Movistar KOI Fenix", "Barca eSports"],
+    "today_connection": "Ambos finalistas clasificaron directamente al EMEA Masters de invierno.",
+    "source": "Movistar eSports, Esports Insider, Sheep Esports (febrero 2026)"
+  },
+  {
+    "month": 10,
+    "day": 16,
+    "year": 2019,
+    "headline": "Elyoya asciende al primer equipo de Movistar Riders",
+    "detail": "Javier 'Elyoya' Prades subio desde la cantera de Movistar Riders al equipo principal como jungla, tras dos meses en la Academy.",
+    "era_name": "Superliga Orange",
+    "teams": ["Movistar Riders"],
+    "today_connection": "Elyoya juega hoy en el Movistar KOI de la LEC, tras pasar por MAD Lions.",
+    "source": "Vandal, Millenium, Wikipedia (octubre 2019)"
+  },
+  {
+    "month": 3,
+    "day": 31,
+    "year": 2019,
+    "headline": "Splyce Vipers gano su primer titulo",
+    "detail": "3-2 a Origen BCN en la final de primavera (Cartuja Center, Sevilla), decidida en el quinto mapa. MVP: Freeze.",
+    "era_name": "Superliga Orange",
+    "teams": ["Splyce Vipers", "Origen BCN"],
+    "today_connection": "Fue la final mas vista de la Superliga hasta entonces (+210.000 espectadores).",
+    "source": "LVP oficial, Cuatro.com, Vandal, Esports Bureau (marzo/abril 2019)"
+  },
+  {
+    "month": 4,
+    "day": 2,
+    "year": 2020,
+    "headline": "Vodafone Giants se corono hexacampeon",
+    "detail": "3-2 a Movistar Riders en la final de primavera, jugada en remoto por la pandemia. Sexto titulo, el mas laureado de la Superliga Orange en ese momento. MVP: Attila.",
+    "era_name": "Superliga Orange",
+    "teams": ["Vodafone Giants", "Movistar Riders"],
+    "today_connection": "GiantX (heredero de Vodafone Giants) sigue compitiendo hoy via GiantX Pride en la LES.",
+    "source": "LVP oficial, esportbase.valenciaplaza.com, Vandal, Gameit (abril 2020)"
+  },
+  {
+    "month": 9,
+    "day": 30,
+    "year": 2018,
+    "headline": "MAD Lions gano el European Masters",
+    "detail": "3-0 a Ninjas in Pyjamas en la gran final de la edicion de verano 2018, cerrando un año en el que tambien ganaron la Superliga.",
+    "era_name": "European Masters (equipo de la Superliga)",
+    "teams": ["MAD Lions"],
+    "today_connection": null,
+    "source": "GosuGamers, gol.gg, LVP (video oficial) (septiembre 2018)"
+  },
+  {
+    "month": 12,
+    "day": 15,
+    "year": 2021,
+    "headline": "Se presento oficialmente KOI",
+    "detail": "Ibai Llanos y Gerard Pique presentaron el equipo en el Palau Sant Jordi (Barcelona) ante mas de 15.000 personas, con pico de +400.000 espectadores en Twitch.",
+    "era_name": "Superliga",
+    "teams": ["KOI"],
+    "today_connection": "Hoy compite en la LES como Movistar KOI.",
+    "source": "Wikipedia, Infobae, Record.com.mx, NacioDigital, Gamereactor (diciembre 2021)"
+  },
+  {
+    "month": 12,
+    "day": 14,
+    "year": 2023,
+    "headline": "Giants y Excel se fusionan y nace GiantX",
+    "detail": "Fusion entre Giants (Malaga) y Excel Esports (Londres), con sede tambien en Berlin para su rendimiento competitivo.",
+    "era_name": "transicion Vodafone Giants -> GiantX",
+    "teams": ["Giants", "Excel Esports"],
+    "today_connection": "GiantX Pride, su filial, compite hoy en la LES.",
+    "source": "elespanol.com, esportbase.valenciaplaza.com, esports-news.co.uk (diciembre 2023)"
   }
 ]

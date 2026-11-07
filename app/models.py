@@ -18,6 +18,7 @@ class Tweet(SQLModel, table=True):
     published_at: Optional[datetime] = None
     tweet_id: Optional[str] = None
     error_message: Optional[str] = None
+    image_url: Optional[str] = None  # ruta propia ("/data/images/...") o URL externa (escudo de lolesports.com)
 
 
 class Template(SQLModel, table=True):

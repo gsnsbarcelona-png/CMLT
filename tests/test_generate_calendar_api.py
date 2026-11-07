@@ -18,7 +18,7 @@ def _match(league_slug="les"):
 
 
 def test_generate_calendar_success(client, mocker):
-    mocker.patch("app.routers.generate.fetch_upcoming_matches", return_value=[_match()])
+    mocker.patch("app.routers.generate.calendar.fetch_upcoming_matches", return_value=[_match()])
 
     res = client.post("/api/generate/calendar", json={"leagues": ["les"]})
 
@@ -40,7 +40,7 @@ def test_generate_calendar_rejects_unknown_league(client):
 
 def test_generate_calendar_service_error_returns_502(client, mocker):
     mocker.patch(
-        "app.routers.generate.fetch_upcoming_matches",
+        "app.routers.generate.calendar.fetch_upcoming_matches",
         side_effect=LoLEsportsError("no se pudo obtener el calendario"),
     )
 
@@ -51,9 +51,9 @@ def test_generate_calendar_service_error_returns_502(client, mocker):
 
 
 def test_generate_calendar_hype_style_uses_ai(client, mocker):
-    mocker.patch("app.routers.generate.fetch_upcoming_matches", return_value=[_match()])
+    mocker.patch("app.routers.generate.calendar.fetch_upcoming_matches", return_value=[_match()])
     hype_mock = mocker.patch(
-        "app.routers.generate.generate_hype_calendar", return_value="Semana decisiva en la LES!"
+        "app.routers.generate.calendar.generate_hype_calendar", return_value="Semana decisiva en la LES!"
     )
 
     res = client.post("/api/generate/calendar", json={"leagues": ["les"], "style": "hype"})
@@ -67,9 +67,9 @@ def test_generate_calendar_hype_style_uses_ai(client, mocker):
 
 
 def test_generate_calendar_hype_style_ai_failure_returns_502(client, mocker):
-    mocker.patch("app.routers.generate.fetch_upcoming_matches", return_value=[_match()])
+    mocker.patch("app.routers.generate.calendar.fetch_upcoming_matches", return_value=[_match()])
     mocker.patch(
-        "app.routers.generate.generate_hype_calendar",
+        "app.routers.generate.calendar.generate_hype_calendar",
         side_effect=AIGenerationError("Falta configurar ANTHROPIC_API_KEY"),
     )
 
@@ -86,7 +86,7 @@ def test_generate_calendar_rejects_unknown_style(client):
 
 
 def test_generate_calendar_appends_closing_tags(client, mocker):
-    mocker.patch("app.routers.generate.fetch_upcoming_matches", return_value=[_match()])
+    mocker.patch("app.routers.generate.calendar.fetch_upcoming_matches", return_value=[_match()])
 
     res = client.post("/api/generate/calendar", json={"leagues": ["les"]})
 
@@ -94,3 +94,16 @@ def test_generate_calendar_appends_closing_tags(client, mocker):
     assert "@LESESPORTS" in content
     assert "#LES" in content
     assert "#LT" in content
+
+
+def test_generate_calendar_accepts_emea_masters_league(client, mocker):
+    mocker.patch(
+        "app.routers.generate.calendar.fetch_upcoming_matches", return_value=[_match("emea_masters")]
+    )
+
+    res = client.post("/api/generate/calendar", json={"leagues": ["emea_masters"]})
+
+    assert res.status_code == 200
+    content = res.json()["content"]
+    assert "@EMEAmasters" in content
+    assert "#EMEAMasters" in content

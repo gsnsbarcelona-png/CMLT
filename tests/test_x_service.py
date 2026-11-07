@@ -79,3 +79,71 @@ def test_server_error_translated(mocker):
 
     with pytest.raises(x_service.XPublishError, match="proba de nuevo"):
         x_service.publish_tweet("hola")
+
+
+def test_publish_without_image_passes_no_media_ids(mocker):
+    fake_response = SimpleNamespace(data={"id": "1"})
+    create_mock = mocker.patch("tweepy.Client.create_tweet", return_value=fake_response)
+
+    x_service.publish_tweet("hola")
+
+    _, kwargs = create_mock.call_args
+    assert kwargs["media_ids"] is None
+
+
+def test_publish_with_external_image_url_uploads_and_attaches(mocker):
+    fake_http_response = SimpleNamespace(content=b"fake-png-bytes", raise_for_status=lambda: None)
+    mocker.patch("httpx.get", return_value=fake_http_response)
+    fake_media = SimpleNamespace(media_id=987)
+    upload_mock = mocker.patch("tweepy.API.media_upload", return_value=fake_media)
+    fake_response = SimpleNamespace(data={"id": "1"})
+    create_mock = mocker.patch("tweepy.Client.create_tweet", return_value=fake_response)
+
+    result = x_service.publish_tweet("hola", "http://static.lolesports.com/teams/logo.png")
+
+    assert result == "1"
+    upload_args, upload_kwargs = upload_mock.call_args
+    assert upload_kwargs["filename"] == "logo.png"
+    assert upload_kwargs["file"].read() == b"fake-png-bytes"
+    _, create_kwargs = create_mock.call_args
+    assert create_kwargs["media_ids"] == ["987"]
+
+
+def test_publish_with_local_image_url_reads_from_disk(mocker, tmp_path, monkeypatch):
+    monkeypatch.setattr(x_service, "_PROJECT_ROOT", tmp_path)
+    images_dir = tmp_path / "data" / "images"
+    images_dir.mkdir(parents=True)
+    (images_dir / "abc.png").write_bytes(b"local-bytes")
+
+    fake_media = SimpleNamespace(media_id=1)
+    upload_mock = mocker.patch("tweepy.API.media_upload", return_value=fake_media)
+    mocker.patch("tweepy.Client.create_tweet", return_value=SimpleNamespace(data={"id": "1"}))
+
+    x_service.publish_tweet("hola", "/data/images/abc.png")
+
+    _, upload_kwargs = upload_mock.call_args
+    assert upload_kwargs["file"].read() == b"local-bytes"
+
+
+def test_publish_image_download_failure_raises(mocker):
+    import httpx
+
+    mocker.patch("httpx.get", side_effect=httpx.ConnectError("boom"))
+
+    with pytest.raises(x_service.XPublishError, match="descargar"):
+        x_service.publish_tweet("hola", "http://static.lolesports.com/teams/logo.png")
+
+
+def test_publish_local_image_missing_raises(tmp_path, monkeypatch):
+    monkeypatch.setattr(x_service, "_PROJECT_ROOT", tmp_path)
+
+    with pytest.raises(x_service.XPublishError, match="No se encontro"):
+        x_service.publish_tweet("hola", "/data/images/no-existe.png")
+
+
+def test_publish_media_upload_rejected_raises(mocker):
+    mocker.patch("httpx.get", return_value=SimpleNamespace(content=b"x", raise_for_status=lambda: None))
+    mocker.patch("tweepy.API.media_upload", side_effect=tweepy.errors.TweepyException("nope"))
+
+    with pytest.raises(x_service.XPublishError, match="rechazo la imagen"):
+        x_service.publish_tweet("hola", "http://static.lolesports.com/teams/logo.png")

@@ -19,11 +19,11 @@ def _roster_b():
 
 def _mock_success(mocker, roster_a=None, roster_b=None, player_stats=None):
     mocker.patch(
-        "app.routers.generate.fetch_les_team_roster_with_roles",
+        "app.routers.generate.duel.fetch_les_team_roster_with_roles",
         side_effect=lambda name: (roster_a or _roster_a()) if "UCAM" in name else (roster_b or _roster_b()),
     )
     mocker.patch(
-        "app.routers.generate.fetch_player_stats",
+        "app.routers.generate.duel.fetch_player_stats",
         return_value=player_stats if player_stats is not None else [_player("Escik"), _player("Fulano", kda=4.0)],
     )
 
@@ -43,6 +43,7 @@ def test_generate_duel_success(client, mocker):
     assert "Escik" in body[0]["content"]
     assert "Fulano" in body[0]["content"]
     assert body[0]["error"] is None
+    assert body[0]["suggested_teams"] == ["UCAM Esports", "Barca eSports"]
 
 
 def test_generate_duel_no_common_role_returns_empty_list(client, mocker):
@@ -79,7 +80,7 @@ def test_generate_duel_rejects_unknown_style(client, mocker):
 
 def test_generate_duel_unknown_team_returns_400(client, mocker):
     mocker.patch(
-        "app.routers.generate.fetch_les_team_roster_with_roles",
+        "app.routers.generate.duel.fetch_les_team_roster_with_roles",
         side_effect=TeamRosterNotFoundError("No encontramos el equipo 'X' en la LES."),
     )
 
@@ -92,7 +93,7 @@ def test_generate_duel_unknown_team_returns_400(client, mocker):
 
 def test_generate_duel_lolesports_failure_returns_502(client, mocker):
     mocker.patch(
-        "app.routers.generate.fetch_les_team_roster_with_roles",
+        "app.routers.generate.duel.fetch_les_team_roster_with_roles",
         side_effect=LoLEsportsError("no se pudo obtener"),
     )
 
@@ -103,10 +104,10 @@ def test_generate_duel_lolesports_failure_returns_502(client, mocker):
 
 def test_generate_duel_golgg_failure_returns_502(client, mocker):
     mocker.patch(
-        "app.routers.generate.fetch_les_team_roster_with_roles",
+        "app.routers.generate.duel.fetch_les_team_roster_with_roles",
         side_effect=lambda name: _roster_a() if "UCAM" in name else _roster_b(),
     )
-    mocker.patch("app.routers.generate.fetch_player_stats", side_effect=GolGGError("no se pudo obtener"))
+    mocker.patch("app.routers.generate.duel.fetch_player_stats", side_effect=GolGGError("no se pudo obtener"))
 
     res = client.post("/api/generate/duel", json={"team_a": "UCAM Esports", "team_b": "Barca eSports"})
 
@@ -116,7 +117,7 @@ def test_generate_duel_golgg_failure_returns_502(client, mocker):
 def test_generate_duel_ai_style_uses_ai(client, mocker):
     _mock_success(mocker)
     ai_mock = mocker.patch(
-        "app.routers.generate.generate_individual_duel_variant", return_value="Duelo de mid con onda!"
+        "app.routers.generate.duel.generate_individual_duel_variant", return_value="Duelo de mid con onda!"
     )
 
     res = client.post(
@@ -135,7 +136,7 @@ def test_generate_duel_partial_ai_failure_still_returns_other_roles(client, mock
     player_stats = [_player("Escik"), _player("Fulano", kda=4.0), _player("Andariel"), _player("Mengano", kda=2.0)]
     _mock_success(mocker, roster_a=roster_a, roster_b=roster_b, player_stats=player_stats)
     mocker.patch(
-        "app.routers.generate.generate_individual_duel_variant",
+        "app.routers.generate.duel.generate_individual_duel_variant",
         side_effect=[AIGenerationError("Falta configurar ANTHROPIC_API_KEY"), "Duelo de adc!"],
     )
 
@@ -168,13 +169,13 @@ def test_generate_duel_appends_closing_tags_with_team_handles(client, mocker):
 
 def test_generate_duel_reconciles_summoner_name_casing(client, mocker):
     mocker.patch(
-        "app.routers.generate.fetch_les_team_roster_with_roles",
+        "app.routers.generate.duel.fetch_les_team_roster_with_roles",
         side_effect=lambda name: [RosterPlayer(name="ESCIK", role="mid")]
         if "UCAM" in name
         else [RosterPlayer(name="FULANO", role="mid")],
     )
     mocker.patch(
-        "app.routers.generate.fetch_player_stats",
+        "app.routers.generate.duel.fetch_player_stats",
         return_value=[_player("Escik"), _player("Fulano", kda=4.0)],
     )
 
@@ -200,7 +201,7 @@ def _match_info(team1, team2, block_name="Semana 6"):
 
 def test_duel_today_match_endpoint_returns_matches(client, mocker):
     mocker.patch(
-        "app.routers.generate.fetch_matches_today_or_tomorrow",
+        "app.routers.generate.duel.fetch_matches_today_or_tomorrow",
         return_value=[_match_info("UCAM Esports", "Barca eSports")],
     )
 
@@ -214,7 +215,7 @@ def test_duel_today_match_endpoint_returns_matches(client, mocker):
 
 
 def test_duel_today_match_endpoint_empty_when_none(client, mocker):
-    mocker.patch("app.routers.generate.fetch_matches_today_or_tomorrow", return_value=[])
+    mocker.patch("app.routers.generate.duel.fetch_matches_today_or_tomorrow", return_value=[])
 
     res = client.get("/api/generate/duel/today-match")
 
@@ -224,7 +225,7 @@ def test_duel_today_match_endpoint_empty_when_none(client, mocker):
 
 def test_duel_today_match_endpoint_error_returns_502(client, mocker):
     mocker.patch(
-        "app.routers.generate.fetch_matches_today_or_tomorrow",
+        "app.routers.generate.duel.fetch_matches_today_or_tomorrow",
         side_effect=LoLEsportsError("no se pudo obtener"),
     )
 

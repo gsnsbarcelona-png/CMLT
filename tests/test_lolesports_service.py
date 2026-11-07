@@ -15,6 +15,7 @@ from app.services.lolesports_service import (
     fetch_todays_matches,
     fetch_upcoming_matches,
     format_schedule_tweet,
+    get_les_team_logo_url,
     league_label,
 )
 
@@ -240,6 +241,18 @@ def test_closing_tags_both_leagues_order(monkeypatch):
     assert closing_tags(["lec", "les"]) == "@LESESPORTS @LEC #LES #LEC #LT"
 
 
+def test_closing_tags_emea_masters_hashtag_has_no_space(monkeypatch):
+    # "EMEA Masters" (LEAGUE_LABELS) tiene espacio -- el hashtag de cierre
+    # usa LEAGUE_HASHTAGS ("EMEAMasters") para que siga siendo un hashtag
+    # valido, igual que lo usa la cuenta oficial en sus propios tweets.
+    import app.services.lolesports_service as lolesports_service
+
+    monkeypatch.setattr(lolesports_service.settings, "league_handle_emea_masters", "@EMEAmasters")
+    monkeypatch.setattr(lolesports_service.settings, "custom_hashtags", "#LT")
+
+    assert closing_tags(["emea_masters"]) == "@EMEAmasters #EMEAMasters #LT"
+
+
 def test_format_live_prefix():
     match = _match_info(datetime(2026, 8, 30, 12, 0, tzinfo=timezone.utc), state="inProgress")
     text = format_schedule_tweet([match], ["les"])
@@ -266,6 +279,7 @@ def test_league_label():
     assert league_label(["les"]) == "LES"
     assert league_label(["lec"]) == "LEC"
     assert league_label(["lec", "les"]) == "LES + LEC"
+    assert league_label(["emea_masters", "les"]) == "LES + EMEA Masters"
 
 
 def test_build_matches_context_empty():
@@ -279,13 +293,14 @@ def test_build_matches_context_lists_matches():
     assert context == "Mar 01/09 17:00 MKF 🆚 UCAM (Grupos)"
 
 
-def _team_entry(name, code, league_name="LES", players=("Escik", "Andariel"), roles=None):
+def _team_entry(name, code, league_name="LES", players=("Escik", "Andariel"), roles=None, image=None):
     roles = roles or [""] * len(players)
     return {
         "name": name,
         "code": code,
         "homeLeague": {"name": league_name},
         "players": [{"summonerName": p, "role": r} for p, r in zip(players, roles)],
+        "image": image,
     }
 
 
@@ -359,3 +374,32 @@ def test_fetch_les_team_roster_caches_getteams(mocker):
     fetch_les_team_roster("UCAM Esports")
 
     get_mock.assert_called_once()
+
+
+def test_get_les_team_logo_url_returns_image_field(mocker):
+    teams = [_team_entry("UCAM Esports", "UCAM", image="http://static.lolesports.com/teams/ucam.png")]
+    mocker.patch("app.services.lolesports_service.httpx.get", return_value=_teams_response(teams))
+
+    assert get_les_team_logo_url("UCAM Esports") == "http://static.lolesports.com/teams/ucam.png"
+
+
+def test_get_les_team_logo_url_matches_by_substring_and_accents(mocker):
+    teams = [_team_entry("Barça Esports", "FCB", image="http://static.lolesports.com/teams/bar.png")]
+    mocker.patch("app.services.lolesports_service.httpx.get", return_value=_teams_response(teams))
+
+    assert get_les_team_logo_url("Barca eSports") == "http://static.lolesports.com/teams/bar.png"
+
+
+def test_get_les_team_logo_url_returns_none_when_team_not_found(mocker):
+    teams = [_team_entry("UCAM Esports", "UCAM", image="http://static.lolesports.com/teams/ucam.png")]
+    mocker.patch("app.services.lolesports_service.httpx.get", return_value=_teams_response(teams))
+
+    assert get_les_team_logo_url("Un Equipo Que No Existe") is None
+
+
+def test_get_les_team_logo_url_returns_none_on_network_error(mocker):
+    mocker.patch("app.services.lolesports_service.httpx.get", side_effect=httpx.ConnectError("boom"))
+
+    # best-effort: nunca levanta, solo devuelve None (es una sugerencia, no
+    # debe romper la generacion/publicacion del tweet).
+    assert get_les_team_logo_url("UCAM Esports") is None

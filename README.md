@@ -2,17 +2,29 @@
 
 Aplicación web local para generar tweets (por IA, en lote a partir de una lista de temas, por plantilla, o manualmente), revisarlos, copiarlos y opcionalmente publicarlos en X (Twitter) con un click.
 
-En Compose hay siete modos visibles por defecto — **Calendario**, **Stats**, **H2H Hoy**, **Duelo 1v1**, **Efeméride**, **Cruce LEC** e **IA** — más **Lote (IA)**, **Plantilla** y **Manual** disponibles en el código pero ocultos del selector (reactivarlos es agregar su `<label>` en `static/index.html`). Todos los modos de datos reales (todos menos IA/Lote/Plantilla/Manual) tienen estilo **Plano** (sin IA, texto fijo con los datos reales) y varios también **IA** (misma info real, redacción con más onda) — la IA nunca decide los hechos, solo la forma de contarlos.
+En Compose hay ocho modos visibles por defecto — **Calendario**, **Stats**, **H2H Hoy**, **Duelo 1v1**, **Top/Ranking**, **Efeméride**, **Cruce LEC** e **IA** — más **Lote (IA)**, **Plantilla** y **Manual** disponibles en el código pero ocultos del selector (reactivarlos es agregar su `<label>` en `static/index.html`). Todos los modos de datos reales (todos menos IA/Lote/Plantilla/Manual) tienen estilo **Plano** (sin IA, texto fijo con los datos reales) y varios también **IA** (misma info real, redacción con más onda) — la IA nunca decide los hechos, solo la forma de contarlos.
 
 - **Calendario**: próximos partidos de **LES** y/o **LEC**, datos reales de la API pública de LoL Esports.
 - **Stats**: "stats curiosas" (KDA, winrate, first blood, rivalidad/head-to-head entre equipos, y rango en ranked SoloQ vía lolpros.gg) con datos reales de **gol.gg** y **lolpros.gg**. **Split actual** o **Todo el año** (todos los torneos del año combinados), foco en un equipo/jugador, o rivalidad de un par puntual.
-- **H2H Hoy**: preview del partido de LES de hoy (autodetectado) — historial directo, forma reciente de cada equipo, 2 variantes (historial / forma reciente).
+- **H2H Hoy**: preview del partido de LES de hoy (autodetectado) — historial directo, forma reciente de cada equipo, 2 variantes (historial / forma reciente). El selector de equipos incluye rivales de EMEA Masters (no solo LES), para cuando un equipo de LES se cruza ahí con alguien que nunca jugó en LES.
 - **Duelo 1v1**: para el partido de hoy/mañana (autodetectado), compara el KDA de temporada del jugador con más partidos en cada carril compartido por ambos equipos (roster y rol vía lolesports.com, stats vía gol.gg) — una tarjeta por carril con datos, ninguna si no hay suficiente info (no inventa alineaciones ni cruces históricos entre esos jugadores, esos datos no están disponibles).
+- **Top/Ranking**: top 3 real de una categoría de **gol.gg** para el split actual — KDA y farmeo (CS/min) por jugador; dragones/partida, torres/partida, primera sangre % y duración media (equipos que más rápido cierran) por equipo. Si hay menos de 3 con datos suficientes lo dice en vez de inventar posiciones. 2 variantes: foco en el líder y top 3 resumido. No incluye "partidas más rápidas" individuales (gol.gg no lo expone en listado, requeriría visitar cada partida una por una) ni el líder del split anterior como dato de contraste (la app no guarda histórico entre splits) — solo la media del split actual.
 - **Efeméride**: "un día como hoy" de la historia de la LES/Superliga, con una base curada de hitos verificados (no es scraping en vivo — ver limitaciones). 2 versiones: completa y "dato rápido".
 - **Cruce LEC**: conecta la LES con la LEC — comparativa de rendimiento en vivo (gol.gg de ambas ligas) o jugadores que pasaron por las dos ligas (base curada). 2 tonos: dato sorprendente y pregunta a debate.
 - **Lote (IA)**: pegás una lista de temas (uno por línea, hasta 25) y genera un tweet por cada uno.
 
-Cada resultado (y cada borrador/tweet del historial) tiene un botón **Copiar** para pegarlo directamente donde publiques manualmente, sin depender de la API de X. Calendario/Stats/IA/Plantilla/Manual usan el editor compartido de abajo, con **Guardar borrador**/**Publicar ahora**; los modos que muestran varias variantes en tarjetas (H2H Hoy, Efeméride, Cruce LEC, Lote) tienen un botón **Guardar** por tarjeta — nada se guarda solo, elegís qué variante(s) quedan como borrador.
+Cada resultado (y cada borrador/tweet del historial) tiene un botón **Copiar** para pegarlo directamente donde publiques manualmente, sin depender de la API de X. Calendario/Stats/IA/Plantilla/Manual usan el editor compartido de abajo, con **Guardar borrador**/**Publicar ahora**; los modos que muestran varias variantes en tarjetas (H2H Hoy, Duelo 1v1, Top/Ranking, Efeméride, Cruce LEC, Lote) tienen un botón **Guardar** por tarjeta — nada se guarda solo, elegís qué variante(s) quedan como borrador.
+
+### Imagen adjunta (opcional)
+
+Cualquier tweet (el del editor compartido, cada tarjeta de los modos múltiples, o un borrador ya guardado en la pestaña Borradores) puede llevar una imagen adjunta al publicarse en X. Formas de elegirla:
+
+- **Automática**: cuando el resultado tiene un equipo de LES como protagonista claro (ej. Stats de un equipo puntual, H2H, Duelo, Top/Ranking de categoría de equipo, Efeméride con equipos, Cruce LEC de un equipo), aparece un botón "🛡️ Nombre del equipo" que trae su escudo directo de la API de LoL Esports (`getTeams`, campo `image`) — no hay imágenes curadas a mano, ni en categorías de jugador (gol.gg no da el equipo de cada jugador, no se inventa).
+- **Fusión de escudos ("VS")**: cuando hay exactamente 2 equipos sugeridos (H2H, Duelo), aparece además "⚔️ Fusionar escudos" — arma un composite con los dos escudos lado a lado y un círculo "VS" en el medio (Pillow, server-side). Si no se encuentra el escudo de alguno de los dos, el botón directamente no aparece en vez de armar un composite a medias.
+- **Fondo de marca**: el botón "🎨 Fondo del programa" (siempre disponible, no depende de equipos) arma un composite con el fondo del programa (`app/data/branding/background.png`) y el logo (`app/data/branding/logo.png`, PNG con fondo transparente) pegado del lado derecho (Pillow, server-side, ver `image_service.compose_branded_image`). Para cambiar el fondo o el logo, reemplazá esos dos archivos (mismos nombres) — no hace falta tocar código.
+- **Manual**: botón "🖼️ Imagen" para subir cualquier archivo (PNG/JPG/GIF/WEBP, máx. 5 MB) — reemplaza a la sugerencia automática si había una.
+
+La subida de medios a X sigue el endpoint v1.1 (`media/upload`) aunque el tweet se publique con la API v2 — usa las mismas 4 credenciales de X ya configuradas, sin permisos extra.
 
 ## Requisitos previos
 
@@ -55,9 +67,11 @@ Este es el paso más delicado, seguilo en orden:
    > Importante: si ya los habías generado *antes* de configurar los permisos "Read and Write", **regeneralos** — si no, la publicación va a fallar con error 403.
 6. Copiá esos valores en `X_ACCESS_TOKEN` / `X_ACCESS_TOKEN_SECRET`.
 
-## Calendario LES/LEC
+## Calendario LES/LEC/EMEA Masters
 
 No requiere configuración: `LOLESPORTS_API_KEY` en `.env.example` ya trae un valor funcional (la key pública que usa el propio sitio lolesports.com). Solo tendrías que tocarla si Riot la rota en el futuro y el modo Calendario empieza a fallar con error 502.
+
+Además de LES y LEC, el Calendario tiene una tercera liga: **EMEA Masters** (torneo semi-profesional que reúne a los mejores equipos de las ligas regionales europeas, incluida la LES — ej. el clasificatorio de Movistar KOI Fénix a EMEA Masters Summer 2026, que a su vez es la vía de la región EMEA para clasificar al WSCI). Mismo mecanismo que LES/LEC: `LEAGUE_HANDLE_EMEA_MASTERS` en `.env` controla la arroba de cierre (default `@EMEAmasters`, la cuenta oficial). Si Riot lanza otra liga/torneo nuevo y querés sumarlo, hay que resolver su `leagueId` a mano contra `GET /persisted/gw/getLeagues` (mismo endpoint, ver comentario en `lolesports_service.py`) y agregarlo a `LEAGUE_IDS`/`LEAGUE_LABELS`/`LEAGUE_HASHTAGS`/`LEAGUE_ORDER`/`LEAGUE_HANDLE_SETTINGS`.
 
 ## Stats (gol.gg)
 
@@ -66,9 +80,10 @@ Tampoco requiere key (gol.gg es scraping de HTML público), pero **sí requiere 
 - `GOLGG_TOURNAMENT`: el split actual (ej. `LES 2026 Summer`), usado cuando el scope es "Split actual".
 - `GOLGG_YEAR_TOURNAMENTS`: lista separada por comas de todos los torneos del año (Kick-off + Spring + Spring Playoffs + Summer + Summer Playoffs), usada para el scope "Todo el año" y siempre para la rivalidad/head-to-head.
 - `LEC_TOURNAMENT`: torneo de LEC usado en "Cruce LEC" (ej. `LEC 2026 Summer Season` — ojo que en gol.gg el nombre de la LEC lleva "Season" al final, a diferencia de LES).
+- `EMEA_MASTERS_TOURNAMENTS`: lista separada por comas de los torneos de EMEA Masters en gol.gg (región `WR` ahí, no `ES`). H2H la combina con `GOLGG_YEAR_TOURNAMENTS` — un equipo de LES que juega EMEA Masters se cruza con rivales que nunca jugaron en LES, y sin esto el historial/forma reciente de ese cruce sale siempre vacío.
 - `GOLGG_SEASON`: el código de temporada de gol.gg (ej. `S16`), generalmente se mantiene igual todo el año calendario.
 
-**Para encontrar el nombre exacto de un torneo nuevo** (ej. al arrancar un split), no hace falta buscar a mano en la web: la app expone `GET /api/generate/stats/available-tournaments` (parámetros opcionales `season` y `region`, por defecto la temporada configurada y `ES`), que pega directo al endpoint real que usa `gol.gg/tournament/list/` y devuelve el nombre exacto (`trname`), cantidad de partidos y rango de fechas de cada torneo. Con el server corriendo: `curl http://localhost:8000/api/generate/stats/available-tournaments`.
+**Para encontrar el nombre exacto de un torneo nuevo** (ej. al arrancar un split), no hace falta buscar a mano en la web: la app expone `GET /api/generate/stats/available-tournaments` (parámetros opcionales `season` y `region`, por defecto la temporada configurada y `ES` — pasar `region=WR` para EMEA Masters, o `region=` vacío/omitido en la URL para buscar en todas las regiones), que pega directo al endpoint real que usa `gol.gg/tournament/list/` y devuelve el nombre exacto (`trname`), cantidad de partidos y rango de fechas de cada torneo. Con el server corriendo: `curl http://localhost:8000/api/generate/stats/available-tournaments`.
 
 ### Ranked SoloQ (lolpros.gg)
 
@@ -108,14 +123,22 @@ Si te faltan credenciales, la app va a arrancar igual y te va a avisar con un ca
 app/
   main.py, config.py, db.py, models.py
   data/         # les_anniversaries.json, les_lec_players.json (bases curadas)
-  routers/      # tweets, generate, templates
+                # branding/background.png, branding/logo.png (fondo de marca, ver seccion de imagen adjunta)
+  routers/      # tweets, templates, images (subida de imagenes)
+                # generate/ (paquete, un sub-router por dominio: ai, calendar, stats, duel,
+                #            anniversary, league_comparison, top_ranking, template)
   services/     # ai_service, x_service, char_count,
-                # lolesports_service (Calendario), golgg_service (Stats/H2H/Cruce LEC),
+                # lolesports_service (Calendario, escudos de equipo), golgg_service (Stats/H2H/Cruce LEC),
                 # history_service (Efemeride), crossover_service (Cruce LEC: jugadores),
                 # ranked_service (Stats: ranked SoloQ via lolpros.gg),
-                # duel_service (Duelo 1v1: roster/rol de lolesports.com + stats de gol.gg)
+                # duel_service (Duelo 1v1: roster/rol de lolesports.com + stats de gol.gg),
+                # image_service (composite "VS" de dos escudos y fondo de marca, con Pillow)
 static/         # frontend (HTML/CSS/JS, sin build step)
 tests/          # pytest, con mocks para IA, X, LoL Esports y gol.gg
+
+data/             # gitignored -- generado en runtime
+  tweets.db       # SQLite (borradores, historial)
+  images/         # imagenes subidas a mano o descargadas para adjuntar a un tweet
 ```
 
 ## Correr los tests
@@ -138,6 +161,9 @@ Los tests corren sin necesidad de credenciales reales (mockean las llamadas a An
 - Efeméride y Cruce LEC (jugadores) usan bases curadas chicas, no scraping en vivo — la mayoría de los días no van a tener una efeméride exacta (muestra la más cercana y lo aclara) y la lista de cruces de jugadores es corta. Expandirlas es manual (ver secciones arriba).
 - No hay handle verificado para UB Alma Mater (ver sección de arrobas arriba) — no se le arroba en los tweets hasta que se consiga el real.
 - Duelo 1v1 depende de que lolesports.com tenga cargado el rol de cada jugador en `getTeams` — confirmado en vivo que algunos equipos lo tienen incompleto (la mayoría de los jugadores sin rol asignado), lo que da menos tarjetas de las esperadas para esos equipos. No hay forma de completarlo desde la app, es un dato de Riot. Tampoco confirma alineaciones oficiales del partido (Riot no las publica de antemano): si un equipo tiene más de un jugador en el mismo rol, se elige el que más partidos jugó esta temporada como proxy de titular.
+- Top/Ranking en categorías de jugador no muestra el equipo de cada jugador — la tabla de jugadores de gol.gg no expone esa columna, no se cruza con otra fuente para no arriesgar un match incorrecto. El dato de contraste es siempre la media del split actual; no hay forma de comparar contra el líder del split anterior porque la app no guarda histórico de stats entre splits.
+- No hay Alembic ni otro sistema de migraciones: `init_db()` solo crea tablas nuevas y aplica un `ALTER TABLE` idempotente para las pocas columnas que se fueron agregando después (ver `_add_column_if_missing` en `db.py`) — sirve para este proyecto chico, pero un cambio de esquema más grande necesitaría hacerse a mano.
+- La imagen adjunta a un tweet no se valida contra los requisitos de X (dimensiones, relación de aspecto) — si X la rechaza, se muestra el error tal cual lo devuelve la API en vez de anticiparlo del lado de la app.
 
 ## Troubleshooting
 

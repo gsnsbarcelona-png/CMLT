@@ -89,3 +89,33 @@ def test_cannot_publish_twice(client, mocker):
 
     res = client.post(f"/api/tweets/{tweet['id']}/publish")
     assert res.status_code == 409
+
+
+def test_create_draft_with_image_url(client):
+    res = client.post(
+        "/api/tweets", json={"content": "con imagen", "source": "manual", "image_url": "/data/images/abc.png"}
+    )
+    assert res.status_code == 201
+    assert res.json()["image_url"] == "/data/images/abc.png"
+
+
+def test_update_draft_image_url(client):
+    tweet = client.post("/api/tweets", json={"content": "sin imagen", "source": "manual"}).json()
+    assert tweet["image_url"] is None
+
+    res = client.put(
+        f"/api/tweets/{tweet['id']}", json={"content": "sin imagen", "image_url": "/data/images/xyz.png"}
+    )
+    assert res.status_code == 200
+    assert res.json()["image_url"] == "/data/images/xyz.png"
+
+
+def test_publish_passes_image_url_to_publish_tweet(client, mocker):
+    publish_mock = mocker.patch("app.routers.tweets.publish_tweet", return_value="1")
+    tweet = client.post(
+        "/api/tweets", json={"content": "con imagen", "source": "manual", "image_url": "/data/images/abc.png"}
+    ).json()
+
+    client.post(f"/api/tweets/{tweet['id']}/publish")
+
+    publish_mock.assert_called_once_with("con imagen", "/data/images/abc.png")

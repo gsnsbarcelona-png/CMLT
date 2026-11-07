@@ -15,10 +15,12 @@ router = APIRouter(prefix="/api/tweets", tags=["tweets"])
 class TweetCreate(BaseModel):
     content: str
     source: str = "manual"
+    image_url: str | None = None
 
 
 class TweetUpdate(BaseModel):
     content: str
+    image_url: str | None = None
 
 
 @router.post("", status_code=201)
@@ -27,6 +29,7 @@ def create_tweet(payload: TweetCreate, session: Session = Depends(get_session)) 
         content=payload.content,
         source=payload.source,
         char_count=char_count.count_chars(payload.content),
+        image_url=payload.image_url,
     )
     session.add(tweet)
     session.commit()
@@ -60,6 +63,7 @@ def update_tweet(tweet_id: int, payload: TweetUpdate, session: Session = Depends
         raise HTTPException(status_code=409, detail="Solo se pueden editar borradores.")
     tweet.content = payload.content
     tweet.char_count = char_count.count_chars(payload.content)
+    tweet.image_url = payload.image_url
     session.add(tweet)
     session.commit()
     session.refresh(tweet)
@@ -93,7 +97,7 @@ def publish(tweet_id: int, session: Session = Depends(get_session)) -> Tweet:
         )
 
     try:
-        remote_id = publish_tweet(tweet.content)
+        remote_id = publish_tweet(tweet.content, tweet.image_url)
     except XPublishError as exc:
         tweet.status = "failed"
         tweet.error_message = str(exc)

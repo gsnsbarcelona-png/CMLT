@@ -19,9 +19,9 @@ def _anniversary():
 def test_anniversary_default_style_is_plain_and_does_not_save_drafts(client, mocker):
     # La efemeride ya no auto-guarda -- el usuario elige que version guardar
     # con el boton "Guardar" de su tarjeta (POST /api/tweets).
-    mocker.patch("app.routers.generate.find_for_today", return_value=(_anniversary(), True, 0))
-    ai_mock = mocker.patch("app.routers.generate.generate_anniversary_tweet")
-    ai_quick_mock = mocker.patch("app.routers.generate.generate_anniversary_quick_fact")
+    mocker.patch("app.routers.generate.anniversary.find_for_today", return_value=(_anniversary(), True, 0))
+    ai_mock = mocker.patch("app.routers.generate.anniversary.generate_anniversary_tweet")
+    ai_quick_mock = mocker.patch("app.routers.generate.anniversary.generate_anniversary_quick_fact")
 
     res = client.post("/api/generate/anniversary", json={})
 
@@ -32,6 +32,7 @@ def test_anniversary_default_style_is_plain_and_does_not_save_drafts(client, moc
     assert body[1]["format"] == "dato_rapido"
     assert all(item["error"] is None for item in body)
     assert "draft_id" not in body[0]
+    assert body[0]["suggested_teams"] == ["Vodafone Giants", "UCAM Esports Club"]
     ai_mock.assert_not_called()
     ai_quick_mock.assert_not_called()
 
@@ -40,7 +41,7 @@ def test_anniversary_default_style_is_plain_and_does_not_save_drafts(client, moc
 
 
 def test_anniversary_plain_marks_is_exact(client, mocker):
-    mocker.patch("app.routers.generate.find_for_today", return_value=(_anniversary(), False, 3))
+    mocker.patch("app.routers.generate.anniversary.find_for_today", return_value=(_anniversary(), False, 3))
 
     res = client.post("/api/generate/anniversary", json={"style": "plain"})
 
@@ -50,9 +51,9 @@ def test_anniversary_plain_marks_is_exact(client, mocker):
 
 
 def test_anniversary_ai_style_returns_two_variants(client, mocker):
-    mocker.patch("app.routers.generate.find_for_today", return_value=(_anniversary(), True, 0))
-    full_mock = mocker.patch("app.routers.generate.generate_anniversary_tweet", return_value="Tweet completo")
-    quick_mock = mocker.patch("app.routers.generate.generate_anniversary_quick_fact", return_value="Tweet corto")
+    mocker.patch("app.routers.generate.anniversary.find_for_today", return_value=(_anniversary(), True, 0))
+    full_mock = mocker.patch("app.routers.generate.anniversary.generate_anniversary_tweet", return_value="Tweet completo")
+    quick_mock = mocker.patch("app.routers.generate.anniversary.generate_anniversary_quick_fact", return_value="Tweet corto")
 
     res = client.post("/api/generate/anniversary", json={"style": "ai"})
 
@@ -65,12 +66,12 @@ def test_anniversary_ai_style_returns_two_variants(client, mocker):
 
 
 def test_anniversary_partial_ai_failure_still_returns_the_other(client, mocker):
-    mocker.patch("app.routers.generate.find_for_today", return_value=(_anniversary(), True, 0))
+    mocker.patch("app.routers.generate.anniversary.find_for_today", return_value=(_anniversary(), True, 0))
     mocker.patch(
-        "app.routers.generate.generate_anniversary_tweet",
+        "app.routers.generate.anniversary.generate_anniversary_tweet",
         side_effect=AIGenerationError("Falta configurar ANTHROPIC_API_KEY"),
     )
-    mocker.patch("app.routers.generate.generate_anniversary_quick_fact", return_value="Tweet corto")
+    mocker.patch("app.routers.generate.anniversary.generate_anniversary_quick_fact", return_value="Tweet corto")
 
     res = client.post("/api/generate/anniversary", json={"style": "ai"})
 
@@ -91,7 +92,7 @@ def test_anniversary_rejects_unknown_style(client):
 
 def test_anniversary_no_data_returns_502(client, mocker):
     mocker.patch(
-        "app.routers.generate.find_for_today", side_effect=HistoryDataError("no hay datos cargados")
+        "app.routers.generate.anniversary.find_for_today", side_effect=HistoryDataError("no hay datos cargados")
     )
 
     res = client.post("/api/generate/anniversary", json={})
@@ -100,7 +101,7 @@ def test_anniversary_no_data_returns_502(client, mocker):
 
 
 def test_anniversary_includes_league_and_hashtag_closing(client, mocker):
-    mocker.patch("app.routers.generate.find_for_today", return_value=(_anniversary(), True, 0))
+    mocker.patch("app.routers.generate.anniversary.find_for_today", return_value=(_anniversary(), True, 0))
 
     res = client.post("/api/generate/anniversary", json={})
 

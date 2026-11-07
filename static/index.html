@@ -27,6 +27,7 @@
         <label><input type="radio" name="mode" value="stats" /> Stats</label>
         <label><input type="radio" name="mode" value="h2h" /> H2H Hoy</label>
         <label><input type="radio" name="mode" value="duel" /> Duelo 1v1</label>
+        <label><input type="radio" name="mode" value="top-ranking" /> Top/Ranking</label>
         <label><input type="radio" name="mode" value="anniversary" /> Efemeride</label>
         <label><input type="radio" name="mode" value="lec-compare" /> Cruce LEC</label>
         <label><input type="radio" name="mode" value="ai" /> IA</label>
@@ -35,6 +36,7 @@
       <div id="mode-calendar" class="mode-panel">
         <label class="checkbox-inline"><input type="checkbox" id="calendar-les" checked /> LES</label>
         <label class="checkbox-inline"><input type="checkbox" id="calendar-lec" /> LEC</label>
+        <label class="checkbox-inline"><input type="checkbox" id="calendar-emea-masters" /> EMEA Masters</label>
         <div class="mode-selector" style="margin-top: 4px;">
           <label><input type="radio" name="calendar-style" value="plain" checked /> Plano</label>
           <label><input type="radio" name="calendar-style" value="hype" /> Hype (IA)</label>
@@ -118,6 +120,19 @@
         <div id="duel-results" class="list"></div>
       </div>
 
+      <div id="mode-top-ranking" class="mode-panel" hidden>
+        <label>Categoria
+          <select id="top-ranking-category"></select>
+        </label>
+        <div class="mode-selector" style="margin-top: 4px;">
+          <label><input type="radio" name="top-ranking-style" value="plain" checked /> Plano</label>
+          <label><input type="radio" name="top-ranking-style" value="ai" /> IA</label>
+        </div>
+        <button id="top-ranking-generate-btn">Generar top</button>
+        <p class="hint">Calcula el top 3 real de gol.gg para el split actual (nunca a mano) -- si hay menos de 3 con datos suficientes, lo dice en vez de inventar posiciones. Las categorias de jugador no muestran equipo (gol.gg no lo expone en esa tabla). Genera 2 variantes: foco en el lider y top 3 resumido. Guarda solo las que quieras con el boton "Guardar" de cada tarjeta.</p>
+        <div id="top-ranking-results" class="list"></div>
+      </div>
+
       <div id="mode-anniversary" class="mode-panel" hidden>
         <div class="mode-selector" style="margin-top: 4px;">
           <label><input type="radio" name="anniversary-style" value="plain" checked /> Plano</label>
@@ -189,6 +204,7 @@
           <div class="char-counter" id="compose-char-counter">0 / 280</div>
           <button id="copy-content-btn" type="button">Copiar</button>
         </div>
+        <div id="image-picker"></div>
 
         <div class="actions">
           <button id="save-draft-btn">Guardar borrador</button>

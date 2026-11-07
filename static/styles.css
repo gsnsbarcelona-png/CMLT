@@ -197,6 +197,14 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .template-form { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 20px; }
 
+.image-picker { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
+.image-suggestions, .image-branding { display: flex; flex-wrap: wrap; gap: 6px; }
+.image-suggestions:empty { display: none; }
+.image-upload-label { font-size: 12px; color: var(--muted); cursor: pointer; }
+.image-upload-label input[type="file"] { display: none; }
+.image-preview { max-width: 90px; max-height: 90px; border-radius: 6px; border: 1px solid var(--border); object-fit: cover; }
+.remove-image-btn { font-size: 12px; }
+
 .empty-state { color: var(--muted); font-size: 14px; padding: 20px 0; text-align: center; }
 
 .var-input { margin-bottom: 10px; }

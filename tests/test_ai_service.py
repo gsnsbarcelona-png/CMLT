@@ -189,3 +189,22 @@ def test_generate_individual_duel_variant_not_configured(monkeypatch):
     monkeypatch.setattr(ai_service.settings, "anthropic_api_key", "")
     with pytest.raises(ai_service.AIGenerationError):
         ai_service.generate_individual_duel_variant("algun dato", "A vs B")
+
+
+def test_generate_top_ranking_variant_passes_context_and_variant(mocker):
+    fake_message = SimpleNamespace(content=[SimpleNamespace(type="text", text="Top KDA...")])
+    create_mock = mocker.patch("anthropic.resources.Messages.create", return_value=fake_message)
+
+    result = ai_service.generate_top_ranking_variant("Categoria: KDA (LES 2026 Summer).\n1. Escik - 9.4", "top1")
+
+    assert result == "Top KDA..."
+    _, kwargs = create_mock.call_args
+    assert "Variante pedida: top1" in kwargs["messages"][0]["content"]
+    assert "1. Escik - 9.4" in kwargs["messages"][0]["content"]
+    assert kwargs["system"] == ai_service.TOP_RANKING_SYSTEM_PROMPT
+
+
+def test_generate_top_ranking_variant_not_configured(monkeypatch):
+    monkeypatch.setattr(ai_service.settings, "anthropic_api_key", "")
+    with pytest.raises(ai_service.AIGenerationError):
+        ai_service.generate_top_ranking_variant("algun contexto", "top3")

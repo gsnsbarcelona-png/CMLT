@@ -10,17 +10,28 @@ from app.config import settings
 
 LOLESPORTS_API_BASE = "https://esports-api.lolesports.com/persisted/gw"
 
-# Ids resueltos a mano contra GET /persisted/gw/getLeagues (2026-08-30).
-# Estables desde hace años, pero podrian cambiar si Riot reestructura ligas.
+# Ids resueltos a mano contra GET /persisted/gw/getLeagues (2026-08-30,
+# emea_masters verificado el 2026-09-04). Estables desde hace años, pero
+# podrian cambiar si Riot reestructura ligas.
 LEAGUE_IDS = {
     "les": "105266074488398661",
     "lec": "98767991302996019",
+    "emea_masters": "100695891328981122",
 }
 LEAGUE_LABELS = {
     "les": "LES",
     "lec": "LEC",
+    "emea_masters": "EMEA Masters",
 }
-LEAGUE_ORDER = ["les", "lec"]
+# Version sin espacios de LEAGUE_LABELS, para el hashtag de cierre (un
+# hashtag con espacio no es un hashtag) -- "EMEAMasters" es como lo usa la
+# propia cuenta oficial en sus tweets.
+LEAGUE_HASHTAGS = {
+    "les": "LES",
+    "lec": "LEC",
+    "emea_masters": "EMEAMasters",
+}
+LEAGUE_ORDER = ["les", "lec", "emea_masters"]
 
 MADRID_TZ = ZoneInfo("Europe/Madrid")
 WEEKDAY_ABBR = ["Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom"]
@@ -114,6 +125,19 @@ def fetch_les_team_roster(team_name: str) -> list[str]:
     equipo de LES, segun getTeams. TeamRosterNotFoundError si el nombre no
     matchea ningun equipo de la liga."""
     return [p.name for p in fetch_les_team_roster_with_roles(team_name)]
+
+
+def get_les_team_logo_url(team_name: str) -> str | None:
+    """URL del escudo del equipo (campo "image" de getTeams, confirmado en
+    vivo que lolesports.com ya lo trae para todos los equipos de LES -- no
+    hace falta curar imagenes a mano). Best-effort: devuelve None en vez de
+    levantar si el equipo no matchea o la API falla, porque esto es solo una
+    sugerencia de imagen, no debe romper la generacion/publicacion del tweet."""
+    try:
+        team = _find_les_team(team_name)
+    except LoLEsportsError:
+        return None
+    return team.get("image") or None
 
 
 @dataclass
@@ -251,6 +275,7 @@ def fetch_matches_today_or_tomorrow(
 LEAGUE_HANDLE_SETTINGS = {
     "les": lambda: settings.league_handle_les,
     "lec": lambda: settings.league_handle_lec,
+    "emea_masters": lambda: settings.league_handle_emea_masters,
 }
 
 
@@ -264,7 +289,7 @@ def closing_tags(league_slugs: list[str]) -> str:
     agregar al final de un tweet de calendario (plano o hype por igual)."""
     ordered_slugs = [s for s in LEAGUE_ORDER if s in league_slugs]
     handles = [LEAGUE_HANDLE_SETTINGS[s]() for s in ordered_slugs]
-    hashtags = [f"#{LEAGUE_LABELS[s]}" for s in ordered_slugs]
+    hashtags = [f"#{LEAGUE_HASHTAGS[s]}" for s in ordered_slugs]
     return " ".join(handles + hashtags + settings.custom_hashtag_list)
 
 
