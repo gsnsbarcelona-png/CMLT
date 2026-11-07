@@ -50,8 +50,8 @@ def test_every_alternative_is_a_question_and_keys_are_unique():
 def test_stat_tweet_uses_varied_question_but_keeps_data(monkeypatch):
     monkeypatch.setattr(phrasing, "VARIETY_ENABLED", True)
     candidate = StatCandidate(
-        kind="player_kda", subject="Escik", fact_sentence="Escik tiene 9.4 de KDA.", plano_emoji="🔥",
-        plano_title="KDA", plano_question="¿Viste el clip?",
+        kind="player_kda", subject="Escik", fact_sentence="Escik tiene 9.4 de KDA.", emoji="🔥",
+        title="KDA", question="¿Viste el clip?",
     )
     for _ in range(10):
         text = format_stat_tweet_plain(candidate)

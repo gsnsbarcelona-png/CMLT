@@ -58,7 +58,7 @@ def test_compute_duel_candidates_matches_common_roles():
     assert len(candidates) == 1
     assert candidates[0].kind == "individual_duel"
     assert candidates[0].subject == "Escik vs Fulano"
-    assert candidates[0].plano_title == "DUELO DE MID"
+    assert candidates[0].title == "DUELO DE MID"
     assert "9.4" in candidates[0].fact_sentence
     assert "4.0" in candidates[0].fact_sentence
 
@@ -103,4 +103,4 @@ def test_compute_duel_candidates_multiple_roles():
 
     candidates = compute_duel_candidates(roster_a, roster_b, player_stats)
 
-    assert {c.plano_title for c in candidates} == {"DUELO DE MID", "DUELO DE ADC"}
+    assert {c.title for c in candidates} == {"DUELO DE MID", "DUELO DE ADC"}

@@ -56,7 +56,7 @@ def _closing_tags_for(kind: str, subject: str) -> str:
     contenido por su cuenta y solo necesitan stat_closing_tags() para el
     cierre) -- evita repetir el StatCandidate sintetico vacio en cada uno."""
     return stat_closing_tags(
-        StatCandidate(kind=kind, subject=subject, fact_sentence="", plano_emoji="", plano_title="", plano_question="")
+        StatCandidate(kind=kind, subject=subject, fact_sentence="", emoji="", title="", question="")
     )
 
 

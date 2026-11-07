@@ -71,9 +71,9 @@ def compute_duel_candidates(
                     f"{player_a.name} cierra el split con {stat_a.kda} de KDA ({stat_a.games} partidos); "
                     f"{player_b.name} tiene {stat_b.kda} de KDA ({stat_b.games} partidos)."
                 ),
-                plano_emoji="🔥",
-                plano_title=f"DUELO DE {role_label}",
-                plano_question="¿Quien se lleva ese carril?",
+                emoji="🔥",
+                title=f"DUELO DE {role_label}",
+                question="¿Quien se lleva ese carril?",
             )
         )
     return candidates

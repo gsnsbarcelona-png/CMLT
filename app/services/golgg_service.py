@@ -133,9 +133,9 @@ class StatCandidate:
     kind: str
     subject: str
     fact_sentence: str
-    plano_emoji: str
-    plano_title: str
-    plano_question: str
+    emoji: str
+    title: str
+    question: str
 
 
 @dataclass
@@ -652,9 +652,9 @@ def compute_head_to_head_candidates(tournaments: list[str]) -> list[StatCandidat
                 kind="team_head_to_head",
                 subject=f"{team_a} vs {team_b}",
                 fact_sentence=fact,
-                plano_emoji="🤜🤛",
-                plano_title="RIVALIDAD DEL AÑO",
-                plano_question="¿Se repite la historia la proxima vez que se crucen?",
+                emoji="🤜🤛",
+                title="RIVALIDAD DEL AÑO",
+                question="¿Se repite la historia la proxima vez que se crucen?",
             )
         )
     return candidates
@@ -771,9 +771,9 @@ def compute_candidates(
                 kind="team_kda",
                 subject=best_kda.name,
                 fact_sentence=f"{best_kda.name} tiene el mejor ratio K:D de la liga: {best_kda.kda} ({best_kda.games} partidos jugados).",
-                plano_emoji="⚔️",
-                plano_title="RATIO DE MUERTES DEL SPLIT",
-                plano_question="¿Alguien lo va a superar antes de que termine el split?",
+                emoji="⚔️",
+                title="RATIO DE MUERTES DEL SPLIT",
+                question="¿Alguien lo va a superar antes de que termine el split?",
             )
         )
 
@@ -784,9 +784,9 @@ def compute_candidates(
                 kind="team_winrate",
                 subject=best_winrate.name,
                 fact_sentence=f"{best_winrate.name} lidera el winrate de la liga con {best_winrate.win_rate}% ({wins}-{best_winrate.games - wins}).",
-                plano_emoji="📈",
-                plano_title="EL MEJOR REGISTRO DE LA LIGA",
-                plano_question="¿Quien le puede parar el paso?",
+                emoji="📈",
+                title="EL MEJOR REGISTRO DE LA LIGA",
+                question="¿Quien le puede parar el paso?",
             )
         )
 
@@ -796,9 +796,9 @@ def compute_candidates(
                 kind="team_fb",
                 subject=best_fb.name,
                 fact_sentence=f"{best_fb.name} se lleva la primera sangre en el {best_fb.fb_pct}% de sus partidos, el mejor registro de la liga.",
-                plano_emoji="🩸",
-                plano_title="SIEMPRE PRIMEROS EN SANGRAR",
-                plano_question="¿Es la clave de su temporada?",
+                emoji="🩸",
+                title="SIEMPRE PRIMEROS EN SANGRAR",
+                question="¿Es la clave de su temporada?",
             )
         )
 
@@ -813,9 +813,9 @@ def compute_candidates(
                             f"{best_winrate.name} lidera la liga con {best_winrate.win_rate}% de victorias, "
                             f"mientras {worst_winrate.name} tiene el peor registro con {worst_winrate.win_rate}%."
                         ),
-                        plano_emoji="⚖️",
-                        plano_title="LAS DOS CARAS DE LA LIGA",
-                        plano_question="¿Se cruzan antes de que termine el split?",
+                        emoji="⚖️",
+                        title="LAS DOS CARAS DE LA LIGA",
+                        question="¿Se cruzan antes de que termine el split?",
                     )
                 )
 
@@ -826,9 +826,9 @@ def compute_candidates(
                 kind="player_kda",
                 subject=best_kda.name,
                 fact_sentence=f"{best_kda.name} cerro el split con {best_kda.kda} de KDA en {best_kda.games} partidos.",
-                plano_emoji="🔥",
-                plano_title="KDA DEL SPLIT",
-                plano_question="¿Puede sostener ese nivel bajo presion?",
+                emoji="🔥",
+                title="KDA DEL SPLIT",
+                question="¿Puede sostener ese nivel bajo presion?",
             )
         )
 
@@ -838,9 +838,9 @@ def compute_candidates(
                 kind="player_csm",
                 subject=best_csm.name,
                 fact_sentence=f"{best_csm.name} promedia {best_csm.csm} de CSM, el mejor farmeo de la liga.",
-                plano_emoji="🌾",
-                plano_title="LA MEJOR FARMEADA DE LA LIGA",
-                plano_question="¿Eso alcanza para ganarle a las junglas rivales?",
+                emoji="🌾",
+                title="LA MEJOR FARMEADA DE LA LIGA",
+                question="¿Eso alcanza para ganarle a las junglas rivales?",
             )
         )
 
@@ -851,9 +851,9 @@ def compute_candidates(
                     kind="player_solo_kills",
                     subject=best_solo.name,
                     fact_sentence=f"{best_solo.name} acumula {best_solo.solo_kills} solo kills este split, el maximo de la liga.",
-                    plano_emoji="🗡️",
-                    plano_title="EL QUE MAS 1V1 GANA",
-                    plano_question="¿Te animas a duelear contra el?",
+                    emoji="🗡️",
+                    title="EL QUE MAS 1V1 GANA",
+                    question="¿Te animas a duelear contra el?",
                 )
             )
 
@@ -864,9 +864,9 @@ def compute_candidates(
                     kind="player_penta_kills",
                     subject=best_penta.name,
                     fact_sentence=f"{best_penta.name} suma {best_penta.penta_kills} pentakill(s) este split.",
-                    plano_emoji="💥",
-                    plano_title="PENTAKILL",
-                    plano_question="¿Viste el clip?",
+                    emoji="💥",
+                    title="PENTAKILL",
+                    question="¿Viste el clip?",
                 )
             )
 
@@ -935,9 +935,9 @@ def stat_closing_tags(candidate: StatCandidate) -> str:
 
 def format_stat_tweet_plain(candidate: StatCandidate) -> str:
     return (
-        f"{candidate.plano_emoji} {candidate.plano_title}\n"
+        f"{candidate.emoji} {candidate.title}\n"
         f"{candidate.fact_sentence}\n"
-        f"{vary_question(candidate.plano_question)} {candidate.plano_emoji}"
+        f"{vary_question(candidate.question)} {candidate.emoji}"
     )
 
 
@@ -1076,35 +1076,35 @@ class TopRankingCategorySpec:
     attr: str  # atributo de PlayerStat/TeamStat a ordenar
     ascending: bool  # True = menor valor es mejor (solo la de duracion)
     unit_label: str  # texto que acompaña la cifra en el tweet
-    plano_emoji: str
+    emoji: str
     value_formatter: Callable[[float], str]
 
 
 TOP_RANKING_CATEGORIES: dict[str, TopRankingCategorySpec] = {
     "player_kda": TopRankingCategorySpec(
         label="KDA", level="player", attr="kda", ascending=False,
-        unit_label="de KDA", plano_emoji="🔥", value_formatter=_fmt_ratio,
+        unit_label="de KDA", emoji="🔥", value_formatter=_fmt_ratio,
     ),
     "player_csm": TopRankingCategorySpec(
         label="Farmeo (CS por minuto)", level="player", attr="csm", ascending=False,
-        unit_label="de CSM", plano_emoji="🌾", value_formatter=_fmt_ratio,
+        unit_label="de CSM", emoji="🌾", value_formatter=_fmt_ratio,
     ),
     "team_dragons": TopRankingCategorySpec(
         label="Dragones por partida", level="team", attr="dragons_per_game", ascending=False,
-        unit_label="dragones/partida", plano_emoji="🐉", value_formatter=_fmt_ratio,
+        unit_label="dragones/partida", emoji="🐉", value_formatter=_fmt_ratio,
     ),
     "team_towers": TopRankingCategorySpec(
         label="Torres por partida", level="team", attr="towers_killed", ascending=False,
-        unit_label="torres/partida", plano_emoji="🏰", value_formatter=_fmt_ratio,
+        unit_label="torres/partida", emoji="🏰", value_formatter=_fmt_ratio,
     ),
     "team_fb": TopRankingCategorySpec(
         label="Primeras sangres (%)", level="team", attr="fb_pct", ascending=False,
-        unit_label="de primera sangre", plano_emoji="🩸", value_formatter=_fmt_pct,
+        unit_label="de primera sangre", emoji="🩸", value_formatter=_fmt_pct,
     ),
     "team_fastest": TopRankingCategorySpec(
         label="Equipos que mas rapido cierran sus partidas", level="team",
         attr="avg_game_duration_seconds", ascending=True,
-        unit_label="de duracion media", plano_emoji="⏱️", value_formatter=_seconds_to_duration,
+        unit_label="de duracion media", emoji="⏱️", value_formatter=_seconds_to_duration,
     ),
 }
 
@@ -1131,7 +1131,7 @@ class TopRankingCandidate:
     total_pool_size: int  # cuantos jugadores/equipos tenian datos en total esta consulta
     unit_label: str
     league_average_display: str | None
-    plano_emoji: str
+    emoji: str
 
 
 def compute_top_ranking_candidate(
@@ -1175,12 +1175,12 @@ def compute_top_ranking_candidate(
         total_pool_size=len(pool),
         unit_label=spec.unit_label,
         league_average_display=league_average_display,
-        plano_emoji=spec.plano_emoji,
+        emoji=spec.emoji,
     )
 
 
 def format_top_ranking_plain(candidate: TopRankingCandidate, variant: str) -> str:
-    header = f"{candidate.plano_emoji} TOP {candidate.category_label.upper()} — {get_current_tournament()}"
+    header = f"{candidate.emoji} TOP {candidate.category_label.upper()} — {get_current_tournament()}"
     lines = [header]
 
     if variant == "top1":
@@ -1188,12 +1188,12 @@ def format_top_ranking_plain(candidate: TopRankingCandidate, variant: str) -> st
         lines.append(f"{leader.name} manda con {leader.value_display} {candidate.unit_label} ({leader.games} partidos).")
         if candidate.league_average_display:
             lines.append(f"Media de la liga: {candidate.league_average_display} {candidate.unit_label}.")
-        lines.append(f"{vary_question('¿Se mantiene arriba?')} {candidate.plano_emoji}")
+        lines.append(f"{vary_question('¿Se mantiene arriba?')} {candidate.emoji}")
     else:
         if candidate.total_pool_size < TOP_RANKING_TOP_N:
             lines.append(f"Solo hay {candidate.total_pool_size} con datos suficientes este split:")
         for i, entry in enumerate(candidate.entries, start=1):
             lines.append(f"{i}. {entry.name} — {entry.value_display} {candidate.unit_label}")
-        lines.append(f"{vary_question('¿Se mantiene el top 1?')} {candidate.plano_emoji}")
+        lines.append(f"{vary_question('¿Se mantiene el top 1?')} {candidate.emoji}")
 
     return "\n".join(lines)

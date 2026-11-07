@@ -83,7 +83,7 @@ def generate_duel(payload: DuelGenerateRequest) -> list[DuelVariantResult]:
         plain_fn=format_stat_tweet_plain,
         closing=closing,
         build_result=lambda c, content, count, within: DuelVariantResult(
-            role=c.plano_title,
+            role=c.title,
             subject=c.subject,
             content=content,
             char_count=count,

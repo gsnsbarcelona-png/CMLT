@@ -265,9 +265,9 @@ def compute_rank_candidates(ranks: list[PlayerRank]) -> list[StatCandidate]:
                     f"{rank.player} esta en {rank.tier} con {rank.lp} LP "
                     f"({rank.wins}-{rank.losses}, {rank.winrate}%) en SoloQ ahora mismo."
                 ),
-                plano_emoji="🏆",
-                plano_title="RANGO EN SOLOQ",
-                plano_question="¿En que elo estas tu?",
+                emoji="🏆",
+                title="RANGO EN SOLOQ",
+                question="¿En que elo estas tu?",
             )
         )
 
@@ -281,9 +281,9 @@ def compute_rank_candidates(ranks: list[PlayerRank]) -> list[StatCandidate]:
                     f"{leader.player} es el jugador con el rango mas alto de la LES ahora mismo: "
                     f"{leader.tier} ({leader.lp} LP)."
                 ),
-                plano_emoji="👑",
-                plano_title="EL ELO MAS ALTO DE LA LIGA",
-                plano_question="¿Quien le hace sombra?",
+                emoji="👑",
+                title="EL ELO MAS ALTO DE LA LIGA",
+                question="¿Quien le hace sombra?",
             )
         )
 
@@ -301,9 +301,9 @@ def compute_rank_candidates(ranks: list[PlayerRank]) -> list[StatCandidate]:
                         f"{rank.player} llego a tocar {rank.peak_tier} ({rank.peak_lp} LP) en SoloQ, "
                         f"hoy esta en {rank.tier} ({rank.lp} LP)."
                     ),
-                    plano_emoji="📉",
-                    plano_title="LEJOS DE SU PICO",
-                    plano_question="¿Vuelve a ese nivel antes de que termine el split?",
+                    emoji="📉",
+                    title="LEJOS DE SU PICO",
+                    question="¿Vuelve a ese nivel antes de que termine el split?",
                 )
             )
 
@@ -321,9 +321,9 @@ def compute_player_vs_player_candidate(rank_a: PlayerRank, rank_b: PlayerRank) -
             f"{rank_b.player} esta en {rank_b.tier} ({rank_b.lp} LP). "
             f"Ahora mismo va arriba {higher.player}."
         ),
-        plano_emoji="⚔️",
-        plano_title="DUELO DE ELO",
-        plano_question="¿A cual te gustaria tener en tu equipo?",
+        emoji="⚔️",
+        title="DUELO DE ELO",
+        question="¿A cual te gustaria tener en tu equipo?",
     )
 
 
@@ -348,7 +348,7 @@ def compute_team_vs_team_candidate(
             f"El mejor elo de {team_a} es {best_a.player} ({best_a.tier}, {best_a.lp} LP); "
             f"el de {team_b} es {best_b.player} ({best_b.tier}, {best_b.lp} LP)."
         ),
-        plano_emoji="🛡️",
-        plano_title="MEJOR ELO DE CADA PLANTILLA",
-        plano_question="¿A cual prefieres tener en tu equipo?",
+        emoji="🛡️",
+        title="MEJOR ELO DE CADA PLANTILLA",
+        question="¿A cual prefieres tener en tu equipo?",
     )

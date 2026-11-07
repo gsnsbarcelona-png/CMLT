@@ -320,9 +320,9 @@ def test_format_stat_tweet_plain_structure():
 
     lines = text.split("\n")
     assert len(lines) == 3
-    assert lines[0] == f"{candidate.plano_emoji} {candidate.plano_title}"
+    assert lines[0] == f"{candidate.emoji} {candidate.title}"
     assert lines[1] == candidate.fact_sentence
-    assert candidate.plano_question in lines[2]
+    assert candidate.question in lines[2]
 
 
 def test_get_year_tournaments_parses_comma_separated(monkeypatch):
@@ -533,9 +533,9 @@ def _team_candidate(kind, subject):
         kind=kind,
         subject=subject,
         fact_sentence="algun dato real",
-        plano_emoji="🔥",
-        plano_title="TITULO",
-        plano_question="¿pregunta?",
+        emoji="🔥",
+        title="TITULO",
+        question="¿pregunta?",
     )
 
 
