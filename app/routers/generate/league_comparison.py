@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from app.config import settings
 from app.routers.generate._shared import _closing_tags_for, _generate_variants
 from app.services.crossover_service import CrossoverDataError, compute_player_crossover_candidates
 from app.services.golgg_service import (
@@ -16,6 +17,23 @@ from app.services.golgg_service import (
 )
 
 router = APIRouter()
+
+
+def _with_lec_handle(closing: str) -> str:
+    """El Cruce LEC compara LES con LEC: ademas de @LESESPORTS (que ya pone
+    stat_closing_tags) se arroba a la LEC, justo despues de la arroba de LES.
+    Coherente con closing_tags() de calendario: arrobas de liga en orden
+    LES, LEC y sin hashtags de liga extra (el cierre de stats no los lleva)."""
+    lec = settings.league_handle_lec
+    parts = closing.split(" ")
+    if not lec or lec in parts:
+        return closing
+    les = settings.league_handle_les
+    if les in parts:
+        parts.insert(parts.index(les) + 1, lec)
+    else:
+        parts.append(lec)
+    return " ".join(parts)
 
 
 class LeagueComparisonRequest(BaseModel):
@@ -63,7 +81,7 @@ def generate_league_comparison(payload: LeagueComparisonRequest) -> list[LeagueC
     except GolGGError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
-    closing = _closing_tags_for(candidate.kind, candidate.subject)
+    closing = _with_lec_handle(_closing_tags_for(candidate.kind, candidate.subject))
     # candidate.subject es un equipo (team_kda/team_winrate/team_fb) o un
     # jugador (player_kda/player_crossover) segun candidate.kind -- solo se
     # sugiere escudo cuando es un equipo, nunca se adivina para un jugador.

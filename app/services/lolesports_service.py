@@ -272,11 +272,24 @@ def fetch_latest_results(
     oldest = (now.astimezone(MADRID_TZ) - timedelta(days=lookback_days)).date()
 
     results: list[ResultInfo] = []
+    final_pool: list[ResultInfo] = []  # TODAS las "Final" de la liga (cualquier estado/fecha) para el relabel
     for slug in league_slugs:
         for event in _fetch_league_events(slug):
-            if event.get("type") != "match" or event.get("state") != "completed":
+            if event.get("type") != "match":
                 continue
             teams = event.get("match", {}).get("teams") or []
+            if (event.get("blockName") or "") == "Final" and event.get("startTime"):
+                # Aunque no este completada o quede fuera de la ventana, cuenta
+                # para saber cual es la ultima Final cronologica de la liga.
+                pool_start = datetime.fromisoformat(event["startTime"].replace("Z", "+00:00")).astimezone(MADRID_TZ)
+                n1, c1 = _parse_team(teams[0] if len(teams) > 0 else None)
+                n2, c2 = _parse_team(teams[1] if len(teams) > 1 else None)
+                final_info = ResultInfo(pool_start, slug, "Final", n1, c1, n2, c2, 0, 0)
+                final_pool.append(final_info)
+            else:
+                final_info = None
+            if event.get("state") != "completed":
+                continue
             if len(teams) < 2 or not teams[0] or not teams[1]:
                 continue
             try:
@@ -287,23 +300,18 @@ def fetch_latest_results(
             if score1 == score2:
                 continue
             start_time = datetime.fromisoformat(event["startTime"].replace("Z", "+00:00")).astimezone(MADRID_TZ)
-            if start_time.date() < oldest or start_time.astimezone(timezone.utc) > now:
+            if start_time.astimezone(timezone.utc) > now:
                 continue
             name1, code1 = _parse_team(teams[0])
             name2, code2 = _parse_team(teams[1])
-            results.append(
-                ResultInfo(
-                    start_time=start_time,
-                    league_slug=slug,
-                    block_name=event.get("blockName") or "",
-                    team1_name=name1,
-                    team1_code=code1,
-                    team2_name=name2,
-                    team2_code=code2,
-                    score1=score1,
-                    score2=score2,
-                )
+            info = final_info or ResultInfo(
+                start_time, slug, event.get("blockName") or "", name1, code1, name2, code2, score1, score2
             )
+            info.score1, info.score2 = score1, score2
+            results.append(info)
+
+    _relabel_final_four_blocks(final_pool)
+    results = [r for r in results if r.start_time.date() >= oldest]
 
     if not results:
         return []
@@ -328,7 +336,8 @@ def format_results_tweet(results: list[ResultInfo], league_slugs: list[str]) -> 
         w_code, l_code = (r.team1_code, r.team2_code) if winner_first else (r.team2_code, r.team1_code)
         w_score, l_score = max(r.score1, r.score2), min(r.score1, r.score2)
         block = f" ({r.block_name})" if r.block_name else ""
-        lines.append(f"✅ {_display_code(w_code)} {w_score}-{l_score} {_display_code(l_code)}{block}")
+        mark = "🏆" if r.block_name == "GRAN FINAL" else "✅"
+        lines.append(f"{mark} {_display_code(w_code)} {w_score}-{l_score} {_display_code(l_code)}{block}")
     return "\n".join(lines)
 
 

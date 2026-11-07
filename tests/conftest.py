@@ -61,6 +61,17 @@ def _clear_ranked_cache():
     from app.services import ranked_service
 
     ranked_service._http_cache.clear()
+    ranked_service._negative_cache.clear()
+    yield
+
+
+@pytest.fixture(autouse=True)
+def _clear_logo_cache():
+    """Cache de bytes de escudos: sin limpiar, tests que mockean la misma URL
+    con respuestas distintas se pisarian."""
+    from app.services import image_service
+
+    image_service.clear_logo_cache()
     yield
 
 

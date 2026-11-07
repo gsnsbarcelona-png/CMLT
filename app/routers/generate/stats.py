@@ -1,4 +1,3 @@
-import uuid
 from concurrent.futures import ThreadPoolExecutor
 
 import httpx
@@ -28,7 +27,13 @@ from app.services.golgg_service import (
     pick_candidate,
     stat_closing_tags,
 )
-from app.services.image_service import ImageComposeError, compose_branded_image, compose_vs_image
+from app.services.image_service import (
+    ImageComposeError,
+    compose_branded_image,
+    compose_vs_image,
+    deterministic_image_name,
+    fetch_logos_parallel,
+)
 from app.services.lolesports_service import (
     LoLEsportsError,
     TeamRosterNotFoundError,
@@ -113,23 +118,22 @@ def get_team_vs_logo(team_a: str, team_b: str) -> dict:
         missing = team_a if not logo_a_url else team_b
         raise HTTPException(status_code=404, detail=f"No encontramos el escudo de '{missing}'.")
 
-    try:
-        response_a = httpx.get(logo_a_url, timeout=10.0, follow_redirects=True)
-        response_a.raise_for_status()
-        response_b = httpx.get(logo_b_url, timeout=10.0, follow_redirects=True)
-        response_b.raise_for_status()
-    except httpx.HTTPError as exc:
-        raise HTTPException(status_code=502, detail="No se pudieron descargar los escudos.") from exc
+    IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+    filename = deterministic_image_name("vs", logo_a_url, logo_b_url)
+    target = IMAGES_DIR / filename
+    if target.exists():
+        return {"image_url": f"/data/images/{filename}"}
+
+    logo_a, logo_b = fetch_logos_parallel([logo_a_url, logo_b_url])
+    if isinstance(logo_a, Exception) or isinstance(logo_b, Exception):
+        raise HTTPException(status_code=502, detail="No se pudieron descargar los escudos.")
 
     try:
-        composed = compose_vs_image(response_a.content, response_b.content)
+        composed = compose_vs_image(logo_a, logo_b)
     except ImageComposeError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
-    IMAGES_DIR.mkdir(parents=True, exist_ok=True)
-    filename = f"{uuid.uuid4().hex}.png"
-    (IMAGES_DIR / filename).write_bytes(composed)
-
+    target.write_bytes(composed)
     return {"image_url": f"/data/images/{filename}"}
 
 
@@ -141,29 +145,34 @@ def get_branded_image(team_a: str | None = None, team_b: str | None = None) -> d
     tarjeta), sus escudos se apilan arriba del logo de marca. Best-effort
     con los escudos: si alguno no se encuentra o no se puede descargar, la
     imagen se arma igual sin el (nunca bloquea el fondo de marca)."""
-    team_logo_bytes_list = []
+    logo_urls = []
     for team in (team_a, team_b):
         if not team:
             continue
         logo_url = get_les_team_logo_url(team)
-        if not logo_url:
+        if logo_url:
+            logo_urls.append(logo_url)
+
+    used_urls = []
+    team_logo_bytes_list = []
+    for url, data in zip(logo_urls, fetch_logos_parallel(logo_urls)):
+        if isinstance(data, Exception):
             continue
-        try:
-            response = httpx.get(logo_url, timeout=10.0, follow_redirects=True)
-            response.raise_for_status()
-        except httpx.HTTPError:
-            continue
-        team_logo_bytes_list.append(response.content)
+        used_urls.append(url)
+        team_logo_bytes_list.append(data)
+
+    IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+    filename = deterministic_image_name("branded", *used_urls)
+    target = IMAGES_DIR / filename
+    if target.exists():
+        return {"image_url": f"/data/images/{filename}"}
 
     try:
         composed = compose_branded_image(team_logo_bytes_list)
     except ImageComposeError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
-    IMAGES_DIR.mkdir(parents=True, exist_ok=True)
-    filename = f"{uuid.uuid4().hex}.png"
-    (IMAGES_DIR / filename).write_bytes(composed)
-
+    target.write_bytes(composed)
     return {"image_url": f"/data/images/{filename}"}
 
 

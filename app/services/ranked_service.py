@@ -1,3 +1,4 @@
+import logging
 import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
@@ -12,6 +13,9 @@ LOLPROS_BASE = "https://lolpros.gg"
 LOLPROS_HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
 
 
+logger = logging.getLogger(__name__)
+
+
 class RankedError(Exception):
     pass
 
@@ -21,15 +25,37 @@ class RankedError(Exception):
 # se genera "ranked" varias veces seguidas en pocos minutos.
 _CACHE_TTL_SECONDS = 900
 _http_cache: dict[str, tuple[float, str]] = {}
+# Cache negativa corta: un slug inexistente (404/500) no se reintenta durante
+# unos minutos. Guarda (instante, status).
+_NEGATIVE_TTL_SECONDS = 600
+_negative_cache: dict[str, tuple[float, int]] = {}
+_CACHE_MAX_ENTRIES = 200
+_NOT_FOUND_STATUSES = {404, 500}  # lolpros.gg devuelve 500 para algunos slugs inexistentes (visto en vivo)
+_RATE_LIMIT_STATUSES = {403, 429}
+
+
+def _purge(cache: dict, ttl: float, now: float) -> None:
+    """Purga simple: primero lo vencido y, si sigue lleno, lo mas viejo."""
+    if len(cache) < _CACHE_MAX_ENTRIES:
+        return
+    for key in [k for k, v in cache.items() if now - v[0] >= ttl]:
+        del cache[key]
+    while len(cache) >= _CACHE_MAX_ENTRIES:
+        del cache[min(cache, key=lambda k: cache[k][0])]
 
 
 def _cached_get(url: str) -> tuple[int, str]:
-    """Devuelve (status_code, texto). No cachea respuestas de error (el
-    jugador podria existir con otro slug que si resuelva)."""
-    cached = _http_cache.get(url)
+    """Devuelve (status_code, texto). 404/500 -> "no encontrado" (status
+    distinto de 200, cacheado poco tiempo). 403/429 -> RankedError (nos estan
+    limitando; no se cachea ni se reintenta). Otros >=400 -> "no encontrado"
+    sin cachear."""
     now = time.monotonic()
+    cached = _http_cache.get(url)
     if cached is not None and now - cached[0] < _CACHE_TTL_SECONDS:
         return 200, cached[1]
+    negative = _negative_cache.get(url)
+    if negative is not None and now - negative[0] < _NEGATIVE_TTL_SECONDS:
+        return negative[1], ""
 
     try:
         response = httpx.get(url, headers=LOLPROS_HEADERS, timeout=10.0)
@@ -38,14 +64,21 @@ def _cached_get(url: str) -> tuple[int, str]:
             "No se pudo consultar lolpros.gg. Intenta de nuevo en unos minutos."
         ) from exc
 
-    if response.status_code >= 400:
-        # lolpros.gg no siempre devuelve 404 limpio para un slug de jugador
-        # que no existe -- confirmado en vivo que algunos devuelven 500.
-        # Tratamos cualquier error HTTP como "no encontrado" (no como un
-        # error de red real), asi un jugador puntual sin match no tira
-        # abajo la tanda completa de fetch_all_player_ranks.
-        return response.status_code, ""
+    status = response.status_code
+    if status in _RATE_LIMIT_STATUSES:
+        logger.warning("lolpros.gg respondio %s para %s (limitacion de peticiones)", status, url)
+        raise RankedError(
+            "lolpros.gg nos esta limitando las peticiones. Espera unos minutos y vuelve a intentarlo."
+        )
+    if status >= 400:
+        if status in _NOT_FOUND_STATUSES:
+            _purge(_negative_cache, _NEGATIVE_TTL_SECONDS, now)
+            _negative_cache[url] = (now, status)
+        else:
+            logger.warning("lolpros.gg respondio %s para %s", status, url)
+        return status, ""
 
+    _purge(_http_cache, _CACHE_TTL_SECONDS, now)
     _http_cache[url] = (now, response.text)
     return 200, response.text
 
@@ -151,7 +184,8 @@ def _safe_fetch_player_rank(player_name: str) -> PlayerRank | None:
     paralelo) no debe tirar abajo toda la generacion."""
     try:
         return fetch_player_rank(player_name)
-    except RankedError:
+    except RankedError as exc:
+        logger.warning("Rango de %s no resuelto: %s", player_name, exc)
         return None
 
 

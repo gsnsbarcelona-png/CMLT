@@ -1,6 +1,11 @@
+import hashlib
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
 from io import BytesIO
 from pathlib import Path
 
+import httpx
 from PIL import Image, ImageDraw, ImageFont
 
 CANVAS_SIZE = (640, 320)
@@ -39,6 +44,81 @@ _BOLD_FONT_CANDIDATES = [
 
 class ImageComposeError(Exception):
     pass
+
+
+# --- Cache en memoria de escudos descargados (bytes por URL) ---------------
+LOGO_CACHE_TTL_SECONDS = 3600
+LOGO_CACHE_MAX_ENTRIES = 64
+_logo_cache: dict[str, tuple[float, bytes]] = {}
+_logo_cache_lock = threading.Lock()
+
+
+def clear_logo_cache() -> None:
+    with _logo_cache_lock:
+        _logo_cache.clear()
+
+
+def fetch_logo_bytes(url: str) -> bytes:
+    """Bytes del escudo en `url`, con cache en memoria (TTL + tope de
+    entradas). Levanta httpx.HTTPError si la descarga falla."""
+    now = time.monotonic()
+    with _logo_cache_lock:
+        hit = _logo_cache.get(url)
+        if hit and now - hit[0] < LOGO_CACHE_TTL_SECONDS:
+            return hit[1]
+    response = httpx.get(url, timeout=10.0, follow_redirects=True)
+    response.raise_for_status()
+    data = response.content
+    with _logo_cache_lock:
+        if len(_logo_cache) >= LOGO_CACHE_MAX_ENTRIES:
+            for key in [k for k, (ts, _) in _logo_cache.items() if now - ts >= LOGO_CACHE_TTL_SECONDS]:
+                del _logo_cache[key]
+            while len(_logo_cache) >= LOGO_CACHE_MAX_ENTRIES:
+                del _logo_cache[min(_logo_cache, key=lambda k: _logo_cache[k][0])]
+        _logo_cache[url] = (now, data)
+    return data
+
+
+def fetch_logos_parallel(urls: list[str]) -> list[bytes | Exception]:
+    """Descarga los escudos en paralelo; devuelve, por URL y en orden, los
+    bytes o la excepcion httpx.HTTPError que fallo (no levanta)."""
+    def _one(url: str) -> bytes | Exception:
+        try:
+            return fetch_logo_bytes(url)
+        except httpx.HTTPError as exc:
+            return exc
+
+    if len(urls) <= 1:
+        return [_one(u) for u in urls]
+    with ThreadPoolExecutor(max_workers=len(urls)) as pool:
+        return list(pool.map(_one, urls))
+
+
+IMAGE_RENDER_VERSION = "1"  # subir si cambia el diseno, para no reutilizar PNGs viejos
+
+
+def deterministic_image_name(kind: str, *parts: str) -> str:
+    """Nombre de archivo estable (sha1 -> 32 hex minusculas + .png) para una
+    imagen compuesta; cumple image_urls.LOCAL_IMAGE_RE."""
+    raw = "|".join([IMAGE_RENDER_VERSION, kind, *parts])
+    return hashlib.sha1(raw.encode("utf-8")).hexdigest()[:32] + ".png"
+
+
+# --- Imagenes de marca: se cargan una vez (por ruta y mtime) ----------------
+_branding_cache: dict[tuple[str, int], Image.Image] = {}
+_branding_lock = threading.Lock()
+
+
+def _load_branding(path: Path) -> Image.Image:
+    key = (str(path), path.stat().st_mtime_ns)
+    with _branding_lock:
+        img = _branding_cache.get(key)
+        if img is None:
+            img = Image.open(path).convert("RGBA")
+            for old in [k for k in _branding_cache if k[0] == key[0]]:
+                del _branding_cache[old]
+            _branding_cache[key] = img
+    return img.copy()
 
 
 def _load_bold_font(size: int) -> ImageFont.FreeTypeFont:
@@ -149,12 +229,12 @@ def compose_branded_image(team_logo_bytes_list: list[bytes] | None = None) -> by
     rectangular compartido, con un circulo "VS" en el medio (igual que
     compose_vs_image pero sobre el fondo de marca). Devuelve bytes PNG."""
     try:
-        background = Image.open(BRANDING_BACKGROUND_PATH).convert("RGBA")
-        brand_logo = Image.open(BRANDING_LOGO_PATH).convert("RGBA")
+        background = _load_branding(BRANDING_BACKGROUND_PATH)
+        brand_logo = _load_branding(BRANDING_LOGO_PATH)
     except Exception as exc:  # archivo faltante o imagen invalida
         raise ImageComposeError("No se pudo generar la imagen de marca (falta el fondo o el logo).") from exc
 
-    canvas = background.copy()
+    canvas = background
     canvas_w, canvas_h = canvas.size
     center_y = canvas_h // 2
     padding = int(canvas_h * BRANDED_PANEL_PADDING_RATIO)
