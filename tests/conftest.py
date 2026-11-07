@@ -7,6 +7,19 @@ from app.main import app
 
 
 @pytest.fixture(autouse=True)
+def _disable_golgg_autodiscover(monkeypatch):
+    """Los tests usan los torneos del settings; el autodescubrimiento (que
+    pega a gol.gg) se prueba aparte, activandolo explicitamente."""
+    from app.config import settings
+    from app.services import golgg_service
+
+    monkeypatch.setattr(settings, "golgg_autodiscover", False)
+    golgg_service.reset_active_config_cache()
+    yield
+    golgg_service.reset_active_config_cache()
+
+
+@pytest.fixture(autouse=True)
 def _clear_golgg_cache():
     """La cache de gol.gg es un dict a nivel de modulo -- sin esto, tests
     distintos que mockean la misma URL con HTML distinto se pisarian entre si."""

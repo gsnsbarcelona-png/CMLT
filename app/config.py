@@ -17,6 +17,11 @@ class Settings(BaseSettings):
 
     # Hay que actualizar estos 3 en cada split nuevo (buscar el nombre exacto
     # del torneo en gol.gg, ej. https://gol.gg/tournament/tournament-stats/LES%202026%20Summer/)
+    # Con autodiscover activo (por defecto) la temporada y los torneos de
+    # abajo se descubren solos desde gol.gg (cache de unas horas); los valores
+    # de abajo quedan como respaldo si gol.gg no responde. Ponelo en false
+    # para forzar a mano los valores configurados.
+    golgg_autodiscover: bool = True
     golgg_season: str = "S16"
     golgg_tournament: str = "LES 2026 Summer"
     # Torneos que forman "todo el año" para el scope=year de Stats (separados por

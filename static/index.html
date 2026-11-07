@@ -192,7 +192,16 @@
     </section>
   </main>
 
-  <footer id="app-version" class="app-version"></footer>
+  <footer class="app-version">
+    <div id="app-version"></div>
+    <div class="backup-row">
+      Copia de seguridad:
+      <button id="backup-export-btn" type="button">Descargar</button>
+      <button id="backup-import-btn" type="button">Restaurar</button>
+      <input id="backup-import-file" type="file" accept="application/json,.json" hidden />
+      <span id="backup-feedback" class="hint"></span>
+    </div>
+  </footer>
 
   <script src="/static/app.js"></script>
 </body>

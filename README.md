@@ -124,6 +124,10 @@ La app es instalable como PWA: desde Chrome en Android, abrís la URL y elegís 
 
 **Render:** el repo incluye `render.yaml` (Blueprint). En render.com: New → Blueprint → elegí este repo, y cargá `APP_PASSWORD` y las 4 claves de X cuando lo pida. `SESSION_SECRET` se genera solo. Ojo: el plan gratuito tiene disco efímero (se pierden borradores e historial en cada deploy/reinicio) y duerme tras ~15 min sin uso; para persistir la base hace falta un disco de pago.
 
+**Base de datos persistente (recomendado en Render gratis):** el disco del plan gratuito se borra en cada deploy/reinicio, y con él los borradores, el historial y las plantillas. Para evitarlo crea una base Postgres gratuita en [Neon](https://neon.tech) o [Supabase](https://supabase.com) (no uses el Postgres gratis de Render: caduca a los 30 días), copia su cadena de conexión y ponla en Render → Environment como `DATABASE_URL` (vale el formato `postgres://...` o `postgresql://...`). Las tablas se crean solas al arrancar. Las imágenes subidas a mano siguen en disco y no persisten. Como respaldo extra, abajo de la web hay botones **Descargar / Restaurar** que exportan e importan borradores, historial y plantillas en JSON (restaurar dos veces no duplica nada).
+
+**Torneos del split:** por defecto la temporada y los torneos de LES, LEC y EMEA Masters se descubren solos desde gol.gg (cache de 6 h; si gol.gg falla se usan los valores de `.env`). Para forzarlos a mano pon `GOLGG_AUTODISCOVER=false`.
+
 **APK:** con la PWA ya publicada en HTTPS, [Bubblewrap](https://github.com/GoogleChromeLabs/bubblewrap) (`npx @bubblewrap/cli init --manifest https://TU-DOMINIO/static/manifest.webmanifest` y después `build`) genera un `.apk` que abre la app a pantalla completa. Para que no muestre la barra de URL hay que guardar el `assetlinks.json` que te genera Bubblewrap en `static/well-known/assetlinks.json`; la app lo sirve en `/.well-known/assetlinks.json`, y esa ruta queda abierta aunque el login esté activo.
 
 Con `APP_PASSWORD` vacía (el valor por defecto) no se pide login, y la app funciona en local igual que siempre.

@@ -1057,6 +1057,45 @@ async function showVersion() {
   }
 }
 
+function initBackup() {
+  const feedback = document.getElementById("backup-feedback");
+  const fileInput = document.getElementById("backup-import-file");
+  const say = (text) => {
+    feedback.textContent = text;
+  };
+
+  document.getElementById("backup-export-btn").addEventListener("click", async () => {
+    try {
+      const data = await api("/api/backup");
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `tweet-automation-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+      say(`Descargados ${data.tweets.length} tweets y ${data.templates.length} plantillas.`);
+    } catch (e) {
+      say(`Error: ${e.message}`);
+    }
+  });
+
+  document.getElementById("backup-import-btn").addEventListener("click", () => fileInput.click());
+  fileInput.addEventListener("change", async () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+    try {
+      const body = JSON.parse(await file.text());
+      const res = await api("/api/restore", { method: "POST", body: JSON.stringify(body) });
+      say(`Restaurado: ${res.tweets_added} tweets y ${res.templates_added} plantillas nuevas.`);
+      loadDrafts();
+    } catch (e) {
+      say(`Error: ${e.message}`);
+    } finally {
+      fileInput.value = "";
+    }
+  });
+}
+
 // ---------- Init ----------
 document.addEventListener("DOMContentLoaded", () => {
   initTabs();
@@ -1064,6 +1103,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initTemplateForm();
   checkConfig();
   showVersion();
+  initBackup();
   initLogout();
 });
 
