@@ -113,13 +113,13 @@ def test_publish_with_local_image_url_reads_from_disk(mocker, tmp_path, monkeypa
     monkeypatch.setattr(x_service, "_PROJECT_ROOT", tmp_path)
     images_dir = tmp_path / "data" / "images"
     images_dir.mkdir(parents=True)
-    (images_dir / "abc.png").write_bytes(b"local-bytes")
+    (images_dir / "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png").write_bytes(b"local-bytes")
 
     fake_media = SimpleNamespace(media_id=1)
     upload_mock = mocker.patch("tweepy.API.media_upload", return_value=fake_media)
     mocker.patch("tweepy.Client.create_tweet", return_value=SimpleNamespace(data={"id": "1"}))
 
-    x_service.publish_tweet("hola", "/data/images/abc.png")
+    x_service.publish_tweet("hola", "/data/images/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png")
 
     _, upload_kwargs = upload_mock.call_args
     assert upload_kwargs["file"].read() == b"local-bytes"
@@ -138,7 +138,7 @@ def test_publish_local_image_missing_raises(tmp_path, monkeypatch):
     monkeypatch.setattr(x_service, "_PROJECT_ROOT", tmp_path)
 
     with pytest.raises(x_service.XPublishError, match="No se encontro"):
-        x_service.publish_tweet("hola", "/data/images/no-existe.png")
+        x_service.publish_tweet("hola", "/data/images/cccccccccccccccccccccccccccccccc.png")
 
 
 def test_publish_media_upload_rejected_raises(mocker):

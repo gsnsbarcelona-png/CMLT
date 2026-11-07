@@ -10,6 +10,7 @@ import hashlib
 import hmac
 import logging
 import secrets
+import threading
 import time
 
 from fastapi import APIRouter, HTTPException, Request, Response
@@ -21,7 +22,7 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 SESSION_COOKIE = "ta_session"
-SESSION_TTL_SECONDS = 30 * 24 * 3600
+SESSION_TTL_SECONDS = 7 * 24 * 3600
 
 # Rutas accesibles sin sesion: login (pagina y API), health, y lo que el
 # navegador necesita para mostrar la pagina de login / instalar la PWA.
@@ -35,7 +36,26 @@ PUBLIC_PATHS = {
 }
 PUBLIC_PREFIXES = ("/static/",)
 
-_FAILED_LOGIN_DELAY_SECONDS = 1.0
+# Limite de intentos fallidos por IP: tras MAX_FAILED_LOGINS fallos dentro de
+# la ventana, esa IP queda bloqueada hasta que la ventana se agote. En memoria
+# (se reinicia con el server), suficiente para una app de un solo usuario.
+MAX_FAILED_LOGINS = 5
+FAILED_LOGIN_WINDOW_SECONDS = 15 * 60
+_failed_logins: dict[str, list[float]] = {}
+_failed_logins_lock = threading.Lock()
+
+
+def _client_ip(request: Request) -> str:
+    return request.client.host if request.client else "unknown"
+
+
+def _recent_failures(ip: str, now: float) -> list[float]:
+    recent = [t for t in _failed_logins.get(ip, []) if now - t < FAILED_LOGIN_WINDOW_SECONDS]
+    if recent:
+        _failed_logins[ip] = recent
+    else:
+        _failed_logins.pop(ip, None)
+    return recent
 
 if settings.session_secret:
     _secret = settings.session_secret.encode()
@@ -105,10 +125,23 @@ def auth_status(request: Request) -> dict:
 def login(payload: LoginRequest, request: Request, response: Response) -> None:
     if not auth_enabled():
         return
+    ip = _client_ip(request)
+    now = time.time()
+    with _failed_logins_lock:
+        recent = _recent_failures(ip, now)
+        if len(recent) >= MAX_FAILED_LOGINS:
+            retry_after = int(FAILED_LOGIN_WINDOW_SECONDS - (now - recent[0])) + 1
+            raise HTTPException(
+                status_code=429,
+                detail="Demasiados intentos fallidos. Espera unos minutos y vuelve a probar.",
+                headers={"Retry-After": str(retry_after)},
+            )
     if not hmac.compare_digest(payload.password.encode(), settings.app_password.encode()):
-        # Freno simple contra fuerza bruta (app de un solo usuario).
-        time.sleep(_FAILED_LOGIN_DELAY_SECONDS)
+        with _failed_logins_lock:
+            _failed_logins.setdefault(ip, []).append(now)
         raise HTTPException(status_code=401, detail="Contraseña incorrecta.")
+    with _failed_logins_lock:
+        _failed_logins.pop(ip, None)
     response.set_cookie(
         SESSION_COOKIE,
         make_session_token(),

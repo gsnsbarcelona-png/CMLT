@@ -6,6 +6,7 @@ import httpx
 import tweepy
 
 from app.config import settings
+from app.services.image_urls import is_allowed_image_url
 
 # Raiz del proyecto -- para resolver una image_url propia ("/data/images/x.png")
 # al archivo real en disco sin pegarle a nuestro propio server por HTTP.
@@ -42,6 +43,9 @@ def _load_image_bytes(image_url: str) -> tuple[bytes, str]:
     """Devuelve (bytes, filename) para subir a X. Una image_url propia
     ("/data/images/x.png", armada por POST /api/images) se lee directo del
     disco; una externa (ej. escudo de static.lolesports.com) se descarga."""
+    if not is_allowed_image_url(image_url):
+        raise XPublishError("La imagen adjunta no es valida.")
+
     if urlparse(image_url).scheme in ("http", "https"):
         try:
             response = httpx.get(image_url, timeout=10.0, follow_redirects=True)

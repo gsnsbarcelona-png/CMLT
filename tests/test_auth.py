@@ -7,7 +7,7 @@ from app.config import settings
 @pytest.fixture()
 def password(monkeypatch):
     monkeypatch.setattr(settings, "app_password", "secreta")
-    monkeypatch.setattr(auth, "_FAILED_LOGIN_DELAY_SECONDS", 0)
+    auth._failed_logins.clear()
     return "secreta"
 
 

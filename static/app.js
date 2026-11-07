@@ -28,9 +28,12 @@ async function api(path, options = {}) {
 }
 
 function escapeHtml(str) {
-  const div = document.createElement("div");
-  div.textContent = str ?? "";
-  return div.innerHTML;
+  return String(str ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 function formatDate(iso) {
@@ -786,7 +789,7 @@ function draftCardHtml(tweet) {
     <div class="card" data-id="${tweet.id}">
       <div class="card-header">
         <span class="badge badge-draft">Borrador</span>
-        <span class="card-meta">${formatDate(tweet.created_at)} · ${tweet.source}</span>
+        <span class="card-meta">${formatDate(tweet.created_at)} · ${escapeHtml(tweet.source)}</span>
       </div>
       <textarea class="card-edit" rows="3">${escapeHtml(tweet.content)}</textarea>
       <div class="char-counter draft-char-counter">0 / 280</div>

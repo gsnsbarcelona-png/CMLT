@@ -1,12 +1,13 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 from sqlmodel import Session, select
 
 from app.db import get_session
 from app.models import Tweet
 from app.services import char_count
+from app.services.image_urls import validate_image_url
 from app.services.x_service import XPublishError, publish_tweet
 
 router = APIRouter(prefix="/api/tweets", tags=["tweets"])
@@ -14,13 +15,17 @@ router = APIRouter(prefix="/api/tweets", tags=["tweets"])
 
 class TweetCreate(BaseModel):
     content: str
-    source: str = "manual"
+    source: str = Field(default="manual", pattern=r"^[a-z0-9_-]{1,32}$")
     image_url: str | None = None
+
+    _check_image_url = field_validator("image_url")(validate_image_url)
 
 
 class TweetUpdate(BaseModel):
     content: str
     image_url: str | None = None
+
+    _check_image_url = field_validator("image_url")(validate_image_url)
 
 
 @router.post("", status_code=201)
